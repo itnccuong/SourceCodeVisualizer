@@ -1,0 +1,13 @@
+{
+  "name": "source-code-visualizer",
+  "version": "0.1.9",
+  "private": true,
+  "description": "Source Code Visualizer development workspace",
+  "scripts": {
+    "build:web": "cd src/web_visualizer && npm run compile",
+    "serve:web": "cd src/web_visualizer && npm run serve",
+    "build:ext": "cd src/vscodeextension && npm run compile",
+    "build": "npm run build:web && npm run build:ext",
+    "test:ext": "cd src/vscodeextension && npm run test"
+  }
+}

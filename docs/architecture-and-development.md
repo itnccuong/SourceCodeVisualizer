@@ -1,0 +1,363 @@
+# Architecture and Development Guide
+
+This guide connects runtime behavior, build scripts, and source files. Paths are relative to the repository root.
+
+## I. How the Three-Layer Architecture Works
+
+The three layers are responsibility boundaries, not three npm packages:
+
+| Layer | Responsibility | Runtime |
+| --- | --- | --- |
+| **1. VS Code UI** | Editor, cursor, context menus, command palette, navigation | VS Code workbench |
+| **2. Extension Host** | Handle commands, obtain code information, adapt it for diagrams, manage webviews | Extension-host JavaScript runtime |
+| **3. Webview Tab** | Display boxes and edges; handle diagram interaction | Embedded browser |
+
+### Summary of the Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Layer 1: VS Code UI
+    participant Host as Layer 2: Extension Host
+    participant Web as Layer 3: Webview Tab
+
+    UI->>Host: User clicks Visualize This, VS Code dispatches registered command
+    Host->>Host: tab.visualize() → visualizeFromCursorPositions()
+    Host->>Host: Read document URI and selection.start
+    Host->>Host: executeCommand("vp.executeDefinitionProvider", uri, position)
+    Host->>Host: registry.get("python") → wrapper holding Python adapter
+    Host->>Host: Ask VS Code definition and document-symbol providers
+    Host->>Host: Python adapter identifies header/body ranges
+    Host->>Host: Build outline tree and fill displayText from source
+    Host->>Web: webview.postMessage({type: "visualizeOutline", data, requestedId})
+    Web->>Web: window message listener → Controller._message_receive()
+    Web->>Web: _visualizeOutline() → position and create boxes/connections
+
+    Note over Web: User selects Show in code on a diagram window
+    Web->>Host: gBackend.postMessage({type: "vp_host_openRawSource", requestId, data})
+    Host->>Host: onDidReceiveMessage() → _receiveMessage()
+    Host->>UI: showTextDocument() → revealRange() → set selection
+    Note over UI: Editor opens the source and jumps to its range
+```
+
+The UI-to-host arrow represents VS Code's command dispatch, not a custom `postMessage` protocol. The two explicit `postMessage` calls cross the host/webview boundary. They are asynchronous messages, not direct calls into the receiving function.
+
+### How Python Registration Connects to a Click
+
+1. `extension_main.ts::activate()` initializes the internal API, registers language adapters, and registers user commands.
+2. `outlineproviders/providerregistrer.ts` creates `new VpLspExtenderPython()` and calls `vp.registerLspExtenderProvider`.
+3. The API handler wraps that object in `VpOutlineProviderWrapper` and stores it under `python`. Registry keys are lowercased.
+4. Later, **Visualize This** captures the active file URI and caret position.
+5. `vp.executeDefinitionProvider` opens the document, reads `document.languageId`, retrieves the stored wrapper, and calls `provideDefinitionOutline()`.
+6. The wrapper passes the same Python adapter to `OutlineUtils.provideDefinitionOutline()`.
+
+Registration stores an object for later use; it does not analyze the file yet.
+
+### Definition Lookup → Python Adaptation → Diagram
+
+Inside `OutlineUtils`, the connected path is:
+
+```text
+provideDefinitionOutline(adapter, document, position)
+  → _getDefinitionRanges(...)
+    → vscode_executeDefinitionProvider(uri, position)
+      → executeCommand("vscode.executeDefinitionProvider", uri, position)
+    → getDocumentSymbolAtPosition(definitionUri, definitionPosition)
+      → getDocumentSymbols(...)
+        → executeCommand("vscode.executeDocumentSymbolProvider", definitionUri)
+  → _provideSymbolDefinitionOutline(...)
+    → documentSymbol2outlineSymbol(...)
+      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol)
+      → recursively build parts from child symbols and ordinary text
+```
+
+- **`vp.executeDefinitionProvider`** is this repository's command: build diagram-ready information.
+- **`vscode.executeDefinitionProvider`** is VS Code's command: find the identifier's definition. Different IDs mean no recursive command loop.
+- A definition location tells the extension **where** the class/function is. A document symbol supplies its full range and children.
+- `VpLspExtenderPython` is **not a language server**. It supplements symbols obtained through installed Python tooling, typically Python/Pylance, with Python-specific header/body ranges.
+- For `class Dog:` containing `def bark(self):`, the current adapter extracts headers `Dog` and `bark(self)`. Shared code creates nested `Symbol` and `Text` parts.
+- `VisualizingTab._translate_outlineRanges2outlineEntities()` fills `displayText` using `document.getText(range)` before sending the tree to the webview.
+
+### Messages Back from the Diagram
+
+`gBackend` is initialized by `acquireVsCodeApi()` in `media/scriptsVscDependant.js`.
+
+| Webview request type | Host action |
+| --- | --- |
+| `outline_requestByFilePosition` | Resolve the clicked identifier; send another outline; the diagram can add a window and connection |
+| `outline_requestLocationDefiner` | Resolve the enclosing class/file, not necessarily an inheritance parent |
+| `vp_host_openRawSource` | Open source, reveal its range, and move the editor selection |
+
+Requests use `requestId`; outline replies use `requestedId`. The controller remembers which diagram element requested an outline so it can position/connect the response.
+
+### Debugging and Visible Updates
+
+- The controller constructor registers the `message` listener **once**. Its callback and `_message_receive()` run **for every incoming message**.
+- Extension TypeScript: use the **Run Extension** debugger and source breakpoints.
+- Canvas JavaScript: use **Webview Developer Tools** and breakpoints in the loaded `web_visualizer.js`. This custom bundle does not generate source maps.
+- A message send is not a normal function call: Step Into does not cross into the other runtime. Set a breakpoint on each receiving side.
+- Boxes are added to the DOM during `_visualizeOutline()`. Connection docking starts a timer-based animation; movement events later update line endpoints. Creating a connection and visibly drawing its line are separate steps.
+
+## II. How the package.json Build Scripts Work
+
+### npm Script Rules
+
+`npm run NAME` executes `scripts.NAME` from the selected package. npm automatically checks for matching hooks:
+
+```text
+preNAME → NAME → postNAME
+```
+
+For example, `npm run compile` runs `precompile`, then `compile`, then `postcompile`, wherever those scripts exist. Running `tsc` directly does not run npm hooks.
+
+- `A && B`: run B only if A succeeds.
+- `A; B`: attempt B even if A fails.
+- `>` overwrites an output file; `>>` appends.
+- A `cd` inside a child npm script does not permanently change the calling script's directory.
+
+### A. Every Command Available from the Repository Root
+
+The root `package.json` exposes five scripts. **W** below means the complete canvas pipeline in subsection C; **E** means the complete extension pipeline in subsection B. These are diagram labels, not additional npm commands.
+
+Arrows show execution order, not concurrent work. A referenced pipeline finishes before execution continues to the next node.
+
+```mermaid
+flowchart TD
+    BW["npm run build:web"]
+    BE["npm run build:ext"]
+    B["npm run build"]
+    S["npm run serve:web"]
+    T["npm run test:ext"]
+
+    BW --> WC["cd src/web_visualizer"]
+    WC --> W["W: npm run compile<br/>Expanded in subsection C"]
+
+    BE --> EC["cd src/vscodeextension"]
+    EC --> E["E: npm run compile<br/>Expanded in subsection B"]
+
+    B --> B1["1. npm run build:web → W"]
+    B1 -->|"After success"| B2["2. npm run build:ext → E<br/>E runs W again"]
+
+    S --> SC["cd src/web_visualizer"]
+    SC --> SS["npm run serve"]
+    SS --> SL["python3 -m http.server 8080"]
+
+    T --> TC["cd src/vscodeextension"]
+    TC --> TT["npm run test"]
+    TT --> TP["Automatic pretest hook"]
+    TP --> T1["1. npm run compile → E"]
+    T1 -->|"After success"| T2["2. npm run lint"]
+    T2 --> TL["eslint src --ext ts"]
+    TL -->|"After pretest succeeds"| TR["test script:<br/>node ./out/test/main.js"]
+```
+
+- Root `build` runs `npm run build:web && npm run build:ext`. It currently builds the canvas **twice**: once explicitly, then again inside E.
+- `serve:web` starts a long-running static server. It does **not** build first or rebuild when source changes.
+- After building and serving, open `http://localhost:8080/tests/index.html` for browser fixtures. These use emulated backend data, not live Python analysis.
+- `test:ext` builds and lints before starting the integration-test program. Its behavior after the Node command is expanded in subsection D.
+- Running a root build command alone does not launch or reload VS Code.
+
+### B. E — Complete Extension Compile Pipeline
+
+**Package and working directory: `src/vscodeextension/`.**
+
+The scripts that connect the calls are:
+
+```json
+"build_dependencies": "cd ../web_visualizer && npm run compile",
+"get_dependencies": "cp -f ../web_visualizer/release/* ./media/",
+"precompile": "npm run build_dependencies && npm run get_dependencies",
+"compile": "tsc -p ./"
+```
+
+```mermaid
+flowchart TD
+    E["npm run compile"]
+    PRE["1. Automatic precompile hook"]
+    DEP["npm run build_dependencies"]
+    CD["cd ../web_visualizer"]
+    W["npm run compile → complete W pipeline<br/>Expanded in subsection C"]
+    GET["npm run get_dependencies<br/>Working directory is src/vscodeextension again"]
+    COPY["cp -f ../web_visualizer/release/* ./media/"]
+    COMPILE["2. compile script"]
+    TSC["tsc -p ./"]
+    DONE["Finished<br/>No extension postcompile hook is defined"]
+
+    E --> PRE --> DEP --> CD --> W
+    W -->|"After success"| GET --> COPY
+    COPY -->|"After precompile succeeds"| COMPILE --> TSC --> DONE
+```
+
+The child `build_dependencies` script changes its own shell's directory to build the canvas. That does not change the parent npm process's directory: `get_dependencies` still starts in `src/vscodeextension/`.
+
+The leaf command `tsc -p ./` uses `src/vscodeextension/tsconfig.json`. It translates extension `.ts` files into separate `.js` files under `out/`, with `.js.map` source maps. It does not combine them into the canvas bundle.
+
+For example:
+
+```text
+src/vscodeextension/src/outlineproviders/lspextenderpython.ts
+    → src/vscodeextension/out/outlineproviders/lspextenderpython.js
+    → src/vscodeextension/out/outlineproviders/lspextenderpython.js.map
+```
+
+### C. W — Complete Canvas Compile Pipeline
+
+**Package and working directory: `src/web_visualizer/`.**
+
+```mermaid
+flowchart TD
+    W["npm run compile"]
+    PRE["1. Automatic precompile hook"]
+    MK["mkdir -p ./release"]
+    COMPILE["2. compile script: npm run build_system"]
+    JS["npm run build_js"]
+    JSL["python3 ../jsstitcher ./src/main.js<br/>&gt; ./release/web_visualizer.js"]
+    CSS["npm run build_css"]
+    CSSL["CSS leaf command<br/>Exact shell expression below"]
+    LIC["npm run build_license"]
+    LICL["License leaf commands<br/>Exact shell expressions below"]
+    POST["3. Automatic postcompile hook"]
+    VERSION["npm run release_version"]
+    VER["echo ${npm_package_version}<br/>&gt; ./release/web_visualizer_version"]
+
+    W --> PRE --> MK --> COMPILE --> JS --> JSL
+    JSL --> CSS --> CSSL --> LIC --> LICL
+    LICL -->|"If compile returns success"| POST --> VERSION --> VER
+```
+
+The exact CSS leaf command is:
+
+```bash
+cat `find ./src -type f -name "*.css"` > ./release/web_visualizer.css
+```
+
+`find` supplies the CSS filenames; `cat` concatenates their contents into the output file.
+
+The exact license leaf commands are:
+
+```bash
+echo 'This file is generated by package.json' > ./release/LICENSE;
+cat `find . -type f -name "LICENSE" -not -path "./release/*"` >> ./release/LICENSE
+```
+
+The first command writes a header; the second finds license files outside `release/` and appends their contents.
+
+`npm_package_version` is provided by npm from this package's version. The version file therefore describes the canvas package, not the root package.
+
+**Failure-handling detail:** `build_system` is defined as:
+
+```json
+"build_system": "npm run build_js; npm run build_css; npm run build_license;"
+```
+
+These semicolons mean it attempts the next command even if the preceding one fails. A later successful command can mask an earlier failure, so inspect the build log rather than relying only on the final exit status. Other steps connected with `&&` stop when the preceding command reports failure.
+
+### D. What the Test Leaf Command Does Next
+
+`node ./out/test/main.js` is the end of the package-script expansion, but it launches more work through JavaScript:
+
+```mermaid
+flowchart TD
+    A["node ./out/test/main.js"]
+    B["downloadAndUnzipVSCode('1.61.1')<br/>Download or reuse that VS Code version"]
+    C["resolveCliPathFromVSCodeExecutablePath(...)"]
+    D["spawnSync(cliPath, arguments)<br/>--install-extension<br/>ms-python.python<br/>ms-python.vscode-pylance"]
+    E["runTests(...)<br/>Launch the selected VS Code with this local extension"]
+    F["Load out/test/suite/index<br/>Execute integration tests"]
+
+    A --> B --> C --> D --> E --> F
+```
+
+The source for that launcher is `src/vscodeextension/src/test/main.ts`. It is a VS Code integration-test environment, not merely a collection of functions executed in plain Node. The CLI installation is an attempted setup step; the current code does not inspect `spawnSync`'s returned exit status before calling `runTests()`.
+
+
+### What Performs Each Build Operation?
+
+| Tool/configuration | Actual responsibility |
+| --- | --- |
+| `src/jsstitcher/__main__.py` | Python bundler entry point |
+| `jslinker/parse_file_content.py` | Extract custom `require ("file.js");` declarations and remove them from emitted content |
+| `jslinker/file.py` | Resolve dependencies relative to the declaring file |
+| `jslinker/js_stitcher.py` | Discover/order dependencies, then concatenate their contents |
+| Extension `tsconfig.json` | Set TypeScript source root `src`, output `out`, CommonJS modules, ES6 target, strict checking, and source maps |
+| `tsc -p ./` | Type-check and translate extension TypeScript into separate JavaScript files; does not bundle the canvas |
+
+The custom bundler starts at `web_visualizer/src/main.js` and follows reachable dependency declarations; it does not include every JS file automatically. Preserve the existing `require ("...");` format: it is a text-based build directive, not a standard browser import. The bundle remains JavaScript, closer to preprocessed/combined source than a C `.o` file.
+
+### Development Versus Release
+
+- F5 uses root `.vscode/launch.json` → task `build:ext` → the pipeline above, then launches the development host.
+- Saving does not trigger hot reload. Reliable loop: **save → stop debugging → F5 → Visualize This again**.
+- `watch` in the extension package runs only the TypeScript watcher; it does not rebuild the canvas or reload the running extension.
+- `src/package.json` is a separate packaging/release orchestrator. None of the five root scripts invokes it. Its `compile` path packages the extension and copies release artifacts, unlike the daily development build.
+- The extension's `publish` script runs `vsce package` to create a `.vsix`; the name does not mean that command uploads to the Marketplace. Its pre/post hooks perform release work.
+
+## III. Component and Generated-File Map
+
+### Layer 1 — VS Code UI and Development Controls
+
+| File | Purpose |
+| --- | --- |
+| `src/vscodeextension/package.json` | Declare menu entries, user command IDs, extension entry point, dependencies, and extension scripts |
+| `.vscode/launch.json` | Launch the local extension from `src/vscodeextension`; map compiled JS back to TypeScript |
+| `.vscode/tasks.json` | Define the pre-launch `build:ext` task |
+| `package.json` | Root convenience commands; not the extension manifest |
+
+The editor and menu implementation belong to VS Code itself; this repository contributes declarations and handlers.
+
+### Layer 2 — Extension Host Source
+
+Paths in this table are under `src/vscodeextension/src/`.
+
+| File/component | Purpose |
+| --- | --- |
+| `extension_main.ts` | Activation entry point; initialize API, language adapters, and user commands |
+| `visualprogramming/extensionactivator.ts` | Register Visualize commands; `VpTabManager` obtains the diagram tab |
+| `visualprogramming/visualizer.ts` | `VisualizingTab`: capture selections, request outlines, fill source text, send messages, handle browser requests, navigate editor |
+| `visualprogramming/webviewcreator.ts` | Create the Code Diagram webview and its HTML; load assets from `media/` |
+| `outlineproviders/providerregistrer.ts` | Register default language adapters, including Python |
+| `outlineproviders/lspextenderpython.ts` | `VpLspExtenderPython`: derive Python header/body ranges from a document symbol |
+| `outlineproviderAPI/extensionactivator.ts` | Register internal `vp.*` commands and dispatch to the language registry |
+| `outlineproviderAPI/utils/languagefeatureregistry.ts` | Store/get providers using lowercased language IDs |
+| `outlineproviderAPI/utils/outlineproviderwrapper.ts` | Hold a language adapter and delegate to shared outline utilities |
+| `outlineproviderAPI/utils/outlineutils.ts` | Query VS Code definitions/symbols and construct recursive outline data |
+| `outlineproviderAPI/utils/documentsymbolx.ts` | Pair a document symbol with its file URI |
+| `outlineproviderAPI/SymbolDefinition.ts` | Shared outline model: `Symbol`, `Text`, `File`, ranges, attributes, nested parts |
+
+### Layer 3 — Webview Source and Bridge
+
+Paths are under `src/web_visualizer/src/` unless stated otherwise.
+
+| File/component | Purpose |
+| --- | --- |
+| `main.js` | Bundler entry point; `initSystem()` creates the diagram root and controller |
+| `vp/controller.js` | Receive messages, request definitions, track requesters, create/position windows and connections |
+| `vp/request_message.js` | `RequestMessage`: read message type, data, and reply ID; a local class, not an npm package |
+| `vp/view_entity.js` | Hold a visualized model and window state such as coordinates |
+| `vp/window_positioner.js` | Initial/relative window placement using offsets |
+| `vpw/vpw_world.js` | Create outline windows and connections within the world |
+| `vpw/vpw_outline_window.js` | Render outline titles and nested content; provide Show in code/Open parent actions |
+| `vpw/vpw_view_entity_window.js` | Attach the view model to a titled window and set its position |
+| `vpw/vpw_entity_connection.js` | Connect source/target widgets; update line endpoints on movement |
+| `vgf/vgf_world.js` | World root, scale, and coordinate conversion |
+| `vgf/vgf_navigationarea.js` | Background pan, wheel scrolling, and zoom |
+| `vgf/` | Reusable GUI primitives: windows, docking, widgets, menus, and canvas lines |
+| `utils/std.js` | Shared helpers, including timer-driven `moveAnimated()` |
+| `highlightjs/` | Vendored syntax-highlighting code/styles |
+| `src/vscodeextension/media/scriptsVscDependant.js` | Handwritten webview bridge: `const gBackend = acquireVsCodeApi()` |
+
+### Source Versus Generated Outputs
+
+| Location | What it contains | Editing rule |
+| --- | --- | --- |
+| `src/vscodeextension/src/` | Original extension TypeScript | Edit here for host behavior |
+| `src/vscodeextension/out/` | Generated extension `.js` and `.js.map` files | Do not edit; regenerated by `tsc`; executed by extension host |
+| `src/web_visualizer/src/` | Original canvas JavaScript/CSS | Edit here for canvas behavior/layout |
+| `src/web_visualizer/release/` | Generated JS/CSS bundle, license, version | Do not edit; rebuilt and copied into extension |
+| `src/vscodeextension/media/web_visualizer.js` and `.css` | Generated/copied visualizer assets | Do not edit as a permanent fix; these are what the webview loads |
+| Other files in `src/vscodeextension/media/` | Can be handwritten, notably `scriptsVscDependant.js` | Do not assume the entire directory is generated |
+| `src/web_visualizer/tests/` | Standalone browser fixtures and backend emulation | Useful for canvas-only work; not production parsing |
+| `src/vscodeextension/src/test/` | Extension integration tests and sample code | Test source, not generated output |
+| `node_modules/` | Installed third-party packages | Do not edit for project fixes |
+| `src/vscodeextension/release/` | Packaging outputs such as `.vsix`, license, version | Release artifacts, not runtime source |
+
+**For humans and AI:** change original source, rebuild, and debug the runtime that owns the behavior. `out/` is extension-host output; the generated visualizer files in `media/` are browser output. A generated copy is not a second implementation to maintain.

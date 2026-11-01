@@ -5,3 +5,9 @@ node_modules/*
 node_modules
 .vscode-test
 __pycache__
+.vscode
+
+# Generated visualizer assets copied into the extension by the build
+/src/vscodeextension/media/web_visualizer.js
+/src/vscodeextension/media/web_visualizer.css
+/src/vscodeextension/media/web_visualizer_version
