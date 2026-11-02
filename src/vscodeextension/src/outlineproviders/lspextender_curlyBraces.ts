@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {VpLspExtenderProvider} from '../outlineproviderAPI/lspextenderprovider';
+import {LanguageSpecificSymbolInformation, VpLspExtenderProvider} from '../outlineproviderAPI/lspextenderprovider';
 import * as Outline from '../outlineproviderAPI/SymbolDefinition';
 import * as utils from "../utils";
 import {OutlineUtils} from '../outlineproviderAPI/utils/outlineutils';
@@ -66,7 +66,7 @@ implements VpLspExtenderProvider
   public getLanguageSpecificSymbolInformation(
     document: vscode.TextDocument,
     docSymbol: vscode.DocumentSymbol)
-                               : any[]
+                               : LanguageSpecificSymbolInformation
   {
     const RANGE_START_INDICATOR = "{";
     const RANGE_END_INDICATOR   = "}";
@@ -174,7 +174,7 @@ implements VpLspExtenderProvider
       }
     }
 
-    return [rangeHead, rangeBody, attributes];
+    return {rangeHead, rangeBody, attributes, declarationOnly: false};
   }
 
 

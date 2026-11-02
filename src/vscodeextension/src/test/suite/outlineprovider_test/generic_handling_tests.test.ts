@@ -21,14 +21,14 @@ async function openDocument(filename: string) {
 }
 
 
-async function createMemDocument(content: string)
+async function createMemDocument(content: string, language = "typescript")
   : Promise<vscode.TextDocument>
 {
-  let memfile = MemoryFile.createDocument (".ts");
+  let memfile = MemoryFile.createDocument (language === "cpp" ? "cpp" : "ts");
   memfile.write (content);
 
-  let doc = vscode.workspace.openTextDocument (memfile.uri);
-  return doc;
+  const doc = await vscode.workspace.openTextDocument(memfile.uri);
+  return vscode.languages.setTextDocumentLanguage(doc, language);
 }
 
 
@@ -55,8 +55,8 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
     let actual = subject.getLanguageSpecificSymbolInformation (doc, symbol);
 
     // check
-    let actual_rangeHead  = actual[0];
-    let actual_rangeBody  = actual[1];
+    let actual_rangeHead  = actual.rangeHead;
+    let actual_rangeBody  = actual.rangeBody;
 
     assertx.range_equals (actual_rangeHead,
                           utils.range_new (0,9,1,0),
@@ -146,8 +146,8 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
     let actual = subject.getLanguageSpecificSymbolInformation (doc, symbol);
 
     // check
-    let actual_rangeHead  = actual[0];
-    let actual_rangeBody  = actual[1];
+    let actual_rangeHead  = actual.rangeHead;
+    let actual_rangeBody  = actual.rangeBody;
 
     assertx.range_equals (actual_rangeHead,
                           utils.range_new (0,0,0,14),
@@ -206,7 +206,10 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
     // check
     let actual_parts = actual.parts;
 
-    assert.strictEqual (actual_parts.length, 2, "Number of parts");
+    assert.deepStrictEqual(actual_parts.map(part => doc.getText(part.displayTextRange!).trim()), ["bb()", "aa()"]);
+    assert.deepStrictEqual(actual_parts.map(part => doc.getText(part.parts[0].displayTextRange!).trim()),
+      ["return 5;", "return 6;"]);
+    assert.deepStrictEqual(symbol.children, [child0, child1], "provider order stays unchanged");
 
 
   });
@@ -223,7 +226,7 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
         + "     aa();\n"
         + "}\n"
 
-    let doc = await createMemDocument (content);
+    let doc = await createMemDocument (content, "cpp");
 
     let symbol = new vscode.DocumentSymbol ("AAA", "",
                                             vscode.SymbolKind.Class,
@@ -240,7 +243,7 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
     let subject = OutlineUtils;
     let actual = subject.documentSymbol2outlineSymbol (doc,
                                 new DocumentSymbolX (symbol, doc.uri),
-                                new VpLspExtenderCurlyBraces ("typescript"));
+                                new VpLspExtenderCurlyBraces ("cpp"));
 
     // check
     let actual_parts = actual.parts;
@@ -260,7 +263,7 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
         + "     virtual aa() = 0;\n"
         + "}\n"
 
-    let doc = await createMemDocument (content);
+    let doc = await createMemDocument (content, "cpp");
 
     let symbol = new vscode.DocumentSymbol ("AAA", "",
                                             vscode.SymbolKind.Class,
@@ -277,7 +280,7 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
     let subject = OutlineUtils;
     let actual = subject.documentSymbol2outlineSymbol (doc,
                                 new DocumentSymbolX (symbol, doc.uri),
-                                new VpLspExtenderCurlyBraces ("typescript"));
+                                new VpLspExtenderCurlyBraces ("cpp"));
 
     // check
     let actual_parts = actual.parts;

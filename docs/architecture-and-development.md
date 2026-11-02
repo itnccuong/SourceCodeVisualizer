@@ -66,7 +66,7 @@ provideDefinitionOutline(adapter, document, position)
         → executeCommand("vscode.executeDocumentSymbolProvider", definitionUri)
   → _provideSymbolDefinitionOutline(...)
     → documentSymbol2outlineSymbol(...)
-      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol)
+      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors})
       → recursively build parts from child symbols and ordinary text
 ```
 
@@ -76,6 +76,20 @@ provideDefinitionOutline(adapter, document, position)
 - `VpLspExtenderPython` is **not a language server**. It supplements symbols obtained through installed Python tooling, typically Python/Pylance, with Python-specific header/body ranges.
 - For `class Dog:` containing `def bark(self):`, the current adapter extracts headers `Dog` and `bark(self)`. Shared code creates nested `Symbol` and `Text` parts.
 - `VisualizingTab._translate_outlineRanges2outlineEntities()` fills `displayText` using `document.getText(range)` before sending the tree to the webview.
+
+### Declaration Boundaries
+
+- `Outline.Symbol.totalRange` normally equals the supplied `DocumentSymbol.range`. Python name-only variables are the exception: the adapter resolves their complete assignment/annotation and returns optional `rangeDeclaration`. Provider symbols/ranges are never mutated.
+- Python loads `@lezer/python` on first extraction. TypeScript/TSX loads TypeScript 3.9.10 on first extraction. Parsing remains declaration-local or uses supplied ancestor context, not a background whole-file index.
+- Each adapter retains one parsed fragment per document in a `WeakMap`. Version, language, and containment govern reuse. Temporary parser wrappers never enter output ranges.
+- An ambiguous TypeScript property can use the nearest suitable LSP-supplied ancestor. Missing context or malformed selected syntax produces an extraction error.
+- The named result contains `rangeHead`, nullable `rangeBody`, `attributes`, `declarationOnly`, and optional `rangeDeclaration`. A null body means no source body; a zero-width body means an empty implementation.
+- TypeScript bodyless signatures set `declarationOnly`; the webview hides their body area while retaining the signature and navigation. No status text or badge is added. Python `pass`, `...`, and docstrings remain source.
+- Shared traversal sorts a copy of children, keeps source gaps, and rejects crossing/overlapping displayed children. Definition lookup uses end-exclusive containment and target-file ranges.
+- Pylance 2026.4.1 supplies name-only ranges for Python variables/constants. For an exact name-only variable/constant/field/property range, reuse suitable cached/ancestor syntax or parse from the name's physical line. Extend the local fragment geometrically only while the selected statement has missing tokens at its end; use the parsed statement boundary, never the next colon or next symbol. Malformed syntax and reference selections still fail explicitly. Other incomplete ranges are not repaired.
+- Multiline decorator attributes retain their full original source in the model/hover text. The window displays only a compact first-line metadata label, constrained to one line with ellipsis, so it cannot overlap the signature/body.
+- Python-related changes require live verification of `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`: file → `_build_dag` → `ingestion_dag`, plus affected variables. Do not execute or modify that Airflow file.
+
 
 ### Messages Back from the Diagram
 
@@ -316,6 +330,7 @@ Paths in this table are under `src/vscodeextension/src/`.
 | `visualprogramming/webviewcreator.ts` | Create the Code Diagram webview and its HTML; load assets from `media/` |
 | `outlineproviders/providerregistrer.ts` | Register default language adapters, including Python |
 | `outlineproviders/lspextenderpython.ts` | `VpLspExtenderPython`: derive Python header/body ranges from a document symbol |
+| `outlineproviders/lspextendertypescript.ts` | `VpLspExtenderTypeScript`: split TS/TSX syntax inside supplied declaration/ancestor ranges |
 | `outlineproviderAPI/extensionactivator.ts` | Register internal `vp.*` commands and dispatch to the language registry |
 | `outlineproviderAPI/utils/languagefeatureregistry.ts` | Store/get providers using lowercased language IDs |
 | `outlineproviderAPI/utils/outlineproviderwrapper.ts` | Hold a language adapter and delegate to shared outline utilities |

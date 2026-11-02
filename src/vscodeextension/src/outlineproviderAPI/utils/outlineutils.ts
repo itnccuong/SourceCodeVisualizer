@@ -12,6 +12,7 @@ import { VpLspExtenderProvider } from '../lspextenderprovider';
 import { DocumentSymbolX } from './documentsymbolx';
 
 export class OutlineUtils {
+  private static readonly symbolParents = new WeakMap<vscode.DocumentSymbol, vscode.DocumentSymbol>();
 
 
   /**
@@ -55,19 +56,14 @@ export class OutlineUtils {
   }
 
 
-  private static convert_LocationLinkArray_to_LocationArray (locationLinkArray: any[])
+  private static convert_LocationLinkArray_to_LocationArray (locationLinkArray: vscode.LocationLink[])
     : vscode.Location[]
   {
     let ret: vscode.Location[] = [];
     for (let i = 0; i < locationLinkArray.length; ++i)
     {
       let e = locationLinkArray[i];
-      let range = e.targetSelectionRange;
-      // in some situations (e.g. outline of constructor in typescript)
-      //  `targetSelectionRange` is undefined. We're trying to solve
-      //  it this way.
-      if (!range)
-        range = e.originSelectionRange;
+      const range = e.targetSelectionRange ?? e.targetRange;
 
       let loc = new vscode.Location (e.targetUri, range);
       ret.push (loc);
@@ -111,28 +107,19 @@ export class OutlineUtils {
 
   private static async _getFlatDocumentSymbols(uri: vscode.Uri)
   {
-    let symbols = null;
-    symbols = await OutlineUtils.getDocumentSymbols (uri);
-
-    let flatSymbolList:vscode.DocumentSymbol[] = [];
-    {
-      if(Array.isArray (symbols))
-      while (true){
-        // stop if finished
-        if (symbols.length == 0) break;
-
-        // "item = worklist.pop()"
-        let symbol = symbols[0];
-        symbols.splice(0,1);
-        flatSymbolList.push (symbol);
-
-        // find new children
-        for (let i = symbol.children.length-1; i >=0; --i)
-        {
-          let child = symbol.children[i];
-          symbols.unshift (child);
-        }
+    const symbols = await OutlineUtils.getDocumentSymbols(uri);
+    const flatSymbolList: vscode.DocumentSymbol[] = [];
+    const visit = (symbol: vscode.DocumentSymbol, parent?: vscode.DocumentSymbol) => {
+      if (parent) {
+        this.symbolParents.set(symbol, parent);
+      } else {
+        this.symbolParents.delete(symbol);
       }
+      flatSymbolList.push(symbol);
+      for (const child of symbol.children) { visit(child, symbol); }
+    };
+    if (Array.isArray(symbols)) {
+      for (const symbol of symbols) { visit(symbol); }
     }
     return flatSymbolList;
   }
@@ -142,26 +129,27 @@ export class OutlineUtils {
   public static async getDocumentSymbolAtPosition(uri: vscode.Uri, startPos: vscode.Position)
                : Promise<vscode.DocumentSymbol | null>
   {
-    // Algorithm: simple linear search algorithm
-    //             TODO:speed: create binary search
-
-    let flatSymbolList = await OutlineUtils._getFlatDocumentSymbols (uri);
-    {
-      // loop reverse, because most detailed range comes last
-      for (let i = flatSymbolList.length - 1; i>=0; --i)
-      {
-        let symbol = flatSymbolList[i];
-        let symbolRange: vscode.Range = symbol.range;
-        if (symbolRange.start.line      <= startPos.line &&
-            symbolRange.start.character <= startPos.character &&
-                                           startPos.line      <= symbolRange.end.line
-                                           )
-        {
-          return symbol;
+    const symbols = await this._getFlatDocumentSymbols(uri);
+    const document = await vscode.workspace.openTextDocument(uri);
+    let selected: vscode.DocumentSymbol | null = null;
+    let enclosing: vscode.DocumentSymbol | null = null;
+    let selectedSize = Infinity;
+    let enclosingSize = Infinity;
+    for (const symbol of symbols) {
+      for (const selection of [true, false]) {
+        const range = selection ? symbol.selectionRange : symbol.range;
+        if (range.start.isAfter(startPos) || !startPos.isBefore(range.end)) { continue; }
+        const size = document.offsetAt(range.end) - document.offsetAt(range.start);
+        if (selection && size < selectedSize) {
+          selected = symbol;
+          selectedSize = size;
+        } else if (!selection && size < enclosingSize) {
+          enclosing = symbol;
+          enclosingSize = size;
         }
       }
     }
-    return null;
+    return selected ?? enclosing;
   }
 
 
@@ -249,112 +237,55 @@ export class OutlineUtils {
    *
    *
    **/
-  private static _provideOutlineForRange (document: vscode.TextDocument,
-                                          range:    vscode.Range,
-                                          documentSymbolsInRange: vscode.DocumentSymbol[],
-                                          provider: VpLspExtenderProvider)
+  private static _provideOutlineForRange(document: vscode.TextDocument,
+                                        range: vscode.Range,
+                                        documentSymbolsInRange: vscode.DocumentSymbol[],
+                                        provider: VpLspExtenderProvider)
     : Outline.OutlineRange[]
   {
-    // documentSymbolsInRange are sorted alphabetically.
-    //  we need to sort them by position
-    utils.documentSymbolArray_sortByRange (documentSymbolsInRange);
-
-    let parts: any = [];
-
-    let code = (function(line: number){
-      return document.lineAt (line).text;
-    });
-
-
-    // loop running data
-    let lastRange = utils.range_new (0,0,range.start.line,range.start.character);
-    let childIdx = 0;
-
-    while (true)
-    {
-      let text = new Outline.Text();
-      text.language = provider.getLanguageStr ();
-      let text_start_line = lastRange.end.line;
-      let text_start_char = lastRange.end.character;
-
-      // cut away empty area after last child (/range)
-      if (code(text_start_line).substr(text_start_char).trim() == ""){
-        text_start_line++;
-        text_start_char = 0;
+    const children = documentSymbolsInRange.slice().sort((a, b) =>
+      a.range.start.compareTo(b.range.start) || a.range.end.compareTo(b.range.end));
+    const parts: Outline.OutlineRange[] = [];
+    let cursor = range.start;
+    const addText = (end: vscode.Position) => {
+      if (cursor.isEqual(end)) { return; }
+      const text = new Outline.Text();
+      text.language = provider.getLanguageStr();
+      text.uri = document.uri.toString();
+      text.displayTextRange = new vscode.Range(cursor, end);
+      if (this._shouldAddTextOutline(document, text)) { parts.push(text); }
+    };
+    for (const child of children) {
+      // These symbols remain ordinary source, as in the generic adapter.
+      if (child.kind === vscode.SymbolKind.Property
+          || child.kind === vscode.SymbolKind.Field
+          || child.kind === vscode.SymbolKind.Variable
+          || child.kind === vscode.SymbolKind.Constant
+          || child.kind === vscode.SymbolKind.String
+          || child.kind === vscode.SymbolKind.Number
+          || child.kind === vscode.SymbolKind.Boolean
+          || child.kind === vscode.SymbolKind.Array
+          || child.kind === vscode.SymbolKind.Object
+          || child.kind === vscode.SymbolKind.Key
+          || child.kind === vscode.SymbolKind.Null
+          || child.kind === vscode.SymbolKind.EnumMember
+          || child.kind === vscode.SymbolKind.Event
+          || child.kind === vscode.SymbolKind.Operator
+          || child.kind === vscode.SymbolKind.TypeParameter
+          || child.kind === vscode.SymbolKind.Function && child.name.indexOf(") callback") > -1) {
+        continue;
       }
-
-      // next child exists
-      if (childIdx <= documentSymbolsInRange.length-1)
-      {
-        let childSymbol = documentSymbolsInRange[childIdx];
-
-        // do not process the following symbols
-        if (childSymbol.kind == vscode.SymbolKind.Property
-            || childSymbol.kind == vscode.SymbolKind.Field
-            || childSymbol.kind == vscode.SymbolKind.Variable
-            || childSymbol.kind == vscode.SymbolKind.Constant
-            || childSymbol.kind == vscode.SymbolKind.String
-            || childSymbol.kind == vscode.SymbolKind.Number
-            || childSymbol.kind == vscode.SymbolKind.Boolean
-            || childSymbol.kind == vscode.SymbolKind.Array
-            || childSymbol.kind == vscode.SymbolKind.Object
-            || childSymbol.kind == vscode.SymbolKind.Key
-            || childSymbol.kind == vscode.SymbolKind.Null
-            || childSymbol.kind == vscode.SymbolKind.EnumMember
-            || childSymbol.kind == vscode.SymbolKind.Event
-            || childSymbol.kind == vscode.SymbolKind.Operator
-            || childSymbol.kind == vscode.SymbolKind.TypeParameter
-            || (childSymbol.kind == vscode.SymbolKind.Function
-                && childSymbol.name.indexOf (") callback") > -1)
-            )
-        {
-          ++childIdx;
-          continue;
-        }
-
-
-        // add raw code area
-        if (childSymbol.range.start.line != 0)
-        {
-          let text_end_line = childSymbol.range.start.line;
-          let text_end_char = childSymbol.range.start.character;
-
-          // cut away indentation of next childSymbol
-          if (code (text_end_line).substring (0, text_end_char).trim() == ""){
-            text_end_line--;
-            text_end_char = code (text_end_line).length;
-          }
-
-          text.displayTextRange = utils.range_new (text_start_line, text_start_char,
-                                                  text_end_line, text_end_char);
-          if (this._shouldAddTextOutline (document, text))
-            parts.push (text);
-        }
-
-        // add childSymbol
-        {
-          lastRange = childSymbol.range;
-
-          // TODO:optimize: just extract entity head ( not the full definition )
-          let docSymX = new DocumentSymbolX (childSymbol, document.uri);
-          let childOutline = this.documentSymbol2outlineSymbol (document, docSymX, provider);
-          parts.push (childOutline);
-
-          ++childIdx;
-        }
+      if (child.range.end.isBeforeOrEqual(range.start) || child.range.start.isAfterOrEqual(range.end)) {
+        continue;
       }
-      // no next childSymbol
-      else
-      {
-        text.displayTextRange = utils.range_new (text_start_line, text_start_char,
-                                                  range.end.line,
-                                                  range.end.character) ;
-        if (OutlineUtils._shouldAddTextOutline (document, text))
-        parts.push (text);
-        break;
+      if (!range.contains(child.range) || child.range.start.isBefore(cursor)) {
+        throw new Error('Overlapping or out-of-bounds declaration ranges cannot be displayed safely.');
       }
+      addText(child.range.start);
+      parts.push(this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(child, document.uri), provider));
+      cursor = child.range.end;
     }
-
+    addText(range.end);
     return parts;
   }
 
@@ -397,10 +328,6 @@ export class OutlineUtils {
     docSymbolXArr  = await OutlineUtils._getDefinitionRanges (provider, document.uri, position);
 
 
-    // TODO: vscode LSPs provide the wrong range. They cut off the comment and
-    //       annotation before the function head. Todo: take it into account and
-    //       enlarge the range.
-
 
     // 2) Outline all found definitions
     if (docSymbolXArr)
@@ -430,6 +357,7 @@ export class OutlineUtils {
     for (let i=0; i<children.length; ++i)
     {
       let child = children[i];
+      if (parents.length > 0) { this.symbolParents.set(child, parents[parents.length - 1]); }
       if (utils.range_contains (child.range, position))
       {
         parents.push (child);
@@ -489,22 +417,22 @@ export class OutlineUtils {
 
     symbol.language = provider.getLanguageStr ();
     symbol.kind = utils.vscodeSymbolKind2String (docSymbol.kind);
-    symbol.totalRange = docSymbol.range;
     symbol.uri = uri.toString ();
 
-    let ranges = provider.getLanguageSpecificSymbolInformation (document, docSymbol);
-    let range_head = ranges[0];
-    let range_body = ranges[1];
-    let attributes = ranges[2];
-
-    symbol.displayTextRange = range_head;
-    symbol.attributes = attributes;
-
-    symbol.parts = this._provideOutlineForRange (
-                              document,
-                              range_body,
-                              docSymbol.children,
-                              provider);
+    for (const child of docSymbol.children) { this.symbolParents.set(child, docSymbol); }
+    const ancestors: vscode.DocumentSymbol[] = [];
+    for (let parent = this.symbolParents.get(docSymbol); parent; parent = this.symbolParents.get(parent)) {
+      ancestors.push(parent);
+    }
+    const information = provider.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors});
+    symbol.totalRange = information.rangeDeclaration ?? docSymbol.range;
+    symbol.displayTextRange = information.rangeHead;
+    symbol.attributes = information.attributes;
+    symbol.declarationOnly = information.declarationOnly;
+    symbol.parts = information.rangeBody === null || information.rangeBody.isEmpty
+      ? []
+      : this._provideOutlineForRange(
+          document, information.rangeBody, docSymbol.children, provider);
 
     return symbol;
   }

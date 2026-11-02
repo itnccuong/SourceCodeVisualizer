@@ -26,7 +26,8 @@ function showInitialWindows(backend)
   let requestId = null;
 
   let data = [
-    testdata["file:///usr/myfile.ts"].outline["MyClass2"]
+    testdata["file:///usr/myfile.ts"].outline["MyClass2"],
+    testdata["file:///usr/declaration_boundaries.ts"].outline["DeclarationExamples"]
   ];
   window_postRequest(type, requestId, data);
 }

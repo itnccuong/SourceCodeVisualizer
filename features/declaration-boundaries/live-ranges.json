@@ -1,0 +1,6083 @@
+{
+  "versions": {
+    "ms-python.python": "2026.10.0",
+    "ms-python.vscode-pylance": "2026.4.1",
+    "vscode.typescript-language-features": "10.0.0",
+    "visualprogrammingx.SourceCodeVisualizer": "0.1.9",
+    "vscode": "1.144.0"
+  },
+  "pythonRaw": [
+    {
+      "name": "identity",
+      "kind": 11,
+      "range": [
+        {
+          "line": 4,
+          "character": 0
+        },
+        {
+          "line": 5,
+          "character": 22
+        }
+      ],
+      "selection": [
+        {
+          "line": 4,
+          "character": 4
+        },
+        {
+          "line": 4,
+          "character": 12
+        }
+      ],
+      "source": "def identity(declaration):\n    return declaration"
+    },
+    {
+      "name": "identity.declaration",
+      "kind": 12,
+      "range": [
+        {
+          "line": 4,
+          "character": 13
+        },
+        {
+          "line": 4,
+          "character": 24
+        }
+      ],
+      "selection": [
+        {
+          "line": 4,
+          "character": 13
+        },
+        {
+          "line": 4,
+          "character": 24
+        }
+      ],
+      "source": "declaration"
+    },
+    {
+      "name": "limit",
+      "kind": 12,
+      "range": [
+        {
+          "line": 10,
+          "character": 0
+        },
+        {
+          "line": 10,
+          "character": 5
+        }
+      ],
+      "selection": [
+        {
+          "line": 10,
+          "character": 0
+        },
+        {
+          "line": 10,
+          "character": 5
+        }
+      ],
+      "source": "limit"
+    },
+    {
+      "name": "build",
+      "kind": 11,
+      "range": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 4
+        },
+        {
+          "line": 15,
+          "character": 9
+        }
+      ],
+      "source": "def build(value=tuple((1, 2)), label=\":\"):\n    return value"
+    },
+    {
+      "name": "build.value",
+      "kind": 12,
+      "range": [
+        {
+          "line": 15,
+          "character": 10
+        },
+        {
+          "line": 15,
+          "character": 29
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 10
+        },
+        {
+          "line": 15,
+          "character": 29
+        }
+      ],
+      "source": "value=tuple((1, 2))"
+    },
+    {
+      "name": "build.label",
+      "kind": 12,
+      "range": [
+        {
+          "line": 15,
+          "character": 31
+        },
+        {
+          "line": 15,
+          "character": 40
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 31
+        },
+        {
+          "line": 15,
+          "character": 40
+        }
+      ],
+      "source": "label=\":\""
+    },
+    {
+      "name": "config",
+      "kind": 12,
+      "range": [
+        {
+          "line": 21,
+          "character": 0
+        },
+        {
+          "line": 21,
+          "character": 6
+        }
+      ],
+      "selection": [
+        {
+          "line": 21,
+          "character": 0
+        },
+        {
+          "line": 21,
+          "character": 6
+        }
+      ],
+      "source": "config"
+    },
+    {
+      "name": "simple",
+      "kind": 11,
+      "range": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 29,
+          "character": 4
+        },
+        {
+          "line": 29,
+          "character": 10
+        }
+      ],
+      "source": "def simple():\n    return 1"
+    },
+    {
+      "name": "async_build",
+      "kind": 11,
+      "range": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 37,
+          "character": 10
+        },
+        {
+          "line": 37,
+          "character": 21
+        }
+      ],
+      "source": "@identity\nasync def async_build(value=tuple(), label=\":\"):\n    return value"
+    },
+    {
+      "name": "async_build.value",
+      "kind": 12,
+      "range": [
+        {
+          "line": 37,
+          "character": 22
+        },
+        {
+          "line": 37,
+          "character": 35
+        }
+      ],
+      "selection": [
+        {
+          "line": 37,
+          "character": 22
+        },
+        {
+          "line": 37,
+          "character": 35
+        }
+      ],
+      "source": "value=tuple()"
+    },
+    {
+      "name": "async_build.label",
+      "kind": 12,
+      "range": [
+        {
+          "line": 37,
+          "character": 37
+        },
+        {
+          "line": 37,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 37,
+          "character": 37
+        },
+        {
+          "line": 37,
+          "character": 46
+        }
+      ],
+      "source": "label=\":\""
+    },
+    {
+      "name": "Worker",
+      "kind": 4,
+      "range": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "source": "class Worker:\n    def read(self):\n        return config\n\n    def empty(self):\n        pass"
+    },
+    {
+      "name": "Worker.read",
+      "kind": 5,
+      "range": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "source": "def read(self):\n        return config"
+    },
+    {
+      "name": "Worker.empty",
+      "kind": 5,
+      "range": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 13
+        }
+      ],
+      "source": "def empty(self):\n        pass"
+    },
+    {
+      "name": "Base",
+      "kind": 4,
+      "range": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 55,
+          "character": 6
+        },
+        {
+          "line": 55,
+          "character": 10
+        }
+      ],
+      "source": "class Base(ABC):\n    @abstractmethod\n    def run(self):\n        pass"
+    },
+    {
+      "name": "Base.run",
+      "kind": 5,
+      "range": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 11
+        }
+      ],
+      "source": "@abstractmethod\n    def run(self):\n        pass"
+    },
+    {
+      "name": "placeholder",
+      "kind": 11,
+      "range": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "selection": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 15
+        }
+      ],
+      "source": "def placeholder():\n    ..."
+    },
+    {
+      "name": "doc_only",
+      "kind": 11,
+      "range": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "selection": [
+        {
+          "line": 71,
+          "character": 4
+        },
+        {
+          "line": 71,
+          "character": 12
+        }
+      ],
+      "source": "def doc_only():\n    \"\"\"A real body containing only a docstring: keep this source intact.\"\"\""
+    },
+    {
+      "name": "later",
+      "kind": 11,
+      "range": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 78,
+          "character": 4
+        },
+        {
+          "line": 78,
+          "character": 9
+        }
+      ],
+      "source": "def later():\n    return 7"
+    }
+  ],
+  "typescriptRaw": [
+    {
+      "name": "limit",
+      "kind": 12,
+      "range": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 11
+        }
+      ],
+      "source": "limit = 42"
+    },
+    {
+      "name": "config",
+      "kind": 12,
+      "range": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 28
+        }
+      ],
+      "selection": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 12
+        }
+      ],
+      "source": "config = { value: 42 }"
+    },
+    {
+      "name": "config.value",
+      "kind": 6,
+      "range": [
+        {
+          "line": 8,
+          "character": 17
+        },
+        {
+          "line": 8,
+          "character": 26
+        }
+      ],
+      "selection": [
+        {
+          "line": 8,
+          "character": 17
+        },
+        {
+          "line": 8,
+          "character": 22
+        }
+      ],
+      "source": "value: 42"
+    },
+    {
+      "name": "Reader",
+      "kind": 10,
+      "range": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "source": "interface Reader {\n  read(): void;\n}"
+    },
+    {
+      "name": "Reader.read",
+      "kind": 5,
+      "range": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "source": "read(): void;"
+    },
+    {
+      "name": "Base",
+      "kind": 4,
+      "range": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 18,
+          "character": 15
+        },
+        {
+          "line": 18,
+          "character": 19
+        }
+      ],
+      "source": "abstract class Base {\n  abstract run(): string;\n}"
+    },
+    {
+      "name": "Base.run",
+      "kind": 5,
+      "range": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "selection": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 14
+        }
+      ],
+      "source": "abstract run(): string;"
+    },
+    {
+      "name": "Worker",
+      "kind": 4,
+      "range": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 12
+        }
+      ],
+      "source": "class Worker implements Reader {\n  read(): void { console.log(\"implemented\"); }\n  empty(): void {}\n}"
+    },
+    {
+      "name": "Worker.empty",
+      "kind": 5,
+      "range": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "source": "empty(): void {}"
+    },
+    {
+      "name": "Worker.read",
+      "kind": 5,
+      "range": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }"
+    },
+    {
+      "name": "later",
+      "kind": 11,
+      "range": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 31,
+          "character": 9
+        },
+        {
+          "line": 31,
+          "character": 14
+        }
+      ],
+      "source": "function later() {\n  return 7;\n}"
+    }
+  ],
+  "pythonProviderLimitations": [
+    {
+      "name": "limit",
+      "raw": {
+        "name": "limit",
+        "kind": 12,
+        "range": [
+          {
+            "line": 10,
+            "character": 0
+          },
+          {
+            "line": 10,
+            "character": 5
+          }
+        ],
+        "selection": [
+          {
+            "line": 10,
+            "character": 0
+          },
+          {
+            "line": 10,
+            "character": 5
+          }
+        ],
+        "source": "limit"
+      },
+      "error": "Error: Cannot determine declaration boundaries for \"limit\"."
+    },
+    {
+      "name": "config",
+      "raw": {
+        "name": "config",
+        "kind": 12,
+        "range": [
+          {
+            "line": 21,
+            "character": 0
+          },
+          {
+            "line": 21,
+            "character": 6
+          }
+        ],
+        "selection": [
+          {
+            "line": 21,
+            "character": 0
+          },
+          {
+            "line": 21,
+            "character": 6
+          }
+        ],
+        "source": "config"
+      },
+      "error": "Error: Cannot determine declaration boundaries for \"config\"."
+    }
+  ],
+  "pythonNavigation": {
+    "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+    "selection": {
+      "start": {
+        "line": 45,
+        "character": 8
+      },
+      "end": {
+        "line": 45,
+        "character": 8
+      },
+      "active": {
+        "line": 45,
+        "character": 8
+      },
+      "anchor": {
+        "line": 45,
+        "character": 8
+      }
+    }
+  },
+  "typescriptNavigation": {
+    "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+    "selection": {
+      "start": {
+        "line": 26,
+        "character": 2
+      },
+      "end": {
+        "line": 26,
+        "character": 2
+      },
+      "active": {
+        "line": 26,
+        "character": 2
+      },
+      "anchor": {
+        "line": 26,
+        "character": 2
+      }
+    }
+  },
+  "captures": [
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "build",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 4
+        },
+        {
+          "line": 15,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 15,
+          "character": 4
+        },
+        {
+          "line": 15,
+          "character": 41
+        }
+      ],
+      "body": [
+        {
+          "line": 16,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "source": "def build(value=tuple((1, 2)), label=\":\"):\n    return value",
+      "heading": "build(value=tuple((1, 2)), label=\":\")",
+      "bodyText": "    return value",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "simple",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 29,
+          "character": 4
+        },
+        {
+          "line": 29,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 29,
+          "character": 4
+        },
+        {
+          "line": 29,
+          "character": 12
+        }
+      ],
+      "body": [
+        {
+          "line": 30,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "source": "def simple():\n    return 1",
+      "heading": "simple()",
+      "bodyText": "    return 1",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "async_build",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 37,
+          "character": 10
+        },
+        {
+          "line": 37,
+          "character": 21
+        }
+      ],
+      "head": [
+        {
+          "line": 37,
+          "character": 10
+        },
+        {
+          "line": 37,
+          "character": 47
+        }
+      ],
+      "body": [
+        {
+          "line": 38,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "source": "@identity\nasync def async_build(value=tuple(), label=\":\"):\n    return value",
+      "heading": "async_build(value=tuple(), label=\":\")",
+      "bodyText": "    return value",
+      "declarationOnly": false,
+      "attributes": [
+        "@identity",
+        "async"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "body": [
+        {
+          "line": 45,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "class Worker:\n    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "heading": "Worker",
+      "bodyText": "    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 13
+        }
+      ],
+      "head": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 49,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "def empty(self):\n        pass",
+      "heading": "empty(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 13
+        }
+      ],
+      "head": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 49,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "def empty(self):\n        pass",
+      "heading": "empty(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Base",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 55,
+          "character": 6
+        },
+        {
+          "line": 55,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 55,
+          "character": 6
+        },
+        {
+          "line": 55,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 56,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "source": "class Base(ABC):\n    @abstractmethod\n    def run(self):\n        pass",
+      "heading": "Base(ABC)",
+      "bodyText": "    @abstractmethod\n    def run(self):\n        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 11
+        }
+      ],
+      "head": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 17
+        }
+      ],
+      "body": [
+        {
+          "line": 58,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "source": "@abstractmethod\n    def run(self):\n        pass",
+      "heading": "run(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": [
+        "@abstractmethod"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 11
+        }
+      ],
+      "head": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 17
+        }
+      ],
+      "body": [
+        {
+          "line": 58,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "source": "@abstractmethod\n    def run(self):\n        pass",
+      "heading": "run(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": [
+        "@abstractmethod"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "placeholder",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "selection": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 15
+        }
+      ],
+      "head": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 17
+        }
+      ],
+      "body": [
+        {
+          "line": 65,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "source": "def placeholder():\n    ...",
+      "heading": "placeholder()",
+      "bodyText": "    ...",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "doc_only",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "selection": [
+        {
+          "line": 71,
+          "character": 4
+        },
+        {
+          "line": 71,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 71,
+          "character": 4
+        },
+        {
+          "line": 71,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 72,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "source": "def doc_only():\n    \"\"\"A real body containing only a docstring: keep this source intact.\"\"\"",
+      "heading": "doc_only()",
+      "bodyText": "    \"\"\"A real body containing only a docstring: keep this source intact.\"\"\"",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "later",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 78,
+          "character": 4
+        },
+        {
+          "line": 78,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 78,
+          "character": 4
+        },
+        {
+          "line": 78,
+          "character": 11
+        }
+      ],
+      "body": [
+        {
+          "line": 79,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "source": "def later():\n    return 7",
+      "heading": "later()",
+      "bodyText": "    return 7",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "body": [
+        {
+          "line": 45,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "class Worker:\n    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "heading": "Worker",
+      "bodyText": "    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 13
+        }
+      ],
+      "head": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 49,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "def empty(self):\n        pass",
+      "heading": "empty(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "identity",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 4,
+          "character": 0
+        },
+        {
+          "line": 5,
+          "character": 22
+        }
+      ],
+      "selection": [
+        {
+          "line": 4,
+          "character": 4
+        },
+        {
+          "line": 4,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 4,
+          "character": 4
+        },
+        {
+          "line": 4,
+          "character": 25
+        }
+      ],
+      "body": [
+        {
+          "line": 5,
+          "character": 0
+        },
+        {
+          "line": 5,
+          "character": 22
+        }
+      ],
+      "source": "def identity(declaration):\n    return declaration",
+      "heading": "identity(declaration)",
+      "bodyText": "    return declaration",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "build",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 4
+        },
+        {
+          "line": 15,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 15,
+          "character": 4
+        },
+        {
+          "line": 15,
+          "character": 41
+        }
+      ],
+      "body": [
+        {
+          "line": 16,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "source": "def build(value=tuple((1, 2)), label=\":\"):\n    return value",
+      "heading": "build(value=tuple((1, 2)), label=\":\")",
+      "bodyText": "    return value",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "simple",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 29,
+          "character": 4
+        },
+        {
+          "line": 29,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 29,
+          "character": 4
+        },
+        {
+          "line": 29,
+          "character": 12
+        }
+      ],
+      "body": [
+        {
+          "line": 30,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "source": "def simple():\n    return 1",
+      "heading": "simple()",
+      "bodyText": "    return 1",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "async_build",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 37,
+          "character": 10
+        },
+        {
+          "line": 37,
+          "character": 21
+        }
+      ],
+      "head": [
+        {
+          "line": 37,
+          "character": 10
+        },
+        {
+          "line": 37,
+          "character": 47
+        }
+      ],
+      "body": [
+        {
+          "line": 38,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "source": "@identity\nasync def async_build(value=tuple(), label=\":\"):\n    return value",
+      "heading": "async_build(value=tuple(), label=\":\")",
+      "bodyText": "    return value",
+      "declarationOnly": false,
+      "attributes": [
+        "@identity",
+        "async"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 44,
+          "character": 6
+        },
+        {
+          "line": 44,
+          "character": 12
+        }
+      ],
+      "body": [
+        {
+          "line": 45,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "class Worker:\n    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "heading": "Worker",
+      "bodyText": "    def read(self):\n        return config\n\n    def empty(self):\n        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 13
+        }
+      ],
+      "head": [
+        {
+          "line": 48,
+          "character": 8
+        },
+        {
+          "line": 48,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 49,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "source": "def empty(self):\n        pass",
+      "heading": "empty(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Base",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 55,
+          "character": 6
+        },
+        {
+          "line": 55,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 55,
+          "character": 6
+        },
+        {
+          "line": 55,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 56,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "source": "class Base(ABC):\n    @abstractmethod\n    def run(self):\n        pass",
+      "heading": "Base(ABC)",
+      "bodyText": "    @abstractmethod\n    def run(self):\n        pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 11
+        }
+      ],
+      "head": [
+        {
+          "line": 57,
+          "character": 8
+        },
+        {
+          "line": 57,
+          "character": 17
+        }
+      ],
+      "body": [
+        {
+          "line": 58,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "source": "@abstractmethod\n    def run(self):\n        pass",
+      "heading": "run(self)",
+      "bodyText": "        pass",
+      "declarationOnly": false,
+      "attributes": [
+        "@abstractmethod"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "placeholder",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "selection": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 15
+        }
+      ],
+      "head": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 17
+        }
+      ],
+      "body": [
+        {
+          "line": 65,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "source": "def placeholder():\n    ...",
+      "heading": "placeholder()",
+      "bodyText": "    ...",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "doc_only",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "selection": [
+        {
+          "line": 71,
+          "character": 4
+        },
+        {
+          "line": 71,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 71,
+          "character": 4
+        },
+        {
+          "line": 71,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 72,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "source": "def doc_only():\n    \"\"\"A real body containing only a docstring: keep this source intact.\"\"\"",
+      "heading": "doc_only()",
+      "bodyText": "    \"\"\"A real body containing only a docstring: keep this source intact.\"\"\"",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "later",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 78,
+          "character": 4
+        },
+        {
+          "line": 78,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 78,
+          "character": 4
+        },
+        {
+          "line": 78,
+          "character": 11
+        }
+      ],
+      "body": [
+        {
+          "line": 79,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "source": "def later():\n    return 7",
+      "heading": "later()",
+      "bodyText": "    return 7",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "aaa",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 0,
+          "character": 0
+        },
+        {
+          "line": 1,
+          "character": 10
+        }
+      ],
+      "selection": [
+        {
+          "line": 0,
+          "character": 4
+        },
+        {
+          "line": 0,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 0,
+          "character": 4
+        },
+        {
+          "line": 0,
+          "character": 9
+        }
+      ],
+      "body": [
+        {
+          "line": 1,
+          "character": 0
+        },
+        {
+          "line": 1,
+          "character": 10
+        }
+      ],
+      "source": "def aaa():\n  return 5",
+      "heading": "aaa()",
+      "bodyText": "  return 5",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "Test",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "selection": [
+        {
+          "line": 15,
+          "character": 6
+        },
+        {
+          "line": 15,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 15,
+          "character": 6
+        },
+        {
+          "line": 15,
+          "character": 10
+        }
+      ],
+      "body": [
+        {
+          "line": 17,
+          "character": 0
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "source": "class Test:\n\n  def aaa(self):\n    return 5\n\n\n  def bbb(self):\n    return self.aaa ()\n\n  def ccc(self):\n    return self.aaa ()",
+      "heading": "Test",
+      "bodyText": "  def aaa(self):\n    return 5\n\n\n  def bbb(self):\n    return self.aaa ()\n\n  def ccc(self):\n    return self.aaa ()",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "aaa",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 17,
+          "character": 2
+        },
+        {
+          "line": 18,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 17,
+          "character": 6
+        },
+        {
+          "line": 17,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 17,
+          "character": 6
+        },
+        {
+          "line": 17,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 18,
+          "character": 12
+        }
+      ],
+      "source": "def aaa(self):\n    return 5",
+      "heading": "aaa(self)",
+      "bodyText": "    return 5",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "bbb",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 21,
+          "character": 2
+        },
+        {
+          "line": 22,
+          "character": 22
+        }
+      ],
+      "selection": [
+        {
+          "line": 21,
+          "character": 6
+        },
+        {
+          "line": 21,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 21,
+          "character": 6
+        },
+        {
+          "line": 21,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 22,
+          "character": 0
+        },
+        {
+          "line": 22,
+          "character": 22
+        }
+      ],
+      "source": "def bbb(self):\n    return self.aaa ()",
+      "heading": "bbb(self)",
+      "bodyText": "    return self.aaa ()",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "ccc",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "selection": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 9
+        }
+      ],
+      "head": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 0
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "source": "def ccc(self):\n    return self.aaa ()",
+      "heading": "ccc(self)",
+      "bodyText": "    return self.aaa ()",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "foo2",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 39,
+          "character": 2
+        },
+        {
+          "line": 41,
+          "character": 12
+        }
+      ],
+      "selection": [
+        {
+          "line": 39,
+          "character": 6
+        },
+        {
+          "line": 39,
+          "character": 10
+        }
+      ],
+      "head": [
+        {
+          "line": 39,
+          "character": 6
+        },
+        {
+          "line": 40,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 41,
+          "character": 0
+        },
+        {
+          "line": 41,
+          "character": 12
+        }
+      ],
+      "source": "def foo2(param1,\n           param2):\n    return 3",
+      "heading": "foo2(param1,\n           param2)",
+      "bodyText": "    return 3",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "breaking_parameters",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 67,
+          "character": 6
+        }
+      ],
+      "selection": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 64,
+          "character": 23
+        }
+      ],
+      "head": [
+        {
+          "line": 64,
+          "character": 4
+        },
+        {
+          "line": 66,
+          "character": 32
+        }
+      ],
+      "body": [
+        {
+          "line": 67,
+          "character": 0
+        },
+        {
+          "line": 67,
+          "character": 6
+        }
+      ],
+      "source": "def breaking_parameters (param1,\n                         param2,\n                         param3):\n  pass",
+      "heading": "breaking_parameters (param1,\n                         param2,\n                         param3)",
+      "bodyText": "  pass",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "selection": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 45,
+          "character": 8
+        },
+        {
+          "line": 45,
+          "character": 18
+        }
+      ],
+      "body": [
+        {
+          "line": 46,
+          "character": 0
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "source": "def read(self):\n        return config",
+      "heading": "read(self)",
+      "bodyText": "        return config",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "limit",
+      "kind": 12,
+      "rawRange": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 16
+        }
+      ],
+      "selection": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 11
+        }
+      ],
+      "head": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 13
+        }
+      ],
+      "body": [
+        {
+          "line": 4,
+          "character": 14
+        },
+        {
+          "line": 4,
+          "character": 16
+        }
+      ],
+      "source": "limit = 42",
+      "heading": "limit =",
+      "bodyText": "42",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "config",
+      "kind": 12,
+      "rawRange": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 28
+        }
+      ],
+      "selection": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 8,
+          "character": 15
+        },
+        {
+          "line": 8,
+          "character": 28
+        }
+      ],
+      "source": "config = { value: 42 }",
+      "heading": "config =",
+      "bodyText": "{ value: 42 }",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "kind": 10,
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "head": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "body": [
+        {
+          "line": 13,
+          "character": 0
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "source": "interface Reader {\n  read(): void;\n}",
+      "heading": "Reader",
+      "bodyText": "  read(): void;",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 14
+        }
+      ],
+      "body": null,
+      "source": "read(): void;",
+      "heading": "read(): void",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 14
+        }
+      ],
+      "body": null,
+      "source": "read(): void;",
+      "heading": "read(): void",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Base",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 18,
+          "character": 15
+        },
+        {
+          "line": 18,
+          "character": 19
+        }
+      ],
+      "head": [
+        {
+          "line": 18,
+          "character": 15
+        },
+        {
+          "line": 18,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 19,
+          "character": 0
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "source": "abstract class Base {\n  abstract run(): string;\n}",
+      "heading": "Base",
+      "bodyText": "  abstract run(): string;",
+      "declarationOnly": false,
+      "attributes": [
+        "abstract"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "selection": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 14
+        }
+      ],
+      "head": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 24
+        }
+      ],
+      "body": null,
+      "source": "abstract run(): string;",
+      "heading": "run(): string",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": [
+        "abstract"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "selection": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 14
+        }
+      ],
+      "head": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 24
+        }
+      ],
+      "body": null,
+      "source": "abstract run(): string;",
+      "heading": "run(): string",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": [
+        "abstract"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 30
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 0
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "source": "class Worker implements Reader {\n  read(): void { console.log(\"implemented\"); }\n  empty(): void {}\n}",
+      "heading": "Worker implements Reader",
+      "bodyText": "  read(): void { console.log(\"implemented\"); }\n  empty(): void {}",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 17
+        },
+        {
+          "line": 25,
+          "character": 44
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }",
+      "heading": "read(): void",
+      "bodyText": "console.log(\"implemented\");",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 26,
+          "character": 17
+        },
+        {
+          "line": 26,
+          "character": 17
+        }
+      ],
+      "source": "empty(): void {}",
+      "heading": "empty(): void",
+      "bodyText": "",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 17
+        },
+        {
+          "line": 25,
+          "character": 44
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }",
+      "heading": "read(): void",
+      "bodyText": "console.log(\"implemented\");",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 26,
+          "character": 17
+        },
+        {
+          "line": 26,
+          "character": 17
+        }
+      ],
+      "source": "empty(): void {}",
+      "heading": "empty(): void",
+      "bodyText": "",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "later",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 31,
+          "character": 9
+        },
+        {
+          "line": 31,
+          "character": 14
+        }
+      ],
+      "head": [
+        {
+          "line": 31,
+          "character": 9
+        },
+        {
+          "line": 31,
+          "character": 16
+        }
+      ],
+      "body": [
+        {
+          "line": 32,
+          "character": 0
+        },
+        {
+          "line": 32,
+          "character": 11
+        }
+      ],
+      "source": "function later() {\n  return 7;\n}",
+      "heading": "later()",
+      "bodyText": "  return 7;",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "kind": 10,
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "head": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "body": [
+        {
+          "line": 13,
+          "character": 0
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "source": "interface Reader {\n  read(): void;\n}",
+      "heading": "Reader",
+      "bodyText": "  read(): void;",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 14
+        }
+      ],
+      "body": null,
+      "source": "read(): void;",
+      "heading": "read(): void",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 14
+        }
+      ],
+      "body": null,
+      "source": "read(): void;",
+      "heading": "read(): void",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 30
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 0
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "source": "class Worker implements Reader {\n  read(): void { console.log(\"implemented\"); }\n  empty(): void {}\n}",
+      "heading": "Worker implements Reader",
+      "bodyText": "  read(): void { console.log(\"implemented\"); }\n  empty(): void {}",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 17
+        },
+        {
+          "line": 25,
+          "character": 44
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }",
+      "heading": "read(): void",
+      "bodyText": "console.log(\"implemented\");",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 26,
+          "character": 17
+        },
+        {
+          "line": 26,
+          "character": 17
+        }
+      ],
+      "source": "empty(): void {}",
+      "heading": "empty(): void",
+      "bodyText": "",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 17
+        },
+        {
+          "line": 25,
+          "character": 44
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }",
+      "heading": "read(): void",
+      "bodyText": "console.log(\"implemented\");",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 26,
+          "character": 17
+        },
+        {
+          "line": 26,
+          "character": 17
+        }
+      ],
+      "source": "empty(): void {}",
+      "heading": "empty(): void",
+      "bodyText": "",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "kind": 10,
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "head": [
+        {
+          "line": 12,
+          "character": 10
+        },
+        {
+          "line": 12,
+          "character": 16
+        }
+      ],
+      "body": [
+        {
+          "line": 13,
+          "character": 0
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "source": "interface Reader {\n  read(): void;\n}",
+      "heading": "Reader",
+      "bodyText": "  read(): void;",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "selection": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 14
+        }
+      ],
+      "body": null,
+      "source": "read(): void;",
+      "heading": "read(): void",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Base",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 18,
+          "character": 15
+        },
+        {
+          "line": 18,
+          "character": 19
+        }
+      ],
+      "head": [
+        {
+          "line": 18,
+          "character": 15
+        },
+        {
+          "line": 18,
+          "character": 19
+        }
+      ],
+      "body": [
+        {
+          "line": 19,
+          "character": 0
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "source": "abstract class Base {\n  abstract run(): string;\n}",
+      "heading": "Base",
+      "bodyText": "  abstract run(): string;",
+      "declarationOnly": false,
+      "attributes": [
+        "abstract"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "selection": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 14
+        }
+      ],
+      "head": [
+        {
+          "line": 19,
+          "character": 11
+        },
+        {
+          "line": 19,
+          "character": 24
+        }
+      ],
+      "body": null,
+      "source": "abstract run(): string;",
+      "heading": "run(): string",
+      "bodyText": null,
+      "declarationOnly": true,
+      "attributes": [
+        "abstract"
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "kind": 4,
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 12
+        }
+      ],
+      "head": [
+        {
+          "line": 24,
+          "character": 6
+        },
+        {
+          "line": 24,
+          "character": 30
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 0
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "source": "class Worker implements Reader {\n  read(): void { console.log(\"implemented\"); }\n  empty(): void {}\n}",
+      "heading": "Worker implements Reader",
+      "bodyText": "  read(): void { console.log(\"implemented\"); }\n  empty(): void {}",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "selection": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 6
+        }
+      ],
+      "head": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 14
+        }
+      ],
+      "body": [
+        {
+          "line": 25,
+          "character": 17
+        },
+        {
+          "line": 25,
+          "character": 44
+        }
+      ],
+      "source": "read(): void { console.log(\"implemented\"); }",
+      "heading": "read(): void",
+      "bodyText": "console.log(\"implemented\");",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "kind": 5,
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "selection": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 7
+        }
+      ],
+      "head": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 15
+        }
+      ],
+      "body": [
+        {
+          "line": 26,
+          "character": 17
+        },
+        {
+          "line": 26,
+          "character": 17
+        }
+      ],
+      "source": "empty(): void {}",
+      "heading": "empty(): void",
+      "bodyText": "",
+      "declarationOnly": false,
+      "attributes": []
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "later",
+      "kind": 11,
+      "rawRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ],
+      "selection": [
+        {
+          "line": 31,
+          "character": 9
+        },
+        {
+          "line": 31,
+          "character": 14
+        }
+      ],
+      "head": [
+        {
+          "line": 31,
+          "character": 9
+        },
+        {
+          "line": 31,
+          "character": 16
+        }
+      ],
+      "body": [
+        {
+          "line": 32,
+          "character": 0
+        },
+        {
+          "line": 32,
+          "character": 11
+        }
+      ],
+      "source": "function later() {\n  return 7;\n}",
+      "heading": "later()",
+      "bodyText": "  return 7;",
+      "declarationOnly": false,
+      "attributes": []
+    }
+  ],
+  "outlines": [
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "build",
+      "totalRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "simple",
+      "totalRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "async_build",
+      "totalRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Base",
+      "totalRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "placeholder",
+      "totalRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "doc_only",
+      "totalRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "later",
+      "totalRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "identity",
+      "totalRange": [
+        {
+          "line": 4,
+          "character": 0
+        },
+        {
+          "line": 5,
+          "character": 22
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 4,
+          "character": 0
+        },
+        {
+          "line": 5,
+          "character": 22
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "build",
+      "totalRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 16,
+          "character": 16
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "simple",
+      "totalRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 29,
+          "character": 0
+        },
+        {
+          "line": 30,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "async_build",
+      "totalRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 36,
+          "character": 0
+        },
+        {
+          "line": 38,
+          "character": 16
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 48,
+          "character": 4
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 44,
+          "character": 0
+        },
+        {
+          "line": 49,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 56,
+          "character": 4
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "Base",
+      "totalRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 55,
+          "character": 0
+        },
+        {
+          "line": 58,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "placeholder",
+      "totalRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 65,
+          "character": 7
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "doc_only",
+      "totalRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 71,
+          "character": 0
+        },
+        {
+          "line": 72,
+          "character": 75
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "later",
+      "totalRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 78,
+          "character": 0
+        },
+        {
+          "line": 79,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "aaa",
+      "totalRange": [
+        {
+          "line": 0,
+          "character": 0
+        },
+        {
+          "line": 1,
+          "character": 10
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 0,
+          "character": 0
+        },
+        {
+          "line": 1,
+          "character": 10
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "aaa",
+      "totalRange": [
+        {
+          "line": 17,
+          "character": 2
+        },
+        {
+          "line": 18,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 17,
+          "character": 2
+        },
+        {
+          "line": 18,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "bbb",
+      "totalRange": [
+        {
+          "line": 21,
+          "character": 2
+        },
+        {
+          "line": 22,
+          "character": 22
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 21,
+          "character": 2
+        },
+        {
+          "line": 22,
+          "character": 22
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "ccc",
+      "totalRange": [
+        {
+          "line": 24,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "Test",
+      "totalRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 15,
+          "character": 0
+        },
+        {
+          "line": 25,
+          "character": 22
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "foo2",
+      "totalRange": [
+        {
+          "line": 39,
+          "character": 2
+        },
+        {
+          "line": 41,
+          "character": 12
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 39,
+          "character": 2
+        },
+        {
+          "line": 41,
+          "character": 12
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/xx_manual_tests.py",
+      "name": "breaking_parameters",
+      "totalRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 67,
+          "character": 6
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 64,
+          "character": 0
+        },
+        {
+          "line": 67,
+          "character": 6
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 45,
+          "character": 4
+        },
+        {
+          "line": 46,
+          "character": 21
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "limit",
+      "totalRange": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 16
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 4,
+          "character": 6
+        },
+        {
+          "line": 4,
+          "character": 16
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "config",
+      "totalRange": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 28
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 8,
+          "character": 6
+        },
+        {
+          "line": 8,
+          "character": 28
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "totalRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Base",
+      "totalRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "later",
+      "totalRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "totalRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 13,
+          "character": 2
+        },
+        {
+          "line": 13,
+          "character": 15
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Reader",
+      "totalRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 12,
+          "character": 0
+        },
+        {
+          "line": 14,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "run",
+      "totalRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 19,
+          "character": 2
+        },
+        {
+          "line": 19,
+          "character": 25
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Base",
+      "totalRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 18,
+          "character": 0
+        },
+        {
+          "line": 20,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "read",
+      "totalRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 25,
+          "character": 2
+        },
+        {
+          "line": 25,
+          "character": 46
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "empty",
+      "totalRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 26,
+          "character": 2
+        },
+        {
+          "line": 26,
+          "character": 18
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "Worker",
+      "totalRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 24,
+          "character": 0
+        },
+        {
+          "line": 27,
+          "character": 1
+        }
+      ]
+    },
+    {
+      "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+      "name": "later",
+      "totalRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ],
+      "rawRange": [
+        {
+          "line": 31,
+          "character": 0
+        },
+        {
+          "line": 33,
+          "character": 1
+        }
+      ]
+    }
+  ],
+  "received": [
+    {
+      "type": "outline_requestByFilePosition",
+      "requestId": "a0",
+      "data": {
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+        "cursorStart": {
+          "line": 45,
+          "character": 8
+        },
+        "cursorEnd": {
+          "line": 45,
+          "character": 18
+        }
+      }
+    },
+    {
+      "type": "vp_host_openRawSource",
+      "requestId": "a1",
+      "data": {
+        "CLASS_TYPE": "Symbol",
+        "language": "python",
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+        "parts": [
+          {
+            "CLASS_TYPE": "Text",
+            "language": "python",
+            "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+            "parts": [],
+            "displayTextRange": [
+              {
+                "line": 46,
+                "character": 0
+              },
+              {
+                "line": 46,
+                "character": 21
+              }
+            ],
+            "displayText": "        return config"
+          }
+        ],
+        "displayTextRange": [
+          {
+            "line": 45,
+            "character": 8
+          },
+          {
+            "line": 45,
+            "character": 18
+          }
+        ],
+        "kind": "method",
+        "totalRange": [
+          {
+            "line": 45,
+            "character": 4
+          },
+          {
+            "line": 46,
+            "character": 21
+          }
+        ],
+        "attributes": [],
+        "declarationOnly": false,
+        "displayText": "read(self)"
+      }
+    },
+    {
+      "type": "vp_host_openRawSource",
+      "requestId": "a2",
+      "data": {
+        "CLASS_TYPE": "Symbol",
+        "language": "python",
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+        "parts": [
+          {
+            "CLASS_TYPE": "Text",
+            "language": "python",
+            "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py",
+            "parts": [],
+            "displayTextRange": [
+              {
+                "line": 46,
+                "character": 0
+              },
+              {
+                "line": 46,
+                "character": 21
+              }
+            ],
+            "displayText": "        return config"
+          }
+        ],
+        "displayTextRange": [
+          {
+            "line": 45,
+            "character": 8
+          },
+          {
+            "line": 45,
+            "character": 18
+          }
+        ],
+        "kind": "method",
+        "totalRange": [
+          {
+            "line": 45,
+            "character": 4
+          },
+          {
+            "line": 46,
+            "character": 21
+          }
+        ],
+        "attributes": [],
+        "declarationOnly": false,
+        "displayText": "read(self)"
+      }
+    },
+    {
+      "type": "outline_requestByFilePosition",
+      "requestId": "a0",
+      "data": {
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+        "cursorStart": {
+          "line": 13,
+          "character": 2
+        },
+        "cursorEnd": {
+          "line": 13,
+          "character": 14
+        }
+      }
+    },
+    {
+      "type": "outline_requestByFilePosition",
+      "requestId": "a1",
+      "data": {
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+        "cursorStart": {
+          "line": 25,
+          "character": 2
+        },
+        "cursorEnd": {
+          "line": 25,
+          "character": 14
+        }
+      }
+    },
+    {
+      "type": "outline_requestByFilePosition",
+      "requestId": "a2",
+      "data": {
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+        "cursorStart": {
+          "line": 26,
+          "character": 2
+        },
+        "cursorEnd": {
+          "line": 26,
+          "character": 15
+        }
+      }
+    },
+    {
+      "type": "vp_host_openRawSource",
+      "requestId": "a3",
+      "data": {
+        "CLASS_TYPE": "Symbol",
+        "language": "typescript",
+        "uri": "file:///Users/nguyencaocuong/Library/Mobile%20Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts",
+        "parts": [],
+        "displayTextRange": [
+          {
+            "line": 26,
+            "character": 2
+          },
+          {
+            "line": 26,
+            "character": 15
+          }
+        ],
+        "kind": "method",
+        "totalRange": [
+          {
+            "line": 26,
+            "character": 2
+          },
+          {
+            "line": 26,
+            "character": 18
+          }
+        ],
+        "attributes": [],
+        "declarationOnly": false,
+        "displayText": "empty(): void"
+      }
+    }
+  ],
+  "typescriptVisibleStates": [
+    {
+      "title": "read(): void",
+      "body": "Declaration only — no body",
+      "status": true
+    },
+    {
+      "title": "Worker implements Reader",
+      "body": "read(): voidempty(): void",
+      "status": false
+    },
+    {
+      "title": "read(): void",
+      "body": "console.log(\"implemented\");",
+      "status": false
+    },
+    {
+      "title": "empty(): void",
+      "body": "",
+      "status": false
+    },
+    {
+      "title": "declaration_boundaries.ts",
+      "body": "// Manual declaration-boundary fixture: analyze in VS Code; do not execute.// Keep declarations module-scoped alongside the other compiled fixture files.export {};const limit = 42;console.log(\"AFTER limit\");const config = { value: 42 };console.log(\"AFTER config\");Reader🠖console.log(\"AFTER Reader\");Base🠖console.log(\"AFTER Base\");Worker implements Reader🠖console.log(\"AFTER Worker\");later()🠖console.log(\"AFTER later\");",
+      "status": false
+    },
+    {
+      "title": "Reader",
+      "body": "read(): voidDeclaration only — no body",
+      "status": false
+    }
+  ]
+}

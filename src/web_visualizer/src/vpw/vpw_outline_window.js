@@ -1,5 +1,3 @@
-const { title } = require("process");
-
 require ("../vgf/vgf_window_tiled.js");
 require ("../vgf/vgf_expandable_with_title.js");
 require ("../vgf/vgf_button_toggle.js");
@@ -10,7 +8,6 @@ require ("../utils/misc_utils.js");
 require ("../vgf/vgf_menu.js");
 
 require ("vpw_view_entity_window.js");
-
 
 
 
@@ -45,9 +42,14 @@ const VpwOutlineWindow = (function(viewEntity_outline)
           let tsOutlineSymbol = tsOutlineRange;
 
           {
-            // put all attributes in metatype information
+            // Keep multiline decorators out of the one-line metadata label.
             for (let i = 0; i<tsOutlineSymbol.attributes.length;++i)
-              metatype += tsOutlineSymbol.attributes[i].kind + " ";
+            {
+              let attribute = tsOutlineSymbol.attributes[i].kind;
+              let firstLine = attribute.split(/\r?\n/, 1)[0].trim();
+              metatype += firstLine + (attribute.includes("\n") ? "…" : "") + " ";
+              quickhelp += attribute + "\n";
+            }
 
             if (metatype.trim() == "")
               metatype += tsOutlineSymbol.kind;
@@ -119,6 +121,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
       node = document.createElement ("div");
       node.classList.add ("Window_Titlebar_MetatypeDiv");
       node.innerText = metatype;
+      node.title = quickhelp;
       root.appendChild (node);
     }
     {
@@ -133,6 +136,12 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
 
   self._vp_fillClientarea = function(window, root, tsOutlineSymbol){
+    if (tsOutlineSymbol.CLASS_TYPE === "Symbol" && tsOutlineSymbol.declarationOnly === true)
+    {
+      root.style.display = "none";
+      return;
+    }
+
     for (let i=0; i<tsOutlineSymbol.parts.length; ++i)
     {
       let part = tsOutlineSymbol.parts[i];

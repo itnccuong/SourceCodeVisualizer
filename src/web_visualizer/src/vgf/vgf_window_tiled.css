@@ -64,6 +64,10 @@
   position: absolute;
   top: 4px;
   left: 22px;
+  right: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color:var(--source-code-entity-class);
 }
 
