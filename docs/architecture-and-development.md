@@ -305,6 +305,32 @@ The custom bundler starts at `web_visualizer/src/main.js` and follows reachable 
 - `src/package.json` is a separate packaging/release orchestrator. None of the five root scripts invokes it. Its `compile` path packages the extension and copies release artifacts, unlike the daily development build.
 - The extension's `publish` script runs `vsce package` to create a `.vsix`; the name does not mean that command uploads to the Marketplace. Its pre/post hooks perform release work.
 
+### Local Extension Packaging and Installation
+
+To run this repository in standard VS Code (outside of an Extension Development Host), package the extension as a local `.vsix` and install it.
+
+#### Local Extension Identity
+- **Identifier**: `visualprogrammingx.sourcecodevisualizer-local` (configured in `src/vscodeextension/package.json`).
+- **Display Name**: `Source Code Visualizer (Local)` (visible in the Extensions view).
+- **Commands**: Contributes `Visual Programming: Visualize This (Local)` and `Visualize This (Local)`. Command IDs use `code-visualizerzer-local.*` to prevent command collisions if the upstream Marketplace extension is installed side-by-side.
+
+#### Packaging and Installing
+From the repository root:
+
+```bash
+# 1. Build dependencies, compile TypeScript, and package VSIX
+npm --prefix src/vscodeextension run publish
+
+# 2. Install or overwrite the extension in VS Code
+code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force
+```
+
+#### Iteration Loop After Code Changes
+Source file modifications do not update the installed extension automatically. When code changes:
+1. Run the build/package script (`npm --prefix src/vscodeextension run publish`).
+2. Re-install using `--force` (`code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force`). There is no need to uninstall first; `--force` replaces the installed copy in place.
+3. Reload the VS Code window (`Cmd+Shift+P` / `Ctrl+Shift+P` → `Developer: Reload Window`).
+
 ## III. Component and Generated-File Map
 
 ### Layer 1 — VS Code UI and Development Controls

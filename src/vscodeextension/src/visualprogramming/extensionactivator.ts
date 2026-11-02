@@ -17,12 +17,12 @@ export function activate(context: vscode.ExtensionContext)
   //  different wording depending on where you are
   {
     // visualize symbol at cursor position
-    register (c, "code-visualizerzer.visualize",                     () => {tab.visualize ();});
-    register (c, "code-visualizerzer.visualize.fromContextMenu",     () => {tab.visualize ();});
+    register (c, "code-visualizerzer-local.visualize",                     () => {tab.visualize ();});
+    register (c, "code-visualizerzer-local.visualize.fromContextMenu",     () => {tab.visualize ();});
 
     // visualize complete file
-    register (c, "code-visualizerzer.visualizeFile",                 () => {tab.visualizeCurrentFile ();});
-    register (c, "code-visualizerzer.visualizeFile.fromContextMenu", (uri: vscode.Uri) => {tab.visualizeFile (uri);});
+    register (c, "code-visualizerzer-local.visualizeFile",                 () => {tab.visualizeCurrentFile ();});
+    register (c, "code-visualizerzer-local.visualizeFile.fromContextMenu", (uri: vscode.Uri) => {tab.visualizeFile (uri);});
   }
 
   // return context for auto tests
