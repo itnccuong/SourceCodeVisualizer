@@ -32,7 +32,8 @@ const VpwWorld = (function()
    **/
   self.visualizeMessageBox = function(viewEntity_message){
     let outlineWindow = new VpwMessageWindow (viewEntity_message);
-    self.vp_widget_add (outlineWindow);
+    self.vp_addWindow (outlineWindow);
+    outlineWindow.vp_fitToContent();
     return outlineWindow;
   }
 
@@ -45,6 +46,7 @@ const VpwWorld = (function()
     let outlineWindow = VpwOutlineWindow (viewEntity);
 
     self.vp_addWindow (outlineWindow);
+    outlineWindow.vp_fitToContent();
 
     return outlineWindow;
   }

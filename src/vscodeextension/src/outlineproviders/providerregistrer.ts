@@ -25,7 +25,7 @@ export function activate(vscode: any)
     registerLspExtender (vscode, "Cpp",        new VpLspExtenderCurlyBraces ("cpp"));
     registerLspExtender (vscode, "C",          new VpLspExtenderCurlyBraces ("c"));
     registerLspExtender (vscode, "Php",        new VpLspExtenderCurlyBraces ("Php"));
-    registerLspExtender (vscode, "Javascript", new VpLspExtenderCurlyBraces ("javascript"));
+    registerLspExtender (vscode, "Javascript", new VpLspExtenderTypeScript ("javascript"));
     registerLspExtender (vscode, "Java",       new VpLspExtenderCurlyBraces ("java"));
     registerLspExtender (vscode, "Python",     new VpLspExtenderPython ());
   }

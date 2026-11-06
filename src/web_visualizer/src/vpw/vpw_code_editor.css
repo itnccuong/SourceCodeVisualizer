@@ -6,29 +6,36 @@
 
   margin-left: 5px;
   margin-bottom: 5px;
-  width:calc(100% - 10px);
+  box-sizing: border-box;
+  width: max-content;
+  min-width: calc(100% - 10px);
 
   white-space: pre;
 
   padding-right: 3px;
+  padding-left: calc(var(--vp-line-number-digits, 2) * 1ch + 12px);
   padding-top: 7px;
   padding-bottom: 7px;
 
   border-width: 0px;
   /* border: 0px solid black; */
 
-  overflow: auto; /* <=> scroll + hidden*/
-
   counter-reset: vpwcodeeditorline;
 }
 
-.VpwCodeEditor div:before {
+.VpwCodeEditor > div::before {
   content: counter(vpwcodeeditorline);
   font-size: 80%;
   color: var(--editor-line-numbers);
-  vertical-align: middle;
+  position: absolute;
+  right: calc(100% + 12px);
+  width: calc(var(--vp-line-number-digits, 2) * 1ch);
+  text-align: right;
+  user-select: none;
+  pointer-events: none;
 }
 
-.VpwCodeEditor div{
+.VpwCodeEditor > div{
   counter-increment: vpwcodeeditorline;
+  position: relative;
 }

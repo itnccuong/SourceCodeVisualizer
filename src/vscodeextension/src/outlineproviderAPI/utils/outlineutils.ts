@@ -8,11 +8,19 @@ import * as Outline from '../SymbolDefinition';
 import * as vscode from 'vscode'
 import * as utils from '../../utils';
 import { VpOutlineProvider } from '../outlineprovider';
-import { VpLspExtenderProvider } from '../lspextenderprovider';
+import { SymbolExtractionContext, VpLspExtenderProvider } from '../lspextenderprovider';
 import { DocumentSymbolX } from './documentsymbolx';
 
 export class OutlineUtils {
   private static readonly symbolParents = new WeakMap<vscode.DocumentSymbol, vscode.DocumentSymbol>();
+
+  private static _getSymbolExtractionContext(symbol: vscode.DocumentSymbol): SymbolExtractionContext {
+    const ancestors: vscode.DocumentSymbol[] = [];
+    for (let parent = this.symbolParents.get(symbol); parent; parent = this.symbolParents.get(parent)) {
+      ancestors.push(parent);
+    }
+    return {ancestors};
+  }
 
 
   /**
@@ -188,9 +196,29 @@ export class OutlineUtils {
                       position: vscode.Position)
                       : Promise<null | DocumentSymbolX[]>
   {
-    // NOTE: keep `provider` in interface, in case we find out,
-    //       that we need it for this processing here!
-
+    // Messages from the webview contain structural positions, not API instances.
+    position = new vscode.Position(position.line, position.character);
+    // JavaScript assignment symbols can select the RHS callable rather than
+    // their displayed receiver. An exact declaration selection is already the
+    // destination; asking for its definition can redirect to the receiver local.
+    if (provider.getLanguageStr() === 'javascript') {
+      const symbols = await this._getFlatDocumentSymbols(uri);
+      const document = await vscode.workspace.openTextDocument(uri);
+      const candidates = symbols.filter(symbol => symbol.range.start.compareTo(position) <= 0
+          && symbol.range.end.compareTo(position) > 0)
+        .sort((a, b) => (document.offsetAt(a.range.end) - document.offsetAt(a.range.start))
+          - (document.offsetAt(b.range.end) - document.offsetAt(b.range.start)));
+      for (const declaration of candidates) {
+        if (declaration.selectionRange.start.isEqual(position) || declaration.range.start.isEqual(position)) {
+          return [new DocumentSymbolX(declaration, uri)];
+        }
+        const information = provider.getLanguageSpecificSymbolInformation(
+          document, declaration, this._getSymbolExtractionContext(declaration));
+        if (information.definitionPosition?.isEqual(position)) {
+          return [new DocumentSymbolX(declaration, uri)];
+        }
+      }
+    }
     let locations = await this.vscode_executeDefinitionProvider (uri, position);
 
     let documentSymbolLocations: DocumentSymbolX[] = []
@@ -239,29 +267,26 @@ export class OutlineUtils {
    **/
   private static _provideOutlineForRange(document: vscode.TextDocument,
                                         range: vscode.Range,
-                                        documentSymbolsInRange: vscode.DocumentSymbol[],
+                                        documentSymbolsInRange: readonly vscode.DocumentSymbol[],
                                         provider: VpLspExtenderProvider)
     : Outline.OutlineRange[]
   {
     const children = documentSymbolsInRange.slice().sort((a, b) =>
       a.range.start.compareTo(b.range.start) || a.range.end.compareTo(b.range.end));
-    const parts: Outline.OutlineRange[] = [];
-    let cursor = range.start;
-    const addText = (end: vscode.Position) => {
-      if (cursor.isEqual(end)) { return; }
-      const text = new Outline.Text();
-      text.language = provider.getLanguageStr();
-      text.uri = document.uri.toString();
-      text.displayTextRange = new vscode.Range(cursor, end);
-      if (this._shouldAddTextOutline(document, text)) { parts.push(text); }
-    };
+    const included: vscode.DocumentSymbol[] = [];
+    let rawCursor = range.start;
     for (const child of children) {
-      // These symbols remain ordinary source, as in the generic adapter.
-      if (child.kind === vscode.SymbolKind.Property
+      if (child.range.end.isBeforeOrEqual(range.start) || child.range.start.isAfterOrEqual(range.end)) {
+        continue;
+      }
+      if ((child.kind === vscode.SymbolKind.Property
           || child.kind === vscode.SymbolKind.Field
           || child.kind === vscode.SymbolKind.Variable
-          || child.kind === vscode.SymbolKind.Constant
-          || child.kind === vscode.SymbolKind.String
+          || child.kind === vscode.SymbolKind.Constant)
+          && !provider.isDeclarationSymbol?.(document, child, this._getSymbolExtractionContext(child))) {
+        continue;
+      }
+      if (child.kind === vscode.SymbolKind.String
           || child.kind === vscode.SymbolKind.Number
           || child.kind === vscode.SymbolKind.Boolean
           || child.kind === vscode.SymbolKind.Array
@@ -275,15 +300,35 @@ export class OutlineUtils {
           || child.kind === vscode.SymbolKind.Function && child.name.indexOf(") callback") > -1) {
         continue;
       }
-      if (child.range.end.isBeforeOrEqual(range.start) || child.range.start.isAfterOrEqual(range.end)) {
-        continue;
-      }
-      if (!range.contains(child.range) || child.range.start.isBefore(cursor)) {
+      if (!range.contains(child.range) || child.range.start.isBefore(rawCursor)) {
         throw new Error('Overlapping or out-of-bounds declaration ranges cannot be displayed safely.');
       }
-      addText(child.range.start);
-      parts.push(this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(child, document.uri), provider));
-      cursor = child.range.end;
+      included.push(child);
+      rawCursor = child.range.end;
+    }
+    // Validate raw provider ranges before extraction can expand a displayed declaration.
+    const outlines = included.map(child =>
+      this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(child, document.uri), provider));
+    outlines.sort((a, b) => a.totalRange!.start.compareTo(b.totalRange!.start)
+      || a.totalRange!.end.compareTo(b.totalRange!.end));
+    const parts: Outline.OutlineRange[] = [];
+    let cursor = range.start;
+    const addText = (end: vscode.Position) => {
+      if (cursor.isEqual(end)) { return; }
+      const text = new Outline.Text();
+      text.language = provider.getLanguageStr();
+      text.uri = document.uri.toString();
+      text.displayTextRange = new vscode.Range(cursor, end);
+      if (this._shouldAddTextOutline(document, text)) { parts.push(text); }
+    };
+    for (const outline of outlines) {
+      const childRange = outline.totalRange!;
+      if (!range.contains(childRange) || childRange.start.isBefore(cursor)) {
+        throw new Error('Overlapping or out-of-bounds declaration ranges cannot be displayed safely.');
+      }
+      addText(childRange.start);
+      parts.push(outline);
+      cursor = childRange.end;
     }
     addText(range.end);
     return parts;
@@ -420,19 +465,19 @@ export class OutlineUtils {
     symbol.uri = uri.toString ();
 
     for (const child of docSymbol.children) { this.symbolParents.set(child, docSymbol); }
-    const ancestors: vscode.DocumentSymbol[] = [];
-    for (let parent = this.symbolParents.get(docSymbol); parent; parent = this.symbolParents.get(parent)) {
-      ancestors.push(parent);
-    }
-    const information = provider.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors});
+    const information = provider.getLanguageSpecificSymbolInformation(
+      document, docSymbol, this._getSymbolExtractionContext(docSymbol));
+    const children = information.children ?? docSymbol.children;
+    for (const child of children) { this.symbolParents.set(child, docSymbol); }
     symbol.totalRange = information.rangeDeclaration ?? docSymbol.range;
     symbol.displayTextRange = information.rangeHead;
     symbol.attributes = information.attributes;
     symbol.declarationOnly = information.declarationOnly;
+    symbol.definitionPosition = information.definitionPosition;
     symbol.parts = information.rangeBody === null || information.rangeBody.isEmpty
       ? []
       : this._provideOutlineForRange(
-          document, information.rangeBody, docSymbol.children, provider);
+          document, information.rangeBody, children, provider);
 
     return symbol;
   }

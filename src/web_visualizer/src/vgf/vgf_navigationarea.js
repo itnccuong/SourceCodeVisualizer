@@ -65,21 +65,33 @@ const VgfNavigationArea = (function(world)
 function _setup_mouseWheelScrolling(interactionArea,
                                     scrolledObject)
 {
+  // Keep a canvas-started touchpad gesture on the canvas when it crosses a box.
+  const gesture = scrolledObject._vp_wheelGesture = {lastTime: -Infinity, panning: false};
+  interactionArea.addEventListener("wheel", e =>
+  {
+    const now = performance.now();
+    if (now - gesture.lastTime > 180 || e.ctrlKey || e.altKey || e.metaKey)
+      gesture.panning = false;
+    gesture.lastTime = now;
+  }, {capture: true, passive: true});
   interactionArea.addEventListener ("wheel", e =>
   {
     // vertical scrolling
     if (!e.altKey  && !e.ctrlKey &&
         !e.metaKey && !e.shiftKey)
     {
-      scrolledObject.style.top  = scrolledObject.offsetTop - (e.deltaY) + "px";
-      scrolledObject.style.left  = scrolledObject.offsetLeft - (e.deltaX) + "px";
+      gesture.panning = true;
+      scrolledObject.style.top = (parseFloat(scrolledObject.style.top) || 0) - e.deltaY + "px";
+      scrolledObject.style.left = (parseFloat(scrolledObject.style.left) || 0) - e.deltaX + "px";
     }
 
     // horizontal scrolling
     if (!e.altKey  && !e.ctrlKey &&
         !e.metaKey &&  e.shiftKey)
     {
-      scrolledObject.style.left = scrolledObject.offsetLeft - (e.deltaY) + "px";
+      gesture.panning = true;
+      const delta = e.deltaX || e.deltaY;
+      scrolledObject.style.left = (parseFloat(scrolledObject.style.left) || 0) - delta + "px";
     }
   });
 }
@@ -103,67 +115,34 @@ function _setup_scaleViewpoint(interactionArea, scalingObject)
   interactionArea.addEventListener ("wheel", e => {
     e.preventDefault();
     zoom (e, scalingObject);
-  });
+  }, {passive: false});
 
 }
 
 
 function zoom (mouseevent, scalingObject)
 {
-  var _scaleObject = function(obj, amount)
+  const e = mouseevent;
+  if ((!e.altKey && e.ctrlKey && !e.metaKey && !e.shiftKey)
+   || (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey))
   {
-    obj.vp_scale += amount;
-    node_scale (obj, obj.vp_scale);
-  }
+    if (!Number.isFinite(e.deltaY)) return;
+    const MIN_SCALE = 0.2;
+    const MAX_SCALE = 3;
+    const oldScale = scalingObject.vp_scale;
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldScale - e.deltaY * 0.001));
+    if (newScale === oldScale) return;
 
-  let e = mouseevent;
+    const oldRect = scalingObject.getBoundingClientRect();
+    const worldX = (e.clientX - oldRect.left) / oldScale;
+    const worldY = (e.clientY - oldRect.top) / oldScale;
+    scalingObject.vp_scale = newScale;
+    node_scale(scalingObject, newScale);
 
-  if ((!e.altKey  &&  e.ctrlKey && !e.metaKey && !e.shiftKey)
-   || ( e.altKey  && !e.ctrlKey && !e.metaKey && !e.shiftKey))
-  {
-    // NOTE: This zooming doesn't work perfectly, but it's acceptable.
-
-    let mouseX = e.x;
-    let mouseY = e.y;
-
-    // get old values
-    let rect_old = scalingObject.getBoundingClientRect ();
-    let obj_centerX_old = (rect_old.left + (rect_old.width/2));
-    let obj_centerY_old = (rect_old.top  + (rect_old.height/2));
-
-    let diffX_old = (mouseX) - obj_centerX_old;
-    let diffY_old = (mouseY) - obj_centerY_old;
-
-    // determine how "strong" we want to scale
-    let scaleWeight = 0.001;
-    {
-      // high precision scroll wheel or touchpad
-      if(e.delteMode === 0)
-        scaleWeight = 0.01;
-
-      // traditional scroll wheel
-      if(e.delteMode === 1)
-        scaleWeight = 0.001;
-    }
-
-    // do scaling
-    let scaleAmount = -(e.deltaY*scaleWeight);
-    _scaleObject (scalingObject, scaleAmount);
-
-
-    // get new values
-    let rect_new = scalingObject.getBoundingClientRect ();
-    let diffX_new = diffX_old * (1+scaleAmount);
-    let diffY_new = diffY_old * (1+scaleAmount);
-
-
-    // move scalingObject so that mouse location
-    //  seemingly didn't change
-    let diffX = diffX_new - diffX_old;
-    let diffY = diffY_new - diffY_old;
-
-    scalingObject.style.left = (rect_new.left - diffX) + "px";
-    scalingObject.style.top  = (rect_new.top  - diffY) + "px";
-
+    const newRect = scalingObject.getBoundingClientRect();
+    scalingObject.style.left = (parseFloat(scalingObject.style.left) || 0)
+      + e.clientX - (newRect.left + worldX * newScale) + "px";
+    scalingObject.style.top = (parseFloat(scalingObject.style.top) || 0)
+      + e.clientY - (newRect.top + worldY * newScale) + "px";
   }
 }

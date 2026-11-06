@@ -117,7 +117,7 @@ Python was exercised before TypeScript:
 - Used actual **Show in code** menus. Python returned to `declaration_boundaries.py` at zero-based `(45, 8)`; TypeScript returned to `declaration_boundaries.ts` at `(26, 2)`. Captured the actual webview navigation messages and active editor selections.
 - Captured **68 extractions/outlines** at `documentSymbol2outlineSymbol`. Each `totalRange` equaled its raw LSP range. No captured declaration body contained an `AFTER` sentinel. Whole-file windows correctly retained sentinel statements as ordinary file source.
 
-Evidence: [raw ranges, extractions, messages, and provider versions](live-ranges.json), [Python source navigation](live-python-navigation.webp), [TypeScript body states](live-typescript.webp).
+Retained visual evidence: [Python source navigation](live-python-navigation.webp), [TypeScript body states](live-typescript.webp). PNG/JSON runtime artifacts were removed at the user's request; observed results remain documented here.
 
 ### Final relaunched live smoke
 
@@ -217,7 +217,7 @@ Opened the real `trino_ingestion_dag_factory.py` as source only; did not modify 
 - Actual **Show in code** menus navigated `ingestion_dag` to zero-based `(195, 8)` and `REQUIRED_KEYS` to `(27, 0)` in the same Airflow source file. Captured webview requests and editor selections confirmed those targets.
 - No page errors were reported by the attached workbench/browser tooling.
 
-Evidence: [actual ranges, values, rendered states, provider versions, and navigation](python-actual-file.json), [file → outer → inner function](python-two-level.webp), [complete variable values](python-assignment-values.webp).
+Retained visual evidence: [file → outer → inner function](python-two-level.webp), [complete variable values](python-assignment-values.webp).
 
 ### Scope and remaining constraints
 

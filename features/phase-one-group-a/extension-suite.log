@@ -1,0 +1,201 @@
+[90m[main 2026-11-04T17:48:50.019Z][0m [node-compile-cache] main: packaged cache enabled (status: enabled, configured: /Applications/Visual Studio Code.app/Contents/Resources/app/node-compile-cache/main, active: /Applications/Visual Studio Code.app/Contents/Resources/app/node-compile-cache/main/v24.22.1-arm64-60e4fe36)
+[90m[main 2026-11-04T17:48:50.029Z][0m StorageMainService: creating application shared storage
+[90m[main 2026-11-04T17:48:50.158Z][0m [shared storage] Creating shared storage database at ':memory:' (wasCreated: true)
+[90m[main 2026-11-04T17:48:50.158Z][0m [shared storage] Initializing fallback application storage (path: in-memory)
+[90m[main 2026-11-04T17:48:50.332Z][0m [shared storage] Fallback application storage initialized with 3 items
+workbench#open()
+Via 'product.json#extensionEnabledApiProposals' extension 'github.vscode-pull-request-github' wants API proposal 'agentsWindowActivation' but that proposal DOES NOT EXIST. Likely, the proposal has been finalized (check 'vscode.d.ts') or was abandoned.
+[90m[main 2026-11-04T17:48:50.740Z][0m update#setState idle
+[RemoteAgentHost] Reconciling: desired=[], current=[]
+[AgentHost:renderer] Acquiring MessagePort to agent host...
+[90m[main 2026-11-04T17:48:50.763Z][0m AgentHostProcessManager: agent host started
+[ChatModelSelection] event=no-model-at-toolbar-build surface="workbench" sessionKey=undefined conversationKey=undefined modelTarget=undefined storageKey="chat.currentLanguageModel.panel" widgetViewKind="view"
+[AgentHost:renderer] MessagePort acquired, creating client...
+Started local extension host with pid 78685.
+IExtensionHostStarter.start() took 16 ms.
+Loading development extension at /Users/nguyencaocuong/Library/Mobile Documents/com~apple~CloudDocs/Personal/SourceCodeVisualizer/src/vscodeextension
+filterEnabledExtensions: extension 'GitHub.copilot-chat' is disabled
+filterEnabledExtensions: extension 'vscodevim.vim' is disabled
+Ignoring gitblame.commitUrl.perHostnameOverride as gitblame.commitUrl is "${tool.protocol}//${gitorigin.hostname}${gitorigin.port}${gitorigin.path}${tool.commitpath}${hash}"
+[91m[main 2026-11-04T17:48:51.855Z][0m [AgentHost:stderr] (node:78671) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `Code Helper --trace-deprecation ...` to show where the warning was created)
+
+Ignoring gitblame.commitUrl.perHostnameOverride as gitblame.commitUrl is "${tool.protocol}//${gitorigin.hostname}${gitorigin.port}${gitorigin.path}${tool.commitpath}${hash}"
+NativeExtensionHostFactory._createLocalProcessExtensionHostDataProvider.scannedExtensions: TypeScriptTeam.jsts-chat-features,vscode.bat,vscode.clojure,vscode.coffeescript,vscode.configuration-editing,GitHub.copilot-chat,vscode.cpp,vscode.csharp,vscode.css,vscode.css-language-features,vscode.dart,vscode.debug-auto-launch,vscode.debug-server-ready,vscode.diff,vscode.docker,vscode.dotenv,vscode.emmet,vscode.extension-editing,vscode.fsharp,vscode.git,vscode.git-base,vscode.github,vscode.github-authentication,vscode.go,vscode.groovy,vscode.grunt,vscode.gulp,vscode.handlebars,vscode.hlsl,vscode.html,vscode.html-language-features,vscode.ini,vscode.ipynb,vscode.jake,vscode.java,vscode.javascript,vscode.json,vscode.json-language-features,vscode.julia,vscode.latex,vscode.less,vscode.log,vscode.lua,vscode.make,vscode.markdown,vscode.markdown-language-features,vscode.markdown-math,vscode.merge-conflict,vscode.mermaid-markdown-features,vscode.microsoft-authentication,ms-vscode.js-debug,ms-vscode.js-debug-companion,ms-vscode.vscode-js-profile-table,vscode.builtin-notebook-renderers,vscode.npm,vscode.objective-c,vscode.perl,vscode.php,vscode.php-language-features,vscode.powershell,vscode.prompt,vscode.pug,vscode.python,vscode.r,vscode.razor,vscode.references-view,vscode.restructuredtext,vscode.ruby,vscode.rust,vscode.scss,vscode.search-result,vscode.shaderlab,vscode.shellscript,vscode.simple-browser,vscode.sql,vscode.swift,vscode.terminal-suggest,vscode.theme-abyss,vscode.theme-defaults,vscode.theme-kimbie-dark,vscode.vscode-modern-icons,vscode.theme-monokai,vscode.theme-monokai-dimmed,vscode.theme-quietlight,vscode.theme-red,vscode.vscode-theme-seti,vscode.theme-solarized-dark,vscode.theme-solarized-light,vscode.theme-tomorrow-night-blue,vscode.tunnel-forwarding,vscode.typescript,vscode.typescript-language-features,vscode.vb,vscode.xml,vscode.yaml,aaron-bond.better-comments,azemoh.one-monokai,buvan.sql-crack,cedricverlinden.cursor-dark,CoderCoffee.codercoffee-theme,Drongo.vs-code-obsidian-plugin,eamodio.gitlens,enkia.tokyo-night,felipe-mendes.slack-theme,formulahendry.code-runner,garytyler.darcula-pycharm,ginfuru.ginfuru-better-solarized-dark-theme,GitHub.github-vscode-theme,golang.go,huytd.nord-light,inferrinizzard.prettier-sql-vscode,IuriPavani.python-uml,jamesmaj.easy-icons,janisdd.vscode-edit-csv,LeetCode.vscode-leetcode,luqimin.tiny-light,magicstack.MagicPython,mathematic.vscode-latex,mechatroner.rainbow-csv,mikaelkristiansson87.react-theme-vscode,ms-dotnettools.vscode-dotnet-runtime,ms-kubernetes-tools.vscode-kubernetes-tools,ms-python.debugpy,ms-python.python,ms-python.vscode-pylance,ms-python.vscode-python-envs,ms-toolsai.jupyter,ms-toolsai.jupyter-keymap,ms-toolsai.jupyter-renderers,ms-toolsai.vscode-jupyter-cell-tags,ms-toolsai.vscode-jupyter-slideshow,ms-vscode-remote.remote-ssh,ms-vscode-remote.remote-ssh-edit,ms-vscode.cpptools,ms-vscode.cpptools-themes,ms-vscode.hexeditor,ms-vscode.remote-explorer,msnilshartmann.blue-light,mujdecisy.simple-light-bw,obrejla.netbeans-light-theme,PKief.material-icon-theme,redhat.vscode-yaml,ritwickdey.LiveServer,ryanolsonx.solarized,sainnhe.gruvbox-material,samuelcolvin.jinjahtml,scala-lang.scala,shd101wyy.markdown-preview-enhanced,stefdevs.stef-simple-theme,subframe7536.custom-ui-style,swagatachaudhuri.github-copilot-tools-pack,teabyii.ayu,tialki.tex-preview,tinkertrain.theme-panda,tobiasalthoff.atom-material-theme,vintharas.learn-vim,visualprogrammingx.SourceCodeVisualizer-Local,vscodevim.vim,waderyan.gitblame,xabikos.JavaScriptSnippets,yzane.markdown-pdf,zoxon.monokai-light
+filterEnabledExtensions: extension 'GitHub.copilot-chat' is disabled
+filterEnabledExtensions: extension 'vscodevim.vim' is disabled
+NativeExtensionHostFactory._createLocalProcessExtensionHostDataProvider.localExtensions: visualprogrammingx.SourceCodeVisualizer-Local,TypeScriptTeam.jsts-chat-features,vscode.bat,vscode.clojure,vscode.coffeescript,vscode.configuration-editing,vscode.cpp,vscode.csharp,vscode.css,vscode.css-language-features,vscode.dart,vscode.debug-auto-launch,vscode.debug-server-ready,vscode.diff,vscode.docker,vscode.dotenv,vscode.emmet,vscode.extension-editing,vscode.fsharp,vscode.git,vscode.git-base,vscode.github,vscode.github-authentication,vscode.go,vscode.groovy,vscode.grunt,vscode.gulp,vscode.handlebars,vscode.hlsl,vscode.html,vscode.html-language-features,vscode.ini,vscode.ipynb,vscode.jake,vscode.java,vscode.javascript,vscode.json,vscode.json-language-features,vscode.julia,vscode.latex,vscode.less,vscode.log,vscode.lua,vscode.make,vscode.markdown,vscode.markdown-language-features,vscode.markdown-math,vscode.merge-conflict,vscode.mermaid-markdown-features,vscode.microsoft-authentication,ms-vscode.js-debug,ms-vscode.js-debug-companion,ms-vscode.vscode-js-profile-table,vscode.builtin-notebook-renderers,vscode.npm,vscode.objective-c,vscode.perl,vscode.php,vscode.php-language-features,vscode.powershell,vscode.prompt,vscode.pug,vscode.python,vscode.r,vscode.razor,vscode.references-view,vscode.restructuredtext,vscode.ruby,vscode.rust,vscode.scss,vscode.search-result,vscode.shaderlab,vscode.shellscript,vscode.simple-browser,vscode.sql,vscode.swift,vscode.terminal-suggest,vscode.theme-abyss,vscode.theme-defaults,vscode.theme-kimbie-dark,vscode.vscode-modern-icons,vscode.theme-monokai,vscode.theme-monokai-dimmed,vscode.theme-quietlight,vscode.theme-red,vscode.vscode-theme-seti,vscode.theme-solarized-dark,vscode.theme-solarized-light,vscode.theme-tomorrow-night-blue,vscode.tunnel-forwarding,vscode.typescript,vscode.typescript-language-features,vscode.vb,vscode.xml,vscode.yaml,aaron-bond.better-comments,azemoh.one-monokai,buvan.sql-crack,cedricverlinden.cursor-dark,CoderCoffee.codercoffee-theme,Drongo.vs-code-obsidian-plugin,eamodio.gitlens,enkia.tokyo-night,felipe-mendes.slack-theme,formulahendry.code-runner,garytyler.darcula-pycharm,ginfuru.ginfuru-better-solarized-dark-theme,GitHub.github-vscode-theme,golang.go,huytd.nord-light,inferrinizzard.prettier-sql-vscode,IuriPavani.python-uml,jamesmaj.easy-icons,janisdd.vscode-edit-csv,LeetCode.vscode-leetcode,luqimin.tiny-light,magicstack.MagicPython,mathematic.vscode-latex,mechatroner.rainbow-csv,mikaelkristiansson87.react-theme-vscode,ms-dotnettools.vscode-dotnet-runtime,ms-kubernetes-tools.vscode-kubernetes-tools,ms-python.debugpy,ms-python.python,ms-python.vscode-pylance,ms-python.vscode-python-envs,ms-toolsai.jupyter,ms-toolsai.jupyter-keymap,ms-toolsai.jupyter-renderers,ms-toolsai.vscode-jupyter-cell-tags,ms-toolsai.vscode-jupyter-slideshow,ms-vscode-remote.remote-ssh,ms-vscode-remote.remote-ssh-edit,ms-vscode.cpptools,ms-vscode.cpptools-themes,ms-vscode.hexeditor,ms-vscode.remote-explorer,msnilshartmann.blue-light,mujdecisy.simple-light-bw,obrejla.netbeans-light-theme,PKief.material-icon-theme,redhat.vscode-yaml,ritwickdey.LiveServer,ryanolsonx.solarized,sainnhe.gruvbox-material,samuelcolvin.jinjahtml,scala-lang.scala,shd101wyy.markdown-preview-enhanced,stefdevs.stef-simple-theme,subframe7536.custom-ui-style,swagatachaudhuri.github-copilot-tools-pack,teabyii.ayu,tialki.tex-preview,tinkertrain.theme-panda,tobiasalthoff.atom-material-theme,vintharas.learn-vim,waderyan.gitblame,xabikos.JavaScriptSnippets,yzane.markdown-pdf,zoxon.monokai-light
+NativeExtensionHostFactory._createLocalProcessExtensionHostDataProvider.myExtensions: visualprogrammingx.SourceCodeVisualizer-Local,TypeScriptTeam.jsts-chat-features,vscode.bat,vscode.clojure,vscode.coffeescript,vscode.configuration-editing,vscode.cpp,vscode.csharp,vscode.css,vscode.css-language-features,vscode.dart,vscode.debug-auto-launch,vscode.debug-server-ready,vscode.diff,vscode.docker,vscode.dotenv,vscode.emmet,vscode.extension-editing,vscode.fsharp,vscode.git,vscode.git-base,vscode.github,vscode.github-authentication,vscode.go,vscode.groovy,vscode.grunt,vscode.gulp,vscode.handlebars,vscode.hlsl,vscode.html,vscode.html-language-features,vscode.ini,vscode.ipynb,vscode.jake,vscode.java,vscode.javascript,vscode.json,vscode.json-language-features,vscode.julia,vscode.latex,vscode.less,vscode.log,vscode.lua,vscode.make,vscode.markdown,vscode.markdown-language-features,vscode.markdown-math,vscode.merge-conflict,vscode.mermaid-markdown-features,vscode.microsoft-authentication,ms-vscode.js-debug,ms-vscode.js-debug-companion,ms-vscode.vscode-js-profile-table,vscode.builtin-notebook-renderers,vscode.npm,vscode.objective-c,vscode.perl,vscode.php,vscode.php-language-features,vscode.powershell,vscode.prompt,vscode.pug,vscode.python,vscode.r,vscode.razor,vscode.references-view,vscode.restructuredtext,vscode.ruby,vscode.rust,vscode.scss,vscode.search-result,vscode.shaderlab,vscode.shellscript,vscode.simple-browser,vscode.sql,vscode.swift,vscode.terminal-suggest,vscode.theme-abyss,vscode.theme-defaults,vscode.theme-kimbie-dark,vscode.vscode-modern-icons,vscode.theme-monokai,vscode.theme-monokai-dimmed,vscode.theme-quietlight,vscode.theme-red,vscode.vscode-theme-seti,vscode.theme-solarized-dark,vscode.theme-solarized-light,vscode.theme-tomorrow-night-blue,vscode.tunnel-forwarding,vscode.typescript,vscode.typescript-language-features,vscode.vb,vscode.xml,vscode.yaml,aaron-bond.better-comments,azemoh.one-monokai,buvan.sql-crack,cedricverlinden.cursor-dark,CoderCoffee.codercoffee-theme,Drongo.vs-code-obsidian-plugin,eamodio.gitlens,enkia.tokyo-night,felipe-mendes.slack-theme,formulahendry.code-runner,garytyler.darcula-pycharm,ginfuru.ginfuru-better-solarized-dark-theme,GitHub.github-vscode-theme,golang.go,huytd.nord-light,inferrinizzard.prettier-sql-vscode,IuriPavani.python-uml,jamesmaj.easy-icons,janisdd.vscode-edit-csv,LeetCode.vscode-leetcode,luqimin.tiny-light,magicstack.MagicPython,mathematic.vscode-latex,mechatroner.rainbow-csv,mikaelkristiansson87.react-theme-vscode,ms-dotnettools.vscode-dotnet-runtime,ms-kubernetes-tools.vscode-kubernetes-tools,ms-python.debugpy,ms-python.python,ms-python.vscode-pylance,ms-python.vscode-python-envs,ms-toolsai.jupyter,ms-toolsai.jupyter-keymap,ms-toolsai.jupyter-renderers,ms-toolsai.vscode-jupyter-cell-tags,ms-toolsai.vscode-jupyter-slideshow,ms-vscode-remote.remote-ssh,ms-vscode-remote.remote-ssh-edit,ms-vscode.cpptools,ms-vscode.cpptools-themes,ms-vscode.hexeditor,ms-vscode.remote-explorer,msnilshartmann.blue-light,mujdecisy.simple-light-bw,obrejla.netbeans-light-theme,PKief.material-icon-theme,redhat.vscode-yaml,ritwickdey.LiveServer,ryanolsonx.solarized,sainnhe.gruvbox-material,samuelcolvin.jinjahtml,scala-lang.scala,shd101wyy.markdown-preview-enhanced,stefdevs.stef-simple-theme,subframe7536.custom-ui-style,swagatachaudhuri.github-copilot-tools-pack,teabyii.ayu,tialki.tex-preview,tinkertrain.theme-panda,tobiasalthoff.atom-material-theme,vintharas.learn-vim,waderyan.gitblame,xabikos.JavaScriptSnippets,yzane.markdown-pdf,zoxon.monokai-light
+Unknown channel: agentHostClientByokLm
+Unknown channel: agentHostClientProxy
+(node:78604) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `Code --trace-deprecation ...` to show where the warning was created)
+[RemoteAgentHostProtocol] Sending initialize: address=local clientId=0b7bd2e0-5de9-4f28-85b9-455764553780 requestId=1
+[RemoteAgentHostProtocol] Initialized: address=local clientId=0b7bd2e0-5de9-4f28-85b9-455764553780 durationMs=3311
+[AgentHost:renderer] Protocol connection established; clientId=0b7bd2e0-5de9-4f28-85b9-455764553780
+Unknown channel: agentHostClientProxy
+Unknown channel: agentHostClientProxy
+[AccountPolicyGate] apply: state=inactive, reason=undefined, isRestricted=false
+[ChatModelSelection] event=no-model-at-toolbar-build surface="workbench" sessionKey="local" conversationKey="vscode-chat-session://local/MmZmNjU0YzItODEwOC00YjUwLWI1ODktMzJmNjhiZDFmYTRl" modelTarget=undefined storageKey="chat.currentLanguageModel.panel" widgetViewKind="view"
+(node:78685) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `Code Helper (Plugin) --trace-deprecation ...` to show where the warning was created)
+(node:78685) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[INFO] 2026-11-04T17:48:58.782Z - Translations initialized.
+[INFO] 2026-11-04T17:48:58.784Z - Extension activated!
+[0m[0m
+[0m  getLanguageSpecificSymbolInformation()[0m
+  [32m  ✓[0m[90m 01 simple function: ranges check[0m[31m (448ms)[0m
+  [32m  ✓[0m[90m 08 handle callback functions[0m[31m (142ms)[0m
+  [32m  ✓[0m[90m 08 constructor (total range = selection range)[0m[31m (343ms)[0m
+[ChatModelSelection] event=no-model-at-toolbar-build surface="workbench" sessionKey="local" conversationKey="vscode-chat-session://local/MmZmNjU0YzItODEwOC00YjUwLWI1ODktMzJmNjhiZDFmYTRl" modelTarget=undefined storageKey="chat.currentLanguageModel.panel" widgetViewKind="view"
+  [32m  ✓[0m[90m 08 Case: outline information not in order[0m[31m (152ms)[0m
+  [32m  ✓[0m[90m 08 Case: In class: method declaration[0m[31m (255ms)[0m
+  [32m  ✓[0m[90m 08 Case: In class: interface method declaration[0m
+[0m  JavaScript function-expression boundaries[0m
+[ChatModelSelection] event=no-model-at-toolbar-build surface="workbench" sessionKey="local" conversationKey="vscode-chat-session://local/MmZmNjU0YzItODEwOC00YjUwLWI1ODktMzJmNjhiZDFmYTRl" modelTarget=undefined storageKey="chat.currentLanguageModel.panel" widgetViewKind="view"
+[AccountPolicyGate] apply: state=inactive, reason=undefined, isRestricted=false
+  [32m  ✓[0m[90m keeps a flattened provider tree: complete[0m[31m (940ms)[0m
+  [32m  ✓[0m[90m keeps a flattened provider tree: rhs-target[0m[31m (150ms)[0m
+  [32m  ✓[0m[90m keeps a flattened provider tree: rhs-selection[0m
+  [32m  ✓[0m[90m projects an exact initializer wrapper: complete[0m
+  [32m  ✓[0m[90m projects an exact initializer wrapper: rhs-target[0m
+  [32m  ✓[0m[90m projects an exact initializer wrapper: rhs-selection[0m
+  [32m  ✓[0m[90m opens the assigned callable rather than its receiver: rhs-target[0m[33m (55ms)[0m
+  [32m  ✓[0m[90m opens the assigned callable rather than its receiver: rhs-selection[0m[33m (52ms)[0m
+  [32m  ✓[0m[90m an exact RHS declaration start wins over an enclosing wrapper selection[0m
+  [32m  ✓[0m[90m a complete assignment reopens from its syntax-backed RHS lookup point[0m
+  [32m  ✓[0m[90m whole-file traversal promotes a callable constant and leaves ordinary variables in source[0m
+  [32m  ✓[0m[90m opts only callable initializers and assignments into ignored kind 12[0m
+  [32m  ✓[0m[90m opts only callable initializers and assignments into ignored kind 13[0m
+  [32m  ✓[0m[90m opts only callable initializers and assignments into ignored kind 6[0m
+  [32m  ✓[0m[90m opts only callable initializers and assignments into ignored kind 7[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: const value = (((function() { return "}; {"; /* }; { */ })));[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: const value = function(input = "{;}") /* }; */ { return input; };[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: value = function() {};[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: holder.run = function() {};[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: holder["run"] = (() => ({value: "};"}));[0m
+  [32m  ✓[0m[90m extracts callable syntax without punctuation scanning: const value = () => 42;[0m
+  [32m  ✓[0m[90m extracts an anonymous function-only fragment through expression syntax[0m
+  [32m  ✓[0m[90m projects only exact function or parenthesized initializer AST ranges[0m
+  [32m  ✓[0m[90m retains unrelated real children when projecting an initializer wrapper[0m
+  [32m  ✓[0m[90m rejects an unrelated enclosing wrapper instead of flattening it[0m
+  [32m  ✓[0m[90m rejects a second certified initializer wrapper rather than deduplicating it[0m
+  [32m  ✓[0m[90m preflights duplicate, overlapping and crossing real children before extraction[0m
+  [32m  ✓[0m[90m rejects malformed selected callables and unrelated reference selections[0m
+  [32m  ✓[0m[90m supplies displaying-parent context to projected child classification and extraction[0m
+  [32m  ✓[0m[90m an empty child projection leaves provider children as ordinary source[0m
+  [32m  ✓[0m[90m rejects overlapping or out-of-body effective ranges after successful raw preflight[0m
+  [32m  ✓[0m[90m rejects incomplete RHS assignment forms without suitable ancestor syntax[0m
+  [32m  ✓[0m[90m keeps a non-callable declaration or expression as ordinary source: const value = makeWindow();[0m
+  [32m  ✓[0m[90m keeps a non-callable declaration or expression as ordinary source: const value = class {};[0m
+  [32m  ✓[0m[90m keeps a non-callable declaration or expression as ordinary source: value += function() {};[0m
+  [32m  ✓[0m[90m keeps a non-callable declaration or expression as ordinary source: use(value = function() {});[0m
+[0m  Outline partition and navigation[0m
+  [32m  ✓[0m[90m partitions same-line declarations in source order without losing gaps[0m
+  [32m  ✓[0m[90m skips outside children and keeps ignored callback source[0m
+  [32m  ✓[0m[90m rejects crossing and overlapping child ranges[0m
+  [32m  ✓[0m[90m records parent context during child traversal for later property extraction[0m[31m (77ms)[0m
+  [32m  ✓[0m[90m empty and absent method bodies have distinct visible state[0m
+  [32m  ✓[0m[90m handles whole-file EOF without a newline[0m
+  [32m  ✓[0m[90m lookup uses containment, smallest selection, end exclusivity and stable ties[0m
+  [32m  ✓[0m[90m flat lookup supplies ancestors to ambiguous object properties[0m
+  [32m  ✓[0m[90m definition links navigate to target coordinates and preserve no-definition behavior[0m
+[0m  Python declaration boundaries[0m
+  [32m  ✓[0m[90m limit = 42 selecting limit[0m[31m (214ms)[0m
+  [32m  ✓[0m[90m def build(value=tuple(), label=":"): selecting build[0m[31m (141ms)[0m
+  [32m  ✓[0m[90m config = { selecting config[0m
+  [32m  ✓[0m[90m def simple(): selecting simple[0m
+  [32m  ✓[0m[90m def placeholder(): selecting placeholder[0m
+  [32m  ✓[0m[90m def placeholder(): selecting placeholder[0m
+  [32m  ✓[0m[90m def doc_only(): selecting doc_only[0m[31m (105ms)[0m
+  [32m  ✓[0m[90m @abstractmethod selecting read[0m[33m (46ms)[0m
+  [32m  ✓[0m[90m left = right = [1, 2] selecting right[0m
+  [32m  ✓[0m[90m left, (middle, right) = values selecting right[0m[31m (78ms)[0m
+  [32m  ✓[0m[90m self.value: int = 42 selecting value[0m[31m (88ms)[0m
+  [32m  ✓[0m[90m total += 2 selecting total[0m[31m (84ms)[0m
+  [32m  ✓[0m[90m value: dict[str, int] selecting value[0m
+  [32m  ✓[0m[90m type Values = list[int] selecting Values[0m
+  [32m  ✓[0m[90m first = 1; second = {"a": 2} selecting second[0m
+  [32m  ✓[0m[90m first = 1; second = {"a": 2} selecting first[0m
+  [32m  ✓[0m[90m def inline(): return ":" selecting inline[0m[33m (48ms)[0m
+  [32m  ✓[0m[90m def unicode(label="😀"): selecting unicode[0m
+  [32m  ✓[0m[90m restores nested indentation without changing multiline strings[0m
+  [32m  ✓[0m[90m accepts the decorated declaration start but not a decorator reference[0m
+  [32m  ✓[0m[90m tabs and source attributes outside the LSP range[0m
+  [32m  ✓[0m[90m keeps pyi ellipsis source[0m[33m (46ms)[0m
+  [32m  ✓[0m[90m does not copy preceding code into a semicolon fragment[0m
+  [32m  ✓[0m[90m resolves name-only CONFIG_DIR = Path(__file__).with_name("config_oracle2iceberg")[0m
+  [32m  ✓[0m[90m resolves name-only REQUIRED_KEYS = frozenset([0m[33m (55ms)[0m
+  [32m  ✓[0m[90m resolves name-only OPTIONAL_KEYS = frozenset([0m
+  [32m  ✓[0m[90m resolves name-only params = {[0m
+  [32m  ✓[0m[90m resolves name-only value: dict[str, int][0m
+  [32m  ✓[0m[90m resolves name-only left = right = [1, 2][0m
+  [32m  ✓[0m[90m resolves name-only first = 1; second = {"a": 2}[0m
+  [32m  ✓[0m[90m resolves name-only text = """first[0m
+  [32m  ✓[0m[90m resolves name-only value = \[0m
+  [32m  ✓[0m[90m resolves a nested name-only target from cached parent syntax[0m
+  [32m  ✓[0m[90m rejects malformed and reference-only name ranges without borrowing later statements[0m[33m (45ms)[0m
+  [32m  ✓[0m[90m rejects selected syntax: def broken(:
+    pass[0m
+  [32m  ✓[0m[90m rejects selected syntax: def broken():[0m
+  [32m  ✓[0m[90m rejects selected syntax: broken = {[0m
+  [32m  ✓[0m[90m rejects selected syntax: broken =[0m
+  [32m  ✓[0m[90m rejects reference/type selections and invalid document positions[0m[33m (59ms)[0m
+  [32m  ✓[0m[90m isolates malformed neighboring syntax in a cached parent[0m
+  [32m  ✓[0m[90m invalidates the cache after an editable document changes[0m[31m (372ms)[0m
+[0m  TypeScript declaration boundaries[0m
+[ChatModelSelection] event=no-model-at-toolbar-build surface="workbench" sessionKey="local" conversationKey="vscode-chat-session://local/MmZmNjU0YzItODEwOC00YjUwLWI1ODktMzJmNjhiZDFmYTRl" modelTarget=undefined storageKey="chat.currentLanguageModel.panel" widgetViewKind="view"
+  [32m  ✓[0m[90m const limit = 42 selecting limit[0m[31m (164ms)[0m
+  [32m  ✓[0m[90m const config = { value: 42 }; selecting config[0m[33m (70ms)[0m
+  [32m  ✓[0m[90m read(): void; selecting read[0m
+  [32m  ✓[0m[90m empty() {} selecting empty[0m
+  [32m  ✓[0m[90m read(): { value: number } { return { value: 1 }; } selecting read[0m
+  [32m  ✓[0m[90m const values = [1, {value: 2}]; selecting values[0m
+  [32m  ✓[0m[90m const text = `value: ${fn({value: 1})}`; selecting text[0m
+  [32m  ✓[0m[90m value: { count: number } = { count: 1 }; selecting value[0m
+  [32m  ✓[0m[90m value: { count: number }; selecting value[0m
+  [32m  ✓[0m[90m Ready = 1 selecting Ready[0m
+  [32m  ✓[0m[90m value = {a: 1} selecting value[0m
+  [32m  ✓[0m[90m const first = 1, second = {a: 2}; selecting second[0m
+  [32m  ✓[0m[90m const first = 1, second = {a: 2}; selecting first[0m
+  [32m  ✓[0m[90m const build = (): {a: number} => { return {a: 1}; }; selecting build[0m
+  [32m  ✓[0m[90m const build = () => ({a: 1}); selecting build[0m
+  [32m  ✓[0m[90m const build = function(): {a: number} { return {a: 1}; }; selecting build[0m
+  [32m  ✓[0m[90m function read(): {value: number} { return {value: 1}; } selecting read[0m
+  [32m  ✓[0m[90m declare function read(): void; selecting read[0m
+  [32m  ✓[0m[90m abstract read(): void; selecting read[0m
+  [32m  ✓[0m[90m constructor(public value: number) {} selecting constructor[0m
+  [32m  ✓[0m[90m get value(): {a: number} { return {a: 1}; } selecting value[0m
+  [32m  ✓[0m[90m set value(input: number) { use(input); } selecting value[0m
+  [32m  ✓[0m[90m class Worker<T extends {a: number}> { value = 1; } selecting Worker[0m
+  [32m  ✓[0m[90m interface Reader extends Other<{a: number}> { read(): void; } selecting Reader[0m
+  [32m  ✓[0m[90m enum State { Ready = 1 } selecting State[0m
+  [32m  ✓[0m[90m namespace Area { export const value = 1; } selecting Area[0m
+  [32m  ✓[0m[90m type Shape = {value: number}; selecting Shape[0m
+  [32m  ✓[0m[90m /* comment containing const */ const value = 1; selecting value[0m
+  [32m  ✓[0m[90m const value = { selecting value[0m
+  [32m  ✓[0m[90m TSX preserves complete JSX values[0m
+  [32m  ✓[0m[90m keeps block indentation and ignores braces in comments[0m
+  [32m  ✓[0m[90m selects an interface signature without borrowing another overload body[0m
+  [32m  ✓[0m[90m uses only source modifiers, not parser wrapper keywords[0m
+  [32m  ✓[0m[90m uses supplied parent context: const object = { value: {a: 1} };[0m
+  [32m  ✓[0m[90m uses supplied parent context: class Scope { value: {a: number}; }[0m
+  [32m  ✓[0m[90m uses supplied parent context: interface Scope { value: {a: number}; }[0m
+  [32m  ✓[0m[90m rejects ambiguous properties without supplied context[0m[31m (95ms)[0m
+  [32m  ✓[0m[90m rejects selected syntax: function broken( {[0m[31m (91ms)[0m
+  [32m  ✓[0m[90m rejects selected syntax: function broken() {[0m
+  [32m  ✓[0m[90m rejects selected syntax: const broken = {[0m[31m (98ms)[0m
+  [32m  ✓[0m[90m rejects selected syntax: const broken =[0m
+  [32m  ✓[0m[90m rejects selected syntax: broken(): {a: ;[0m
+  [32m  ✓[0m[90m rejects unrelated reference and type selections[0m
+  [32m  ✓[0m[90m accepts constructor and declaration-start selections[0m
+  [32m  ✓[0m[90m isolates malformed neighboring syntax in a cached parent[0m[33m (68ms)[0m
+  [32m  ✓[0m[90m does not treat an object inside a class as a class property[0m
+  [32m  ✓[0m[90m destructured names do not select default-value references[0m
+  [32m  ✓[0m[90m invalidates the cache after edits and rejects invalid document positions[0m[31m (415ms)[0m
+[92m [0m[32m 140 passing[0m[90m (7s)[0m
+SCV_ACTUAL_EXTRACTION_PASSED {"factory":[{"line":8,"character":6},{"line":283,"character":2}],"constructor":[{"line":24,"character":2},{"line":73,"character":3}],"heading":"self.constructor = function()"}
+SCV_FINAL_SUITE_AND_ACTUAL_SOURCE_PASSED
+Extension host test runner exit code: 0
+[90m[main 2026-11-04T17:49:09.141Z][0m Extension host with pid 78685 exited with code: 0, signal: unknown.
+Asking native host service to exit with code 0.

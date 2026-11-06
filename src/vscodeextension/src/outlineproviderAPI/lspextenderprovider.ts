@@ -9,7 +9,9 @@ export interface LanguageSpecificSymbolInformation {
   rangeBody: vscode.Range | null; // null = no body; empty range = empty body
   attributes: Outline.Attribute[];
   declarationOnly: boolean;
-  rangeDeclaration?: vscode.Range; // resolved Python assignment when LSP supplies only its name
+  rangeDeclaration?: vscode.Range; // syntax-backed Python assignment or JavaScript RHS-only assignment
+  children?: readonly vscode.DocumentSymbol[]; // display projection; absent keeps the provider's children
+  definitionPosition?: vscode.Position; // callable lookup may differ from an assignment heading's receiver
 }
 
 export interface SymbolExtractionContext {
@@ -54,6 +56,16 @@ export interface VpLspExtenderProvider
     docSymbol: vscode.DocumentSymbol,
     context?: SymbolExtractionContext
   ): LanguageSpecificSymbolInformation;
+
+  /**
+   * Opt a variable, constant, property, or field into declaration rendering.
+   * Other symbol kinds retain the shared traversal's existing inclusion rules.
+   **/
+  isDeclarationSymbol?(
+    document: vscode.TextDocument,
+    symbol: vscode.DocumentSymbol,
+    context?: SymbolExtractionContext
+  ): boolean;
 
 
 

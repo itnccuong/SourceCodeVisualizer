@@ -45,11 +45,13 @@ The current integration-test runner targets VS Code 1.61.1 and installs Python t
 See [Architecture and Development](../docs/architecture-and-development.md) for build prerequisites, debugging, message flow, and the detailed source/output map. Record actual validation and limitations under the [project workflow](context.md).
 
 ## Future Capability Boundaries
+Phase 1.5 adds YAML visualization within the existing extension/webview architecture. Its parser/provider approach, supported constructs, and source-navigation semantics require dedicated planning; no new dependency, domain-specific execution, or external integration is selected here.
+
 Phase 2 targets UML views and AI-assisted source analysis, not execution of the analyzed code or runtime-trace collection. Keep AI inference distinguishable from observed execution; do not describe predicted behavior as runtime evidence.
 
 UML diagram types and AI providers, deployment model, and source-data handling are intentionally deferred to future user-directed planning. This document does not approve a cloud service, a local model requirement, transmission of source data, or a new AI dependency. These decisions are not prerequisites for the Phase 1 improvements.
 
-Phase 3 broadens language support beyond Python. No additional language priority or support-parity promise is established here.
+Phase 3 broadens support to other languages after the Python-first work and the Phase 1.5 YAML milestone. No further language priority or support-parity promise is established here.
 
 ## Constitution Changes
 Follow [Project Context](context.md) for ownership and approvals. If a proposed feature conflicts with this baseline, obtain user direction rather than silently changing the constitution or replacing the approved stack. Product purpose and phase direction are defined in [Project Mission](mission.md).

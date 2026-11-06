@@ -191,3 +191,48 @@ Expand attention beyond Python after the Python-first work, using dedicated plan
 - Approval authorizes this roadmap and its task records only. Do not treat it as authorization to implement all listed features, publish, choose AI vendors, transmit source, or change the approved stack.
 - Product acceptance expectations are intentionally finer-grained than a phase list, but application designs such as serialization schema, comment classification, pan gesture, exact zoom bounds, and Phase 2 discovery algorithms remain for dedicated feature plans. They are not implementation decisions needed to deliver this exact roadmap document.
 - If the current workflow has changed, follow compatible record requirements. If it conflicts with the approved documentation scope, obtain direction before making a conflicting change.
+
+## Approved Update — R14–R18 and Phase 1.5 YAML
+
+The user authorized adding five ideas and regrouping the roadmap. Clarification confirmed that R17 covers both decorators and class/instance attributes, and Phase 1.5 means YAML visualization support, not YAML roadmap export.
+
+### Scope and grouping
+
+| Phase/group | Feature IDs |
+| --- | --- |
+| Phase 1 A — Correctness, Visibility, and Box Sizing | R04, R10, R11, R13, R15, R18 |
+| Phase 1 B — Source Navigation and Connection Anchors | R03, R14, R17, R16 |
+| Phase 1 C — Canvas Navigation and Graph Interaction | R01, R02, R12, R05, R06, R08 |
+| Phase 1 D — Persistence | R09 |
+| Phase 1.5 — YAML Visualization | Dedicated scope/acceptance planning before implementation |
+| Phase 2 | R07, UML, AI research; unchanged |
+| Phase 3 | Other additional languages after the explicit YAML milestone |
+
+### New outcomes
+
+- R14: clicking an imported module/file reference opens its resolved file as a connected file node; missing/ambiguous targets are explicit. Preserve symbol navigation separately.
+- R15: size initial/auto-fit code-box width to the longest rendered source line, including gutter/padding; do not silently clip or truncate source. Manual narrowing can require horizontal scrolling. Detailed handling of exceptionally wide lines belongs to feature planning.
+- R16: connect the clicked source location to the opened box, preferably at the end of the clicked token/expression, instead of only docking to an unrelated point on the source box. Keep anchors correct through layout, scrolling, zoom, and source-display changes.
+- R17: clickable decorator metadata and class/instance fields/properties open the corresponding definition/declaration/assignment as connected nodes. Preserve full-source coordinates and report ambiguity honestly. Do not add another generic parameter-navigation feature.
+- R18: every box, including bodyless declarations and error cards, retains a bottom-right width/height resize handle independent of having a code body. Keep bodyless declarations signature-only.
+- Phase 1.5: YAML files become explorable in the existing VS Code diagram environment. Detailed node model, supported YAML constructs, and reference semantics require dedicated planning; do not infer domain-specific execution or integrations.
+
+### Execution and checks
+
+1. Amend `specs/roadmap.md`, retaining each R01–R18 exactly once, the existing acceptance substance, and separate Phase 2 workstreams. Align R10 with the later approved hide-body behavior.
+2. Align `specs/mission.md` and `specs/tech.md` with the explicit YAML milestone. Keep the existing stack, static-analysis boundaries, and unspecified choices intact.
+3. Run a read-only documentation smoke script checking IDs, group membership, phase order, required outcomes, and relative links. No application feature implementation or runtime claims.
+4. Append observed validation and executed changes to `features/product-roadmap/results.md` only after the update and checks finish.
+
+
+## Approved Update — R19 JavaScript Function-Expression Visualization Failure
+
+The user requested recording a new bug fix in Phase 1 Group A, not implementing it in this update.
+
+- Add R19 directly after R04 because both concern declaration extraction/partitioning. Keep existing IDs and other groups unchanged.
+- Reproduction: `const VgfWindowTitled = (function() { ... self.constructor = function() { ... } ... });` in `src/web_visualizer/src/vgf/vgf_window_tiled.js`. The user reports “Overlapping or out-of-bounds declaration ranges cannot be displayed safely.” when attempting visualization.
+- Record the report without claiming whether the cause is provider ranges, nested/alias symbols, or our extraction/partitioning. Do not prescribe suppressing the overlap guard.
+- Acceptance for later implementation: visualize the actual file and `VgfWindowTitled` declaration, then its nested `self.constructor`; preserve the intended heading/body, nested declarations and source gaps without duplication or neighboring-source leakage. Source navigation must remain correct; truly invalid overlapping ranges must still fail safely.
+- Update roadmap coverage to R01–R19 and document this targeted JavaScript defect without promising general JavaScript support parity.
+- Run a documentation smoke check for unique IDs, exact group membership/order, unchanged existing feature sections, reproduction path/error, and local links. Append the completed update to results only after validation.
+

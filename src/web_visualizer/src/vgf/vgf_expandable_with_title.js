@@ -21,37 +21,23 @@ const VgfExpandableWithTitle = (function()
 
   self.constructor = function()
   {
-    let table = document.createElement ("table");
-    self.appendChild (table);
+    let titleRow = document.createElement ("div");
+    titleRow.classList.add ("VgfExpandableTitleRow");
+    self.appendChild (titleRow);
 
-    {
-      let titleRow = document.createElement ("tr");
-      {
-        table.appendChild (titleRow);
+    let toggleHolder = document.createElement ("div");
+    toggleHolder.classList.add ("VgfExpandableToggle");
+    titleRow.appendChild (toggleHolder);
+    let expanderButton = _createToggleButton(self);
+    self._vp_button_expand = expanderButton;
+    toggleHolder.appendChild (expanderButton);
 
-        let td_expanderButton = document.createElement ("td");
-        titleRow.appendChild (td_expanderButton);
-        td_expanderButton.classList.add ("td_expanderButton");
-        let expanderButton = _createToggleButton(self);
-        self._vp_button_expand = expanderButton;
-        td_expanderButton.appendChild (expanderButton);
+    let titleHolder = document.createElement ("div");
+    titleHolder.classList.add ("VgfExpandableTitle");
+    titleRow.appendChild (titleHolder);
+    self.vp_title = titleHolder;
 
-
-        let td_title = document.createElement ("td");
-        titleRow.appendChild (td_title);
-        self.vp_title = td_title;
-      }
-
-      let contentRow = document.createElement ("tr");
-      {
-        table.appendChild (contentRow);
-
-        let td_content = document.createElement ("td");
-        td_content.colSpan=2;
-        contentRow.appendChild (td_content);
-        td_content.appendChild (self.vp_content);
-      }
-    }
+    self.appendChild (self.vp_content);
 
     return self;
   }
@@ -61,7 +47,6 @@ const VgfExpandableWithTitle = (function()
   let _createToggleButton = function(self)
   {
     let button = new VgfButtonToggle(["▸", "▾"]);
-    button.style.float = "left";
 
     button.addEventListener ("vp_toggled", e =>
     {
@@ -76,7 +61,7 @@ const VgfExpandableWithTitle = (function()
         self.vp_title.classList.add ("expandable_title_extended");
         self.vp_title.classList.remove ("expandable_title_collapsed");
 
-        self.vp_content.style.display = "initial";
+        self.vp_content.style.display = "";
       }
 
       self.vp_childSizeChanged();

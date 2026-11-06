@@ -42,7 +42,7 @@ class OutlineEntityFunctions {
   }
   // ------------------------------------------------------
   static getPosStart(self){
-    return self.displayTextRange[0];
+    return self.definitionPosition ?? self.displayTextRange[0];
   }
   // ------------------------------------------------------
   static getPosEnd(self){

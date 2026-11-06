@@ -75,15 +75,6 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     };
 
 
-    // shrink size to an initial of 52 chars
-    {
-      let sizeRect = getSizeRectOfUnownedElement (self);
-      let MAX_SIZE = 356; // 52 chars
-      if (sizeRect.width > MAX_SIZE)
-      {
-        self.vp_window_clientarea.style.width = MAX_SIZE + "px";
-      }
-    }
 
 
     let _setupContextMenu = function()
@@ -115,7 +106,6 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
   self._vp_createClientTitle = function(root, metatype, titleString, quickhelp)
   {
-
     let node = null;
     {
       node = document.createElement ("div");
@@ -192,7 +182,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     table.append (line);
 
     let td1 = document.createElement("td");
-    td1.innerText = tsOutlineSymbol.displayText;
+    td1.textContent = tsOutlineSymbol.displayText;
     line.append (td1);
 
     let td2 = document.createElement("td");
