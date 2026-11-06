@@ -3,19 +3,42 @@
 ************* Window Mgr Windows **********************
 *******************************************************
 ******************************************************/
-.Window_OuterFrame {
-
-  /*width: 250px; /**/
-  /*width: auto;*/
-
+.VgfWindow.Window_OuterFrame {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: visible;
+  padding-bottom: 14px;
   border: 1px solid var(--window-border);
   background-color: var(--window-background);
   border-radius: 3px;
 }
 
 .Window_InnerFrame {
-  padding-bottom: 1px;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   border-radius: 3px;
+}
+
+.Window_InnerFrame > .VgfExpandable {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.Window_OuterFrame .VgfExpandableContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .Window_InnerFrame hr {
@@ -23,58 +46,45 @@
   margin-top:0px;
 }
 
-.Window_Titlebar {
-  user-select: none;
-  display: table;
+.Window_OuterFrame .VgfExpandableTitle .Window_Titlearea {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
   width: 100%;
-}
-
-.Window_Titlearea {
-  padding-bottom: 7px;
   padding-top: 7px;
-  width: 100%;
+  padding-bottom: 7px;
   user-select: none;
 }
 
-/*.expandable_title_extended .Window_Titlearea {
-
-}*/
-
-.expandable_title_collapsed .Window_Titlearea {
-  white-space: nowrap;
-  max-width: 24em;
-  overflow: hidden;
-
-  /* fading text */
-  /* Also blurrs text to an illegible degree, so deactivated
-  mask-image: linear-gradient(to right, black 80%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
-  */
+.Window_Titlearea > span {
+  display: block;
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-
-.VgfWindowTiled_WindowButtonsDiv{
-  vertical-align: top;
-  float: right;
-}
 
 
 .Window_Titlebar_MetatypeDiv {
   font-size: 65%;
   position: absolute;
-  top: 4px;
-  left: 22px;
-  color:var(--source-code-entity-class);
+  top: -3px;
+  left: 3px;
+  right: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--source-code-entity-class);
 }
 
 .Window_Titlebar_Title {
-  padding: 5px;
+  padding-top: 8px;
   padding-left: 3px;
-  padding-bottom: 0px;
-  position: relative;
-  top: 6px;
-  left: -3px;
-
+  padding-right: 5px;
   font-family: monospace;
 }
 
@@ -95,11 +105,10 @@
 }
 
 .Window_btnClose{
+  flex: 0 0 auto;
   min-width: 15px;
   height: 15px;
-  position: absolute;
-  right: 0px;
-  top: 1px;
+  margin-top: -6px;
 }
 
 .Window_btnClose:hover{
@@ -116,7 +125,33 @@
 
 
 .Window_Clientarea{
-  /* Border like for class diagrams */
-  /* border-top: 1px solid rgba(200, 200, 200); */
-  padding:2px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2px;
+}
+
+.Window_ResizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+  opacity: 0.7;
+}
+
+.Window_ResizeHandle::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: repeating-linear-gradient(135deg, transparent 0 2px, currentColor 2px 3px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+.Window_ResizeHandle:hover {
+  opacity: 1;
 }

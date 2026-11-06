@@ -66,7 +66,7 @@ provideDefinitionOutline(adapter, document, position)
         → executeCommand("vscode.executeDocumentSymbolProvider", definitionUri)
   → _provideSymbolDefinitionOutline(...)
     → documentSymbol2outlineSymbol(...)
-      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol)
+      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors})
       → recursively build parts from child symbols and ordinary text
 ```
 
@@ -76,6 +76,36 @@ provideDefinitionOutline(adapter, document, position)
 - `VpLspExtenderPython` is **not a language server**. It supplements symbols obtained through installed Python tooling, typically Python/Pylance, with Python-specific header/body ranges.
 - For `class Dog:` containing `def bark(self):`, the current adapter extracts headers `Dog` and `bark(self)`. Shared code creates nested `Symbol` and `Text` parts.
 - `VisualizingTab._translate_outlineRanges2outlineEntities()` fills `displayText` using `document.getText(range)` before sending the tree to the webview.
+
+### Declaration Boundaries
+
+- `Outline.Symbol.totalRange` normally equals the supplied `DocumentSymbol.range`. Syntax-backed exceptions are Python name-only assignments and JavaScript RHS-only callable assignments. The adapter returns optional `rangeDeclaration`; provider objects remain unchanged.
+- Python loads `@lezer/python` on first extraction. JavaScript/TypeScript/TSX reuse TypeScript 3.9.10 in JS/TS/TSX mode. Parsing remains declaration-local or uses supplied ancestor context, not a background whole-file index.
+- Each adapter retains one parsed fragment per document in a `WeakMap`. Version, language, and containment govern reuse. Temporary parser wrappers never enter output ranges.
+- An ambiguous TypeScript property or incomplete JavaScript assignment can use supplied ancestor syntax. Missing context, ambiguous matches, and malformed selected syntax produce extraction errors.
+- The named result contains `rangeHead`, nullable `rangeBody`, `attributes`, `declarationOnly`, optional `rangeDeclaration`, optional display-child projection, and optional `definitionPosition`. A null body means no source body; a zero-width body means an empty implementation.
+- TypeScript bodyless signatures set `declarationOnly`; the webview hides their body area while retaining the signature and navigation. No status text or badge is added. Python `pass`, `...`, and docstrings remain source.
+- Shared traversal sorts a copy of children, keeps source gaps, and rejects crossing/overlapping displayed children. Definition lookup uses end-exclusive containment and target-file ranges.
+- Pylance 2026.4.1 supplies name-only ranges for Python variables/constants. For an exact name-only variable/constant/field/property range, reuse suitable cached/ancestor syntax or parse from the name's physical line. Extend the local fragment geometrically only while the selected statement has missing tokens at its end; use the parsed statement boundary, never the next colon or next symbol. Malformed syntax and reference selections still fail explicitly. Other incomplete ranges are not repaired.
+- Multiline decorator attributes retain their full original source in the model/hover text. The window displays only a compact first-line metadata label, constrained to one line with ellipsis, so it cannot overlap the signature/body.
+- Python-related changes require live verification of `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`: file → `_build_dag` → `ingestion_dag`, plus affected variables. Do not execute or modify that Airflow file.
+- JavaScript callable variable/property/field/constant initializers become declaration rows. Only an immediate wrapper with exactly the same AST function/parenthesis range is transparent; its children are projected without changing the provider tree. Raw and effective child ranges retain strict overlap/crossing checks.
+- Assignment headings include their receiver. Their syntax-backed `definitionPosition` keeps row lookup on the callable, not on the receiver local. Definition requests normalize serialized webview positions into VS Code `Position` instances before comparisons. **Show in code** still selects the displayed heading's source start.
+
+### Canvas Window Geometry
+
+- Zoom is Ctrl-only or Alt-only wheel, bounded to 0.2–3. Translation uses the old/new DOM rects and scales to preserve the source point under the cursor. Input at a bound leaves translation untouched.
+- `VgfWindowTitled.vp_fitToContent()` runs for every newly created node after themed world attachment, or on grip double-click. Intrinsic DOM measurement fits content up to 1200 world px wide, then measures height after heading reflow, with at most 400px initial body height. Code bodies scroll rather than wrap. Short nodes remain content-sized; manual resize can exceed 1200px. Later focus/zoom and existing-node reuse do not refit.
+- The outer frame owns a pointer-captured 14px grip and keeps visible overflow for dockers. Flex inner containers shrink into one `.VgfExpandableContent` scroll viewport. Declaration headings and declaration rows collapse display whitespace and wrap to the current node width; widening can join a multiline source signature onto one rendered line. Close/collapse controls stay fixed. Code bodies retain original formatting and horizontal/vertical scrolling. Ordinary/Shift-wheel scrolls the body only while its dominant axis can move further; otherwise it pans the canvas. Ctrl/Alt bubbles to zoom.
+- Resize uses screen delta divided by positive world scale, with 120px minimum width and title/chrome minimum height. Collapse saves/restores expanded height without changing width. Existing outer ResizeObserver events update edges; descendant scroll emits `vp_windowMoved`.
+- Connection origins retain their source-anchor semantics, then clamp to the outer frame and every nested clipping ancestor's client viewport. Fully scrolled-out rows pin to the nearest visible boundary instead of producing off-window edges. Display-hidden sources fall back to a visible ancestor.
+- A canvas-started wheel gesture stays on the canvas when crossing a box. After 180ms idle, the next gesture can begin as content scrolling. Pan uses subpixel CSS positions rather than rounded `offsetTop`/`offsetLeft`, preserving small touchpad and momentum deltas.
+- `WindowPositioner.placeWindow()` measures new attached frames, keeps 24 world px clearance, and advances only the new candidate downward. LEFT slots subtract the new width. Missing/deleted anchors use a viewport-relative slot and cannot receive connections.
+- After a batch, `revealWindow()` eases the minimum camera translation over 450ms with smooth acceleration/deceleration, showing the last new frame with a 20px viewport inset; oversized frames align their beginning. The clock starts on the first rendered frame so response layout cannot consume the transition before it is visible. A new response supersedes the old reveal. Native wheel, pointer/keyboard input, drag, deletion, or external camera changes cancel it without swallowing input or snapping later. Active user gestures take priority over auto-reveal.
+- New windows fade in while their inner presentation translates 20px over 300ms. The outer measured frame stays at its final geometry; per-frame movement notifications keep source connections attached. Interaction ends the entrance immediately. Reduced-motion preferences disable both animations. Reused windows keep their size/position and do not reanimate.
+- Editor selection endpoints both use the source block's start as their coordinate origin. Scrolling/resizing does not change source spans or `SelectionUtils` offsets.
+- `VpwCodeEditor` reserves a shared line-number gutter from the rendered row count (minimum two digits). Right-aligned CSS counters sit outside code flow, with a 12px gap before the source column. They are non-selectable and ignore pointer events; no number text is added to source rows or selection offsets.
+
 
 ### Messages Back from the Diagram
 
@@ -291,6 +321,32 @@ The custom bundler starts at `web_visualizer/src/main.js` and follows reachable 
 - `src/package.json` is a separate packaging/release orchestrator. None of the five root scripts invokes it. Its `compile` path packages the extension and copies release artifacts, unlike the daily development build.
 - The extension's `publish` script runs `vsce package` to create a `.vsix`; the name does not mean that command uploads to the Marketplace. Its pre/post hooks perform release work.
 
+### Local Extension Packaging and Installation
+
+To run this repository in standard VS Code (outside of an Extension Development Host), package the extension as a local `.vsix` and install it.
+
+#### Local Extension Identity
+- **Identifier**: `visualprogrammingx.sourcecodevisualizer-local` (configured in `src/vscodeextension/package.json`).
+- **Display Name**: `Source Code Visualizer (Local)` (visible in the Extensions view).
+- **Commands**: Contributes `Visual Programming: Visualize This (Local)` and `Visualize This (Local)`. Command IDs use `code-visualizerzer-local.*` to prevent command collisions if the upstream Marketplace extension is installed side-by-side.
+
+#### Packaging and Installing
+From the repository root:
+
+```bash
+# 1. Build dependencies, compile TypeScript, and package VSIX
+npm --prefix src/vscodeextension run publish
+
+# 2. Install or overwrite the extension in VS Code
+code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force
+```
+
+#### Iteration Loop After Code Changes
+Source file modifications do not update the installed extension automatically. When code changes:
+1. Run the build/package script (`npm --prefix src/vscodeextension run publish`).
+2. Re-install using `--force` (`code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force`). There is no need to uninstall first; `--force` replaces the installed copy in place.
+3. Reload the VS Code window (`Cmd+Shift+P` / `Ctrl+Shift+P` → `Developer: Reload Window`).
+
 ## III. Component and Generated-File Map
 
 ### Layer 1 — VS Code UI and Development Controls
@@ -316,6 +372,7 @@ Paths in this table are under `src/vscodeextension/src/`.
 | `visualprogramming/webviewcreator.ts` | Create the Code Diagram webview and its HTML; load assets from `media/` |
 | `outlineproviders/providerregistrer.ts` | Register default language adapters, including Python |
 | `outlineproviders/lspextenderpython.ts` | `VpLspExtenderPython`: derive Python header/body ranges from a document symbol |
+| `outlineproviders/lspextendertypescript.ts` | `VpLspExtenderTypeScript`: split TS/TSX syntax inside supplied declaration/ancestor ranges |
 | `outlineproviderAPI/extensionactivator.ts` | Register internal `vp.*` commands and dispatch to the language registry |
 | `outlineproviderAPI/utils/languagefeatureregistry.ts` | Store/get providers using lowercased language IDs |
 | `outlineproviderAPI/utils/outlineproviderwrapper.ts` | Hold a language adapter and delegate to shared outline utilities |

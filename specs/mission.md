@@ -14,13 +14,16 @@ Implement small, immediately actionable improvements to the current extension, w
 
 Individual features and their acceptance criteria are selected through dedicated feature planning, not prescribed by this constitution.
 
+### Phase 1.5 — YAML Visualization
+Add YAML-file visualization and source exploration within the existing VS Code extension. Select its node model, supported constructs, and navigation semantics through dedicated feature planning. This milestone does not approve a standalone YAML product, domain-specific execution, or external integrations.
+
 ### Phase 2 — UML and AI-Assisted Source Analysis
 Introduce UML views and AI-assisted analysis of source code beyond the information currently supplied through VS Code language providers. This direction does not require executing the analyzed code or collecting runtime traces. AI-derived relationships and behavior are inferences, not observed execution evidence.
 
 Select UML diagram types during dedicated feature planning. AI providers, local versus cloud deployment, and source-data handling require future planning; this mission approves no particular choice.
 
 ### Phase 3 — Additional Languages
-Expand attention to languages beyond Python after the Python-first work. Select languages and their support expectations during later planning rather than promise parity across the existing adapters.
+Expand attention to other languages after the Python-first work and the explicit Phase 1.5 YAML milestone. Select languages and their support expectations during later planning rather than promise parity across the existing adapters.
 
 ## Evidence of Progress
 - A Phase 1 improvement delivers its agreed behavior in the locally running extension, with validation recorded before being described as complete.

@@ -1,5 +1,7 @@
 # Product Roadmap — Completed Results
 
+**Current roadmap:** the R14–R18 / Phase 1.5 update extends the original payload and reorganizes Phase 1 into four groups. The later R19 update adds the reported JavaScript function-expression bug to Group A after R04. Original results are preserved as history.
+
 ## Goal and Acceptance Criteria
 Create [the product roadmap](../../specs/roadmap.md) with the exact approved payload, preserving all R01–R13 entries, correctness-first delivery groups, separate Phase 2 interface discovery/UML/AI workstreams, Python-first validation, and deferred design decisions. Deliver documentation only, with no implementation or runtime-validation claims.
 
@@ -38,3 +40,72 @@ The command verified exact equality with the saved approved payload, exactly one
 - No dependencies installed, builds/tests run, or extension launched. This check provides no runtime or provider-integration evidence.
 - Reported defects remain reported symptoms, not established implementation causes.
 - Dedicated feature plans must settle implementation details, UML diagram types, interface discovery strategy, and AI deployment/source-data authorization. No code execution, runtime-trace collection, source transmission, publication, or stack change was authorized or performed.
+
+## Completed Update — R14–R18 and Phase 1.5 YAML
+
+### Goal and decisions
+
+Add the user's new ideas and place them in suitable delivery groups without implementing application behavior. The user explicitly authorized this roadmap/constitution update and clarified:
+- R17 includes both decorator metadata and class/instance attributes.
+- Phase 1.5 means YAML visualization in the extension, not a YAML-formatted roadmap.
+- Existing basic parameter navigation should not be duplicated as a new feature. The full R03 parameter-type acceptance is retained for verification, not automatically marked complete.
+
+### Plan as executed
+
+1. Inspected both supplied screenshots, the current roadmap, and mission. R14's example clicks the imported `operators` module and gets an implementation error; R15's example has long source lines extending outside the visible box. Recorded these as reported symptoms, not established runtime causes.
+2. Appended the approved update contract to `features/product-roadmap/plan.md` before editing specifications.
+3. Added R14 imported-module/file navigation, R15 longest-line code-box sizing, R16 source-position connection anchors, R17 decorator/field navigation, and R18 bottom-right resize handles on every box.
+4. Reorganized Phase 1 as follows:
+
+| Group | Scope | IDs |
+| --- | --- | --- |
+| A | Correctness, Visibility, and Box Sizing | R04, R10, R11, R13, R15, R18 |
+| B | Source Navigation and Connection Anchors | R03, R14, R17, R16 |
+| C | Canvas Navigation and Graph Interaction | R01, R02, R12, R05, R06, R08 |
+| D | Persistence | R09 |
+
+5. Added Phase 1.5 YAML visualization between Phase 1 and Phase 2. YAML node structure, construct coverage, and reference semantics remain dedicated planning decisions. Kept R07/UML/AI in Phase 2 and other languages in Phase 3.
+6. Aligned `specs/mission.md` and `specs/tech.md` with the YAML milestone. Corrected R10's old status-text requirement to the later approved signature-only presentation; R18 explicitly preserves resize handles without restoring a fake body.
+7. Ran the read-only documentation smoke check, then appended this record after successful validation.
+
+### Validation
+
+Executed a Python documentation smoke script through Eval using `pathlib` and regular expressions. It checked:
+- Exactly one entry for every ID R01–R18.
+- Exact membership/order of all four Phase 1 groups against the approved plan.
+- Phase order 1 → 1.5 → 2 → 3.
+- Existing R01–R13 acceptance text retained, except the explicitly superseded R10 presentation.
+- Presence of each new requirement, including both R17 targets, token-end anchors, body-independent resize handles, and YAML visualization rather than roadmap export.
+- Phase 1.5 alignment and local Markdown links in roadmap, mission, and tech.
+
+Observed successful output:
+
+```text
+PASS: R01–R18 unique; groups A/B/C/D match approved mapping; phases 1 → 1.5 → 2 → 3; original acceptance retained except approved R10 update; all six additions and local links checked.
+```
+
+### Boundaries
+
+Documentation update only. No application code, dependencies, generated assets, installed extension, or runtime feature status was changed. No extension build or GUI scenario was exercised for this update. Detailed designs—including extreme line widths, off-screen edge anchors, attribute ambiguity, and YAML semantics—remain feature-planning gates rather than invented implementation decisions.
+
+## Completed Update — R19 JavaScript Function-Expression Visualization Failure
+
+The user requested adding this reported bug to Phase 1 Group A, not fixing application code in this update.
+
+### Changes
+- Appended the approved update contract to `features/product-roadmap/plan.md` before editing the roadmap.
+- Added **R19 — Visualize JavaScript Function-Expression Window Constructors Safely** directly after R04 in `specs/roadmap.md`.
+- Recorded the reproduction at `src/web_visualizer/src/vgf/vgf_window_tiled.js`: the parenthesized `VgfWindowTitled` function expression assigns a nested `self.constructor = function() { ... }`; the user reports `Overlapping or out-of-bounds declaration ranges cannot be displayed safely.` on visualization. The source is a function expression, not an immediately invoked function at its declaration.
+- Specified future live acceptance for file → `VgfWindowTitled` → nested constructor, correct source partitioning/navigation, and continued rejection of genuinely invalid ranges. Do not suppress the guard, drop valid children, or return placeholders.
+- Updated roadmap ID coverage to R01–R19. Group A is now R04, R19, R10, R11, R13, R15, R18; other groups and phases are unchanged.
+
+### Validation
+
+Ran a read-only Python documentation smoke script through Eval. It verified unique R01–R19 entries, exact group membership/order, unchanged R01–R18 feature sections against a pre-edit snapshot, the reproduction path and exact error, and local roadmap links.
+
+```text
+PASS: R01–R19 unique; R19 in Group A after R04; existing R01–R18 sections unchanged; other groups preserved; reproduction path/error and roadmap links verified.
+```
+
+Documentation only. The user-reported error was accepted as evidence; it was not rerun. No runtime cause was established, no application code changed, and no fix was claimed or tested.
+

@@ -1,16 +1,25 @@
-.VpwViewEntityWindow {
-  animation-name: VpwViewEntityWindowOpen;
-  animation-duration: 0.3s;
+/* Only the inner presentation moves; the measured outer frame stays final. */
+.VpwViewEntityWindow_opening {
+  animation: VpwViewEntityWindowOpen 0.3s ease-out;
 }
 
-@keyframes VpwViewEntityWindowOpen{
+.VpwViewEntityWindow_opening > .Window_InnerFrame {
+  animation: VpwViewEntityWindowContentOpen 0.3s ease-out;
+}
 
-  from{
-    opacity: 0;
-    transform: scaleY(0.9) scaleX(1.1) translate(-20%,0px);
-  }
-  to{
-    opacity: 1;
-    transform: scaleY(1) scaleX(1) translate(0px,0px);
+@keyframes VpwViewEntityWindowOpen {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes VpwViewEntityWindowContentOpen {
+  from { transform: translateX(-20px); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .VpwViewEntityWindow_opening,
+  .VpwViewEntityWindow_opening > .Window_InnerFrame {
+    animation: none;
   }
 }

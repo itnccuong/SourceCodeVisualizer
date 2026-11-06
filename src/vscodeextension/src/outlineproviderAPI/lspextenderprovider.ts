@@ -4,6 +4,20 @@ import * as path from 'path';
 import * as Outline from './SymbolDefinition';
 import {DocumentSymbolX} from './utils/documentsymbolx'
 
+export interface LanguageSpecificSymbolInformation {
+  rangeHead: vscode.Range;
+  rangeBody: vscode.Range | null; // null = no body; empty range = empty body
+  attributes: Outline.Attribute[];
+  declarationOnly: boolean;
+  rangeDeclaration?: vscode.Range; // syntax-backed Python assignment or JavaScript RHS-only assignment
+  children?: readonly vscode.DocumentSymbol[]; // display projection; absent keeps the provider's children
+  definitionPosition?: vscode.Position; // callable lookup may differ from an assignment heading's receiver
+}
+
+export interface SymbolExtractionContext {
+  ancestors: readonly vscode.DocumentSymbol[]; // nearest parent first
+}
+
 
 /**
  * Interface for implementing an Outliner with
@@ -35,12 +49,23 @@ export interface VpLspExtenderProvider
    *
    * This function will find the range for head and body
    *
-   * Returns:
-   *  [rangeHead, rangeBody, Outline.Attributes]
+   * A null body denotes a declaration without a body.
    **/
-  getLanguageSpecificSymbolInformation(document:  vscode.TextDocument,
-                                       docSymbol: vscode.DocumentSymbol)
-        : any[];
+  getLanguageSpecificSymbolInformation(
+    document: vscode.TextDocument,
+    docSymbol: vscode.DocumentSymbol,
+    context?: SymbolExtractionContext
+  ): LanguageSpecificSymbolInformation;
+
+  /**
+   * Opt a variable, constant, property, or field into declaration rendering.
+   * Other symbol kinds retain the shared traversal's existing inclusion rules.
+   **/
+  isDeclarationSymbol?(
+    document: vscode.TextDocument,
+    symbol: vscode.DocumentSymbol,
+    context?: SymbolExtractionContext
+  ): boolean;
 
 
 

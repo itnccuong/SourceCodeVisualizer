@@ -335,3 +335,98 @@ gTestdata_outlineData["file:///usr/myfile.ts"].outline["standard_function"] = {
   displayTextRange: [{line: 9, character: 3}, {line: 13, character: 27}],
   displayText: 'standard_function(): string'
 }
+
+
+const declarationBoundaries_ts_content = `abstract class DeclarationExamples {
+  abstract read(): void;
+  run(): string { return "implemented"; }
+  empty(): void {}
+}`;
+
+gTestdata_outlineData["file:///usr/declaration_boundaries.ts"] = {
+  content: declarationBoundaries_ts_content,
+  contentLineBuffer: declarationBoundaries_ts_content.split("\n"),
+  outline: {
+    "read": {
+      uri: "file:///usr/declaration_boundaries.ts",
+      language: "typescript",
+      CLASS_TYPE: "Symbol",
+      parts: [],
+      kind: "Method",
+      totalRange: [{line: 1, character: 2}, {line: 1, character: 24}],
+      attributes: [
+        {
+          uri: "file:///usr/declaration_boundaries.ts",
+          language: "typescript",
+          CLASS_TYPE: "Attribute",
+          parts: [],
+          kind: "abstract",
+          displayTextRange: [{line: 1, character: 2}, {line: 1, character: 10}],
+          displayText: "abstract",
+        }
+      ],
+      displayTextRange: [{line: 1, character: 11}, {line: 1, character: 23}],
+      displayText: "read(): void",
+      declarationOnly: true,
+    },
+    "run": {
+      uri: "file:///usr/declaration_boundaries.ts",
+      language: "typescript",
+      CLASS_TYPE: "Symbol",
+      parts: [
+        {
+          uri: "file:///usr/declaration_boundaries.ts",
+          language: "typescript",
+          CLASS_TYPE: "Text",
+          displayTextRange: [{line: 2, character: 18}, {line: 2, character: 39}],
+          displayText: 'return "implemented";',
+        }
+      ],
+      kind: "Method",
+      totalRange: [{line: 2, character: 2}, {line: 2, character: 41}],
+      attributes: [],
+      displayTextRange: [{line: 2, character: 2}, {line: 2, character: 15}],
+      displayText: "run(): string",
+      declarationOnly: false,
+    },
+    "empty": {
+      uri: "file:///usr/declaration_boundaries.ts",
+      language: "typescript",
+      CLASS_TYPE: "Symbol",
+      parts: [],
+      kind: "Method",
+      totalRange: [{line: 3, character: 2}, {line: 3, character: 18}],
+      attributes: [],
+      displayTextRange: [{line: 3, character: 2}, {line: 3, character: 15}],
+      displayText: "empty(): void",
+      declarationOnly: false,
+    },
+  }
+};
+
+gTestdata_outlineData["file:///usr/declaration_boundaries.ts"].outline["DeclarationExamples"] = {
+  uri: "file:///usr/declaration_boundaries.ts",
+  language: "typescript",
+  CLASS_TYPE: "Symbol",
+  parts: [
+    gTestdata_outlineData["file:///usr/declaration_boundaries.ts"].outline["read"],
+    gTestdata_outlineData["file:///usr/declaration_boundaries.ts"].outline["run"],
+    gTestdata_outlineData["file:///usr/declaration_boundaries.ts"].outline["empty"],
+  ],
+  kind: "Class",
+  totalRange: [{line: 0, character: 0}, {line: 4, character: 1}],
+  attributes: [
+    {
+      uri: "file:///usr/declaration_boundaries.ts",
+      language: "typescript",
+      CLASS_TYPE: "Attribute",
+      parts: [],
+      kind: "abstract",
+      displayTextRange: [{line: 0, character: 0}, {line: 0, character: 8}],
+      displayText: "abstract",
+    }
+  ],
+  displayTextRange: [{line: 0, character: 15}, {line: 0, character: 34}],
+  displayText: "DeclarationExamples",
+  declarationOnly: false,
+};

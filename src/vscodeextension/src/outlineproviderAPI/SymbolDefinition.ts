@@ -57,6 +57,8 @@ export class Symbol extends OutlineRange
 
   public totalRange: null | Range  = null;
   public attributes: Attribute[]   = [];
+  public declarationOnly = false;
+  public definitionPosition?: vscode.Position;
 }
 
 // ==================================================================

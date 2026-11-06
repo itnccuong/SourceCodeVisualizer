@@ -1,6 +1,7 @@
 
 import {VpLspExtenderCurlyBraces} from './lspextender_curlyBraces';
 import {VpLspExtenderPython} from './lspextenderpython';
+import {VpLspExtenderTypeScript} from './lspextendertypescript';
 import {VpLspExtenderProvider} from '../outlineproviderAPI/lspextenderprovider';
 import { VpOutlineProvider } from '../outlineproviderAPI/outlineprovider';
 
@@ -18,13 +19,13 @@ export function activate(vscode: any)
 
   // register `VP LSP Extender`s
   {
-    registerLspExtender (vscode, "Typescript", new VpLspExtenderCurlyBraces ("typescript"));
-    registerLspExtender (vscode, "typescriptreact", new VpLspExtenderCurlyBraces ("typescriptreact"));
+    registerLspExtender (vscode, "Typescript", new VpLspExtenderTypeScript ("typescript"));
+    registerLspExtender (vscode, "typescriptreact", new VpLspExtenderTypeScript ("typescriptreact"));
     registerLspExtender (vscode, "Dart",       new VpLspExtenderCurlyBraces ("dart"));
     registerLspExtender (vscode, "Cpp",        new VpLspExtenderCurlyBraces ("cpp"));
     registerLspExtender (vscode, "C",          new VpLspExtenderCurlyBraces ("c"));
     registerLspExtender (vscode, "Php",        new VpLspExtenderCurlyBraces ("Php"));
-    registerLspExtender (vscode, "Javascript", new VpLspExtenderCurlyBraces ("javascript"));
+    registerLspExtender (vscode, "Javascript", new VpLspExtenderTypeScript ("javascript"));
     registerLspExtender (vscode, "Java",       new VpLspExtenderCurlyBraces ("java"));
     registerLspExtender (vscode, "Python",     new VpLspExtenderPython ());
   }

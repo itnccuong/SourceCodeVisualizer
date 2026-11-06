@@ -67,6 +67,9 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
       intermediate = "<div>" + intermediate.replaceAll("\n","<br/></div><div>") + "</div>"
 
       self.innerHTML = intermediate;//.replaceAll("<div></div>", "<div></div>") ;
+      // Reserve one shared gutter for every row, including unindented values.
+      self.style.setProperty ("--vp-line-number-digits",
+          Math.max (2, String (self.childElementCount).length));
    }
 
    // -------------------------------------------------------
@@ -118,7 +121,7 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
 
    self.vp_getOriginalCursorEnd = function()
    {
-      let base = self.vp_model.displayTextRange[1];
+      let base = self.vp_model.displayTextRange[0];
       let offsetPos = SelectionUtils.div_getSelectionEndPosition (self);
 
       return VsCode.position_sum (base, offsetPos);

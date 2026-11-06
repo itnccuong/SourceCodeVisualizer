@@ -1,5 +1,3 @@
-const { title } = require("process");
-
 require ("../vgf/vgf_window_tiled.js");
 require ("../vgf/vgf_expandable_with_title.js");
 require ("../vgf/vgf_button_toggle.js");
@@ -10,7 +8,6 @@ require ("../utils/misc_utils.js");
 require ("../vgf/vgf_menu.js");
 
 require ("vpw_view_entity_window.js");
-
 
 
 
@@ -45,9 +42,14 @@ const VpwOutlineWindow = (function(viewEntity_outline)
           let tsOutlineSymbol = tsOutlineRange;
 
           {
-            // put all attributes in metatype information
+            // Keep multiline decorators out of the one-line metadata label.
             for (let i = 0; i<tsOutlineSymbol.attributes.length;++i)
-              metatype += tsOutlineSymbol.attributes[i].kind + " ";
+            {
+              let attribute = tsOutlineSymbol.attributes[i].kind;
+              let firstLine = attribute.split(/\r?\n/, 1)[0].trim();
+              metatype += firstLine + (attribute.includes("\n") ? "…" : "") + " ";
+              quickhelp += attribute + "\n";
+            }
 
             if (metatype.trim() == "")
               metatype += tsOutlineSymbol.kind;
@@ -73,15 +75,6 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     };
 
 
-    // shrink size to an initial of 52 chars
-    {
-      let sizeRect = getSizeRectOfUnownedElement (self);
-      let MAX_SIZE = 356; // 52 chars
-      if (sizeRect.width > MAX_SIZE)
-      {
-        self.vp_window_clientarea.style.width = MAX_SIZE + "px";
-      }
-    }
 
 
     let _setupContextMenu = function()
@@ -113,12 +106,12 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
   self._vp_createClientTitle = function(root, metatype, titleString, quickhelp)
   {
-
     let node = null;
     {
       node = document.createElement ("div");
       node.classList.add ("Window_Titlebar_MetatypeDiv");
       node.innerText = metatype;
+      node.title = quickhelp;
       root.appendChild (node);
     }
     {
@@ -133,6 +126,12 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
 
   self._vp_fillClientarea = function(window, root, tsOutlineSymbol){
+    if (tsOutlineSymbol.CLASS_TYPE === "Symbol" && tsOutlineSymbol.declarationOnly === true)
+    {
+      root.style.display = "none";
+      return;
+    }
+
     for (let i=0; i<tsOutlineSymbol.parts.length; ++i)
     {
       let part = tsOutlineSymbol.parts[i];
@@ -183,7 +182,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     table.append (line);
 
     let td1 = document.createElement("td");
-    td1.innerText = tsOutlineSymbol.displayText;
+    td1.textContent = tsOutlineSymbol.displayText;
     line.append (td1);
 
     let td2 = document.createElement("td");

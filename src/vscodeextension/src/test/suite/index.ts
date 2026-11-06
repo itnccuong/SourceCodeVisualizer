@@ -32,7 +32,7 @@ export class Extensions
   static async activate_visualProgramming()
   {
     return await Extensions.activate_extension (
-                "visualprogrammingx.code-visualizerzer");
+                "visualprogrammingx.SourceCodeVisualizer-Local");
   }
 }
 

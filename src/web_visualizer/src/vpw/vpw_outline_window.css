@@ -9,7 +9,8 @@
   border-color: grey white white grey;*/
   font-family: monospace;
 
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 
   padding-top:7px;
   padding-bottom:7px;

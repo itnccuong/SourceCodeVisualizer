@@ -137,71 +137,83 @@ const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget)
 
   self._vp_getLineStartPos = function()
   {
-    /**
-     * TODO: actually we
-     *  - have to take into account, that the window might
-     *    be so small, that it hides the sourc
-     *  - have to take into account, that the small window
-     *    is scrolled in a way, so that it's actually shown again.
-     *
-     * Info:
-     * self._vp_target = movable button
-     **/
-
-    // we need the scale factor here, because getBoundingClientRect
-    //  wouldn't take scaling into account
-    let scale = self.vp_getWorld ().vp_scale;
-
+    let scale = self.vp_getWorld().vp_scale;
+    let toplevel = self._vp_source.vp_getToplevelWidget();
     let src = self._vp_getVisibleSource();
+    let source_offset = src.getBoundingClientRect();
+    let target_offset = self._vp_target.getBoundingClientRect();
+    let toplevel_offset = toplevel.getBoundingClientRect();
 
-    //let source_offset = getOffset (src);
-    //let target_offset = getOffset (self._vp_target);
-    let source_offset = src.getBoundingClientRect ();
-    let target_offset = self._vp_target.getBoundingClientRect ();
-
-    let x = (source_offset.left - target_offset.left) / scale  + src.offsetWidth;
-    let y = (source_offset.top - target_offset.top) / scale;
-
-    y -= self._vp_target.offsetHeight;
-
-    // move the line to about the middle of the circle
-    if (src == self._vp_source){
-      x -= 1;
-      y += src.offsetHeight/5*1;
-    }
-
-
-
-    // do not let the line's source coordinates "escape" the toplevel window
-    if (src == self._vp_source)
+    // Preserve the existing source anchor before clipping it in screen space.
+    let x = source_offset.left + src.offsetWidth * scale;
+    let y = source_offset.top;
+    if (src === self._vp_source)
     {
-      let toplevel = self._vp_source.vp_getToplevelWidget ();
-      let toplevel_offset = toplevel.getBoundingClientRect ();
-
-      let toplevel_right    = (toplevel_offset.left - target_offset.left)/scale + toplevel.offsetWidth;
-      let toplevel_top      = (toplevel_offset.top  - target_offset.top) /scale - self._vp_target.offsetHeight;
-      let toplevel_bottom   = toplevel_top + toplevel.offsetHeight - 4;
-
-      if (x > toplevel_right)
-        x = toplevel_right;
-
-      if (y > toplevel_bottom)
-        y = toplevel_bottom;
-
+      x -= scale;
+      y += src.offsetHeight / 5 * scale;
     }
+
+    let bounds = {
+      left: toplevel_offset.left,
+      top: toplevel_offset.top,
+      right: toplevel_offset.right,
+      bottom: Math.max (toplevel_offset.top, toplevel_offset.bottom - 4 * scale)
+    };
+    if (src !== toplevel)
+      _clipSourceBounds (src.parentElement, toplevel, bounds, scale);
+    x = Math.clamp (x, bounds.left, bounds.right);
+    y = Math.clamp (y, bounds.top, bounds.bottom);
+
+    // The line lives below the docking button's local top edge.
+    x = (x - target_offset.left) / scale;
+    y = (y - target_offset.top) / scale - self._vp_target.offsetHeight;
 
     return [x,y];
   }
+
+  let _clipSourceBounds = function(ancestor, toplevel, bounds, scale)
+  {
+    if (!ancestor || ancestor === toplevel)
+      return;
+
+    // Outer-to-inner clipping also pins a wholly hidden nested viewport to
+    // the nearest boundary of its visible parent.
+    _clipSourceBounds (ancestor.parentElement, toplevel, bounds, scale);
+    let style = window.getComputedStyle (ancestor);
+    let clipX = style.overflowX !== "visible";
+    let clipY = style.overflowY !== "visible";
+    if (!clipX && !clipY)
+      return;
+
+    let rect = ancestor.getBoundingClientRect();
+    if (clipX)
+    {
+      let left = rect.left + ancestor.clientLeft * scale;
+      let min = bounds.left;
+      let max = bounds.right;
+      bounds.left = Math.clamp (left, min, max);
+      bounds.right = Math.clamp (left + ancestor.clientWidth * scale, min, max);
+    }
+    if (clipY)
+    {
+      let top = rect.top + ancestor.clientTop * scale;
+      let min = bounds.top;
+      let max = bounds.bottom;
+      bounds.top = Math.clamp (top, min, max);
+      bounds.bottom = Math.clamp (top + ancestor.clientHeight * scale, min, max);
+    }
+  };
 
 
 
   self._vp_getVisibleSource = function()
   {
-    // source could be hidden; in that case,
-    //  use it's parent... and so on
+    // Display-hidden sources (for example a collapsed body) use a visible
+    // ancestor; scroll-clipped sources retain their own anchor.
+    let toplevel = self._vp_source.vp_getToplevelWidget();
     let src = self._vp_source;
-    while( !isVisible(src))
-      src = src.parentNode;
+    while (src !== toplevel && !isVisible (src))
+      src = src.parentElement;
     return src;
   }
 
@@ -209,8 +221,7 @@ const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget)
 
   self.vp_update = function()
   {
-    // we need the scale factor here, because getBoundingClientRect
-    //  wouldn't take scaling into account
+    // Convert the docking button's screen height back to world coordinates.
     let scale = self.vp_getWorld ().vp_scale;
 
     // from source

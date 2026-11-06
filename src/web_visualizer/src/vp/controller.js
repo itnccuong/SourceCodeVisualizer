@@ -136,7 +136,10 @@ class Controller
     // translate direction
     let visualizingLocation = this._requestDirection2visualizationLocation (requestInfo.requestDirection);
 
-    let positioner = new WindowPositioner (this._vp_world, requestInfo.requestee, visualizingLocation);
+    const requestee = requestInfo.requestee && this._vp_world.contains(requestInfo.requestee)
+      ? requestInfo.requestee : null;
+    let positioner = new WindowPositioner (this._vp_world, requestee, visualizingLocation);
+    let lastCreatedWindow = null;
 
     // visualize all outlineEntities
     const outlineEntities = requestMessage.getOutlineEntities ();
@@ -145,22 +148,25 @@ class Controller
     {
       let outlineEntity = outlineEntities[i];
       let managedWindow = self._window_focusFromOutlineEntity (outlineEntity);
+      const created = !managedWindow;
 
       if (!managedWindow)
       {
-        managedWindow = self._managedWindow_create (
-                                requestMessage, outlineEntity,
-                                positioner.getX(),
-                                positioner.getY());
+        managedWindow = self._managedWindow_create(requestMessage, outlineEntity, 0, 0);
+        const position = positioner.placeWindow(managedWindow);
+        managedWindow.vp_setXY(position.x, position.y);
+        lastCreatedWindow = managedWindow;
       }
 
-      positioner.moveY();
+      // A late response must not attach connections to a deleted requestee.
+      if (RequestInformation.CALLEE == requestInfo.requestDirection && requestee)
+        self._connection_createIfNotExisting (requestee, managedWindow);
 
-      // create connection, if necessary
-      if (RequestInformation.CALLEE == requestInfo.requestDirection)
-        self._connection_createIfNotExisting (requestInfo.requestee, managedWindow);
+      // Start presentation only after attached sizing, final placement and wiring.
+      if (created) managedWindow.vp_animateEntrance();
 
     }
+    if (lastCreatedWindow) positioner.revealWindow(lastCreatedWindow);
   }
 
   // ----------------------------------------------------------------
