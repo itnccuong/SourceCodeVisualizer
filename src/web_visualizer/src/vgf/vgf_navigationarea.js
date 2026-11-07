@@ -30,6 +30,11 @@ const VgfNavigationArea = (function(world)
 
     self.appendChild (self._vp_interactionArea);
     self.appendChild (world);
+    self.addEventListener("mousedown", event => {
+      if (event.button !== 0 || event.target.closest(".VgfWindow")) return;
+      for (const window of world.querySelectorAll(".VgfWindow_focussed"))
+        vgf_window_unfocus_visually(window);
+    });
 
     setup_mouse_dragElement (self._vp_interactionArea, world);
     _setup_mouseWheelScrolling (self, world);

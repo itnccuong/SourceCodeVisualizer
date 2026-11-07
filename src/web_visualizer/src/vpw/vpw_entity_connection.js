@@ -66,6 +66,15 @@ const VpwEntityConnection = (function (domSource, domTarget, sourceAnchor = null
     listener_source.addEventListener("vp_beforeDelete", self.vp_delete);
     self.addEventListener("vp_beforeDelete", () =>
       listener_source.removeEventListener("vp_beforeDelete", self.vp_delete));
+    const restoreAboveSource = () => {
+      if (!self.isConnected) return;
+      const target = self._vp_domTarget ?? self;
+      if (target !== listener_source)
+        self.vp_getWorld().vp_liftElementToTop(target);
+    };
+    listener_source.addEventListener("vp_windowUnfocused", restoreAboveSource);
+    self.addEventListener("vp_beforeDelete", () =>
+      listener_source.removeEventListener("vp_windowUnfocused", restoreAboveSource));
 
     self.addEventListener ("mousedown", self.vp_update);
     self.addEventListener ("vp_beforeDelete", self._vp_removeSelfFromSource);
