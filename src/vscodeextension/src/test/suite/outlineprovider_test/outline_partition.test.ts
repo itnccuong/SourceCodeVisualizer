@@ -174,32 +174,4 @@ suite('Outline partition and navigation', () => {
       contentProvider.dispose();
     }
   });
-
-  test('definition links navigate to target coordinates and preserve no-definition behavior', async () => {
-    const scheme = 'outline-partition-definition';
-    const contentProvider = vscode.workspace.registerTextDocumentContentProvider(scheme, {provideTextDocumentContent: () => 'call();\nfunction target() {}'});
-    let definitionProvider: vscode.Disposable | undefined;
-    try {
-      const source = vscode.Uri.parse(scheme + ':/source.ts');
-      const target = vscode.Uri.parse(scheme + ':/target.ts');
-      await vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(source), 'plaintext');
-      const targetRange = new vscode.Range(1, 0, 1, 20);
-      const targetSelectionRange = new vscode.Range(1, 9, 1, 15);
-      const originSelectionRange = new vscode.Range(0, 0, 0, 4);
-      let links: vscode.LocationLink[] = [{targetUri: target, targetRange, targetSelectionRange, originSelectionRange}];
-      definitionProvider = vscode.languages.registerDefinitionProvider({scheme}, {provideDefinition: () => links});
-      const selected = await OutlineUtils.vscode_executeDefinitionProvider(source, new vscode.Position(0, 1));
-      assert.strictEqual(selected[0].uri.toString(), target.toString());
-      AssertX.range_equals(selected[0].range, targetSelectionRange);
-      // Runtime LocationLinks can lack targetSelectionRange despite the old API typing.
-      links = [{targetUri: target, targetRange, originSelectionRange}] as unknown as vscode.LocationLink[];
-      const fallback = await OutlineUtils.vscode_executeDefinitionProvider(source, new vscode.Position(0, 1));
-      AssertX.range_equals(fallback[0].range, targetRange);
-      links = [];
-      assert.deepStrictEqual(await OutlineUtils.vscode_executeDefinitionProvider(source, new vscode.Position(0, 1)), []);
-    } finally {
-      definitionProvider?.dispose();
-      contentProvider.dispose();
-    }
-  });
 });

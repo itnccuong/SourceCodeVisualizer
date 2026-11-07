@@ -3,6 +3,17 @@ import * as path from 'path';
 
 import * as Outline from "./SymbolDefinition";
 
+export interface DefinitionTarget {
+  uri: vscode.Uri;
+  range: vscode.Range;
+  selectionRange: vscode.Range;
+  originSelectionRange?: vscode.Range;
+}
+
+export type DefinitionTargetChooser =
+  (targets: readonly DefinitionTarget[]) => Promise<DefinitionTarget | undefined>;
+export type DefinitionOutlineResult = Array<Outline.Symbol | Outline.File> | null;
+
 export interface VpOutlineProvider
 {
   // TODO:future: maybe it's better to use a uri instead of a TextDocument?
@@ -29,8 +40,9 @@ export interface VpOutlineProvider
    *        annotation before the function head.
    **/
   provideDefinitionOutline(document: vscode.TextDocument,
-                           position: vscode.Position)
-    : Promise<Outline.Symbol[]>;
+                           position: vscode.Position,
+                           chooseTarget?: DefinitionTargetChooser)
+    : Promise<DefinitionOutlineResult>;
 
 
   /**

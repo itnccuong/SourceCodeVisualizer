@@ -108,6 +108,87 @@ implements VpLspExtenderProvider
     throw new Error('Cannot determine declaration boundaries for "' + symbol.name + '".');
   }
 
+  private assignmentTargetAt(node: SyntaxNode, offset: number): SyntaxNode | null {
+    if (offset < node.from || offset >= node.to || node.name === 'TypeDef') { return null; }
+    if (node.name === 'VariableName' || node.name === 'PropertyName') { return node; }
+    if (node.name === 'MemberExpression') {
+      if (node.getChild('[')) { return null; }
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        const target = this.assignmentTargetAt(child, offset);
+        if (target) { return target; }
+      }
+    }
+    if (['TupleExpression', 'ArrayExpression', 'ParenthesizedExpression'].includes(node.name)) {
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        const target = this.assignmentTargetAt(child, offset);
+        if (target) { return target; }
+      }
+    }
+    return null;
+  }
+
+  private assignmentDefinitionAt(statement: SyntaxNode, offset: number): SyntaxNode | null {
+    let finalOperator: SyntaxNode | null = null;
+    for (let child = statement.firstChild; child; child = child.nextSibling) {
+      if (child.name === 'AssignOp' || child.name === 'UpdateOp') { finalOperator = child; }
+    }
+    for (let child = statement.firstChild; child && child !== finalOperator; child = child.nextSibling) {
+      const target = this.assignmentTargetAt(child, offset);
+      if (target) { return target; }
+    }
+    return null;
+  }
+
+  public getDefinitionSymbol(document: vscode.TextDocument, position: vscode.Position,
+                             context?: SymbolExtractionContext): vscode.DocumentSymbol | undefined {
+    const ancestors = context?.ancestors ?? [];
+    const enclosing = ancestors.find(symbol => symbol.range.contains(position)
+      && [vscode.SymbolKind.Function, vscode.SymbolKind.Method, vscode.SymbolKind.Constructor,
+          vscode.SymbolKind.Class].includes(symbol.kind))
+      ?? ancestors.find(symbol => symbol.range.contains(position));
+    const fragment = this.parseDeclaration(document, enclosing?.range ?? document.lineAt(position.line).range);
+    const offset = document.offsetAt(position) - fragment.start + fragment.prefixLength;
+    let node: SyntaxNode | null = fragment.tree.resolveInner(offset, 1);
+    if (!['VariableName', 'PropertyName'].includes(node.name)
+        || offset < node.from || offset >= node.to) { return undefined; }
+
+    if (node.parent?.name === 'ParamList') {
+      // Default-value names are also direct ParamList children. Only the first
+      // name after a separator (possibly following * or **) declares a parameter.
+      let expectsName = true;
+      for (let child = node.parent.firstChild; child; child = child.nextSibling) {
+        if (child.name === ',') { expectsName = true; }
+        if (child.name === 'VariableName') {
+          if (child.from === node.from && expectsName) {
+            const functionNode = node.parent.parent;
+            const name = functionNode?.getChild('VariableName');
+            if (functionNode?.name !== 'FunctionDefinition' || !name) { return undefined; }
+            const namePosition = document.positionAt(fragment.start + name.from - fragment.prefixLength);
+            return ancestors.find(symbol =>
+              [vscode.SymbolKind.Function, vscode.SymbolKind.Method, vscode.SymbolKind.Constructor].includes(symbol.kind)
+              && symbol.selectionRange.contains(namePosition));
+          }
+          expectsName = false;
+        }
+      }
+      return undefined;
+    }
+
+    while (node && node.name !== 'AssignStatement' && node.name !== 'UpdateStatement') { node = node.parent; }
+    if (!node) { return undefined; }
+    const target = this.assignmentDefinitionAt(node, offset);
+    if (!target) { return undefined; }
+    const start = document.positionAt(fragment.start + target.from - fragment.prefixLength);
+    const end = document.positionAt(fragment.start + target.to - fragment.prefixLength);
+    const range = new vscode.Range(start, end);
+    const seed = new vscode.DocumentSymbol(document.getText(range), '',
+      target.name === 'PropertyName' ? vscode.SymbolKind.Field : vscode.SymbolKind.Variable, range, range);
+    // Validate the selected assignment now; malformed syntax must be a concrete
+    // extraction failure rather than an unrelated enclosing declaration.
+    this.getLanguageSpecificSymbolInformation(document, seed, context);
+    return seed;
+  }
+
   public getLanguageStr(): string{
     return "python";
   }
@@ -152,26 +233,6 @@ implements VpLspExtenderProvider
     const selection = document.offsetAt(docSymbol.selectionRange.start)
       - fragment.start + fragment.prefixLength;
     const contains = (node: SyntaxNode) => node.from <= selection && selection < node.to;
-    const targetContains = (node: SyntaxNode): boolean => {
-      if (!contains(node) || node.name === "TypeDef") {
-        return false;
-      }
-      if (node.name === "VariableName" || node.name === "PropertyName") {
-        return true;
-      }
-      if (node.name === "MemberExpression") {
-        // Index expressions are references, not declared targets.
-        return node.firstChild !== null && targetContains(node.firstChild)
-          || node.getChildren("PropertyName").some(contains);
-      }
-      if (node.name === "TupleExpression" || node.name === "ArrayExpression"
-          || node.name === "ParenthesizedExpression") {
-        for (let child = node.firstChild; child; child = child.nextSibling) {
-          if (targetContains(child)) { return true; }
-        }
-      }
-      return false;
-    };
     const matches: SyntaxNode[] = [];
     const visit = (node: SyntaxNode) => {
       const decorated = node.parent?.name === "DecoratedStatement" ? node.parent : node;
@@ -184,13 +245,7 @@ implements VpLspExtenderProvider
           const name = node.getChild("VariableName");
           matchesSelection = matchesSelection || name !== null && contains(name);
         } else {
-          let finalOperator: SyntaxNode | null = null;
-          for (let child = node.firstChild; child; child = child.nextSibling) {
-            if (child.name === "AssignOp" || child.name === "UpdateOp") { finalOperator = child; }
-          }
-          for (let child = node.firstChild; child && child !== finalOperator; child = child.nextSibling) {
-            if (targetContains(child)) { matchesSelection = true; }
-          }
+          matchesSelection = matchesSelection || this.assignmentDefinitionAt(node, selection) !== null;
         }
         if (matchesSelection && toDocument(node.from) >= start
             && toDocument(trimEnd(node.from, node.to)) <= end) {
@@ -226,6 +281,13 @@ implements VpLspExtenderProvider
       attribute.displayTextRange = range(node.from, attributeEnd);
       attribute.language = document.languageId;
       attribute.uri = document.uri.toString();
+      if (node.name === 'Decorator') {
+        let callable: SyntaxNode | null = null;
+        for (let child = node.firstChild; child && child.name !== 'ArgList'; child = child.nextSibling) {
+          if (child.name === 'VariableName') { callable = child; }
+        }
+        if (callable) { attribute.definitionRange = range(callable.from, callable.to); }
+      }
       attributes.push(attribute);
     };
     if (selected !== declaration) {

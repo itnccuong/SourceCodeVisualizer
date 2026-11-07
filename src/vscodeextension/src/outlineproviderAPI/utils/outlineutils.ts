@@ -7,7 +7,7 @@
 import * as Outline from '../SymbolDefinition';
 import * as vscode from 'vscode'
 import * as utils from '../../utils';
-import { VpOutlineProvider } from '../outlineprovider';
+import type {DefinitionTarget, DefinitionTargetChooser, DefinitionOutlineResult} from '../outlineprovider';
 import { SymbolExtractionContext, VpLspExtenderProvider } from '../lspextenderprovider';
 import { DocumentSymbolX } from './documentsymbolx';
 
@@ -28,55 +28,26 @@ export class OutlineUtils {
    * return type (because "vscode.executeDefinitionProvider" itself has
    * 5 different return types
    **/
-  public static async vscode_executeDefinitionProvider (uri: vscode.Uri, position: vscode.Position)
-  : Promise <vscode.Location[]>
+  public static async vscode_executeDefinitionProvider(uri: vscode.Uri, position: vscode.Position)
+    : Promise<DefinitionTarget[]>
   {
-    let result = await vscode.commands.executeCommand (
-      "vscode.executeDefinitionProvider", uri, position);
-
-    if (undefined == result || null == result)
-      return [];
-
-    if (result instanceof vscode.Location)
-      return [result];
-
-    if (Array.isArray(result))
-    {
-      if (0 == result.length)
-        return result;
-
-      let elem = result[0];
-      if (elem instanceof vscode.Location)
-      {
-        return result;
-      }
-      // vscode does not understand the type vscode.LocationLink
-      // even though, that's the one returned to us, so we try
-      //  to catch it by this else case here
-      else
-      {
-        let locArray = this.convert_LocationLinkArray_to_LocationArray (result);
-        return locArray;
-      }
+    position = new vscode.Position(position.line, position.character);
+    const result = await vscode.commands.executeCommand<vscode.Location | Array<vscode.Location | vscode.LocationLink>>(
+      'vscode.executeDefinitionProvider', uri, position);
+    const entries = result == null ? [] : Array.isArray(result) ? result : [result];
+    const targets: DefinitionTarget[] = [];
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      const target: DefinitionTarget = 'targetUri' in entry
+        ? {uri: entry.targetUri, range: entry.targetRange,
+          selectionRange: entry.targetSelectionRange ?? entry.targetRange,
+          originSelectionRange: entry.originSelectionRange}
+        : {uri: entry.uri, range: entry.range, selectionRange: entry.range};
+      const {start, end} = target.selectionRange;
+      const key = JSON.stringify([target.uri.toString(), start.line, start.character, end.line, end.character]);
+      if (!seen.has(key)) { seen.add(key); targets.push(target); }
     }
-
-    return [];
-  }
-
-
-  private static convert_LocationLinkArray_to_LocationArray (locationLinkArray: vscode.LocationLink[])
-    : vscode.Location[]
-  {
-    let ret: vscode.Location[] = [];
-    for (let i = 0; i < locationLinkArray.length; ++i)
-    {
-      let e = locationLinkArray[i];
-      const range = e.targetSelectionRange ?? e.targetRange;
-
-      let loc = new vscode.Location (e.targetUri, range);
-      ret.push (loc);
-    }
-    return ret;
+    return targets;
   }
 
 
@@ -193,8 +164,9 @@ export class OutlineUtils {
   private static async _getDefinitionRanges(
                       provider: VpLspExtenderProvider,
                       uri:      vscode.Uri,
-                      position: vscode.Position)
-                      : Promise<null | DocumentSymbolX[]>
+                      position: vscode.Position,
+                      chooseTarget?: DefinitionTargetChooser)
+                      : Promise<DefinitionOutlineResult>
   {
     // Messages from the webview contain structural positions, not API instances.
     position = new vscode.Position(position.line, position.character);
@@ -210,54 +182,62 @@ export class OutlineUtils {
           - (document.offsetAt(b.range.end) - document.offsetAt(b.range.start)));
       for (const declaration of candidates) {
         if (declaration.selectionRange.start.isEqual(position) || declaration.range.start.isEqual(position)) {
-          return [new DocumentSymbolX(declaration, uri)];
+          return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, uri), provider)];
         }
         const information = provider.getLanguageSpecificSymbolInformation(
           document, declaration, this._getSymbolExtractionContext(declaration));
         if (information.definitionPosition?.isEqual(position)) {
-          return [new DocumentSymbolX(declaration, uri)];
+          return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, uri), provider)];
         }
       }
     }
-    let locations = await this.vscode_executeDefinitionProvider (uri, position);
-
-    let documentSymbolLocations: DocumentSymbolX[] = []
-    for (let i = 0; i<locations.length; ++i)
-    {
-      let location = locations[i];
-      let uri = location.uri;
-      let docSym = await this.getDocumentSymbolAtPosition (uri, location.range.start);
-      if (null == docSym)
-        continue;
-
-      let docSymX = new DocumentSymbolX (docSym, uri);
-      documentSymbolLocations.push (docSymX);
+    const targets = await this.vscode_executeDefinitionProvider(uri, position);
+    if (targets.length === 0) { return []; }
+    let target = targets[0];
+    if (targets.length > 1) {
+      if (!chooseTarget) { throw new Error('Multiple definition targets require selection.'); }
+      const selected = await chooseTarget(targets);
+      if (!selected) { return null; }
+      target = selected;
     }
-    return documentSymbolLocations;
+    const origin = await vscode.workspace.openTextDocument(uri);
+    const document = await vscode.workspace.openTextDocument(target.uri);
+    if (document.languageId !== origin.languageId) {
+      throw new Error('The resolved target uses an unsupported language for this navigation: ' + document.languageId + '.');
+    }
+    const root = target.selectionRange.isEmpty
+      && target.selectionRange.start.line === 0 && target.selectionRange.start.character === 0;
+    if (root) { return [await this.provideDocumentOutline(provider, document)]; }
+    const symbols = await this._getFlatDocumentSymbols(target.uri);
+    const exactRange = symbols.find(symbol => symbol.range.isEqual(target.range));
+    if (!exactRange && target.range.isEqual(target.selectionRange)
+        && target.range.isEqual(utils.document_getRange(document))) {
+      return [await this.provideDocumentOutline(provider, document)];
+    }
+    let declaration = await this.getDocumentSymbolAtPosition(target.uri, target.selectionRange.start);
+    const exactSelection = declaration && declaration.selectionRange.contains(target.selectionRange)
+      && target.selectionRange.start.isBefore(declaration.selectionRange.end);
+    if (exactRange) { declaration = exactRange; }
+    if (provider.getLanguageStr() === 'python'
+        && (!exactSelection && !exactRange || declaration
+          && [vscode.SymbolKind.Variable, vscode.SymbolKind.Field, vscode.SymbolKind.Property,
+              vscode.SymbolKind.Constant].includes(declaration.kind))) {
+      const ancestors = declaration
+        ? [declaration, ...this._getSymbolExtractionContext(declaration).ancestors] : [];
+      const syntax = provider.getDefinitionSymbol?.(document, target.selectionRange.start, {ancestors});
+      if (syntax && declaration && syntax !== declaration && declaration.range.contains(syntax.range)) {
+        this.symbolParents.set(syntax, declaration);
+      }
+      declaration = syntax ?? (exactSelection || exactRange ? declaration : null);
+    }
+    if (!declaration) {
+      throw new Error('No source declaration could be mapped at the resolved location.');
+    }
+    return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, target.uri), provider)];
   }
 
 
 
-  /**
-   * @param definitionLocation: always surrounds only one single symbol and
-   *         nothing else
-   **/
-  private static async _provideSymbolDefinitionOutline (
-                document: vscode.TextDocument,
-                documentSymbolX: DocumentSymbolX,
-                provider: VpLspExtenderProvider)
-                : Promise<Outline.Symbol | null>
-  {
-    // Outline that range (Result: one outlined symbol)
-
-    let filepath = documentSymbolX.uri.toString ()
-    let symbol: Outline.Symbol
-        = this.documentSymbol2outlineSymbol (document, documentSymbolX, provider);
-
-    symbol.uri = filepath ;
-
-    return symbol;
-  }
 
 
 
@@ -268,7 +248,8 @@ export class OutlineUtils {
   private static _provideOutlineForRange(document: vscode.TextDocument,
                                         range: vscode.Range,
                                         documentSymbolsInRange: readonly vscode.DocumentSymbol[],
-                                        provider: VpLspExtenderProvider)
+                                        provider: VpLspExtenderProvider,
+                                        preserveSourceGaps = false)
     : Outline.OutlineRange[]
   {
     const children = documentSymbolsInRange.slice().sort((a, b) =>
@@ -319,7 +300,7 @@ export class OutlineUtils {
       text.language = provider.getLanguageStr();
       text.uri = document.uri.toString();
       text.displayTextRange = new vscode.Range(cursor, end);
-      if (this._shouldAddTextOutline(document, text)) { parts.push(text); }
+      if (preserveSourceGaps || this._shouldAddTextOutline(document, text)) { parts.push(text); }
     };
     for (const outline of outlines) {
       const childRange = outline.totalRange!;
@@ -345,6 +326,7 @@ export class OutlineUtils {
     let filesymbol: Outline.File = new Outline.File ();
     filesymbol.uri = document.uri.toString ();
     filesymbol.language = provider.getLanguageStr();
+    filesymbol.displayTextRange = new vscode.Range(0, 0, 0, 0);
 
     let documentSymbols = await this.getDocumentSymbols (document.uri);
     if (!documentSymbols) documentSymbols = [];
@@ -353,7 +335,7 @@ export class OutlineUtils {
                       document,
                       utils.document_getRange (document),
                       documentSymbols,
-                      provider);
+                      provider, true);
 
     return filesymbol;
   }
@@ -363,34 +345,11 @@ export class OutlineUtils {
   public static async provideDefinitionOutline(
                   provider: VpLspExtenderProvider,
                   document: vscode.TextDocument,
-                  position: vscode.Position)
-                : Promise<Outline.Symbol[]>
+                  position: vscode.Position,
+                  chooseTarget?: DefinitionTargetChooser)
+                : Promise<DefinitionOutlineResult>
   {
-    let symbols: Outline.Symbol[] = [];
-
-    // let LSP provide range of possible functions
-    let docSymbolXArr: null | DocumentSymbolX[];
-    docSymbolXArr  = await OutlineUtils._getDefinitionRanges (provider, document.uri, position);
-
-
-
-    // 2) Outline all found definitions
-    if (docSymbolXArr)
-    {
-      // array.forEach-function does not work here! It would cause symbols to be empty
-      for (let i=0; i<docSymbolXArr.length; ++i){
-        let docSymX: DocumentSymbolX = docSymbolXArr[i];
-        let document = await vscode.workspace.openTextDocument (docSymX.uri);
-        if (!document)
-          throw new Error ("The following document could not be opened:\n" + docSymX.uri);
-
-        let symbol = await this._provideSymbolDefinitionOutline(document, docSymX, provider);
-        if (symbol)
-          symbols.push (symbol);
-      }
-    }
-
-    return symbols;
+    return this._getDefinitionRanges(provider, document.uri, position, chooseTarget);
   }
 
 

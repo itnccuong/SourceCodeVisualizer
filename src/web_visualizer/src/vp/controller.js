@@ -12,6 +12,7 @@ class RequestInformation
   static CALLER = "caller";
 
   requestee = null;
+  sourceAnchor = null;
   // CALLEE => visualize a call; I.e. put the new
   //           outline to the right of the requestee
   // CALLER => visualize a caller; I.e. put the new
@@ -60,11 +61,29 @@ class Controller
    *           false => Did not run `openDeclaration`
    **/
   onKeyDown_openDeclaration(){
-    console.log ("open declaration via F12");
-    let focusedElem = document.activeElement;
-    if (isObject (focusedElem.vp_request_outline_for_selection))
+    const sourceSurface = node => {
+      const element = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
+      return element ? element.closest ("[data-vp-source-surface]") : null;
+    };
+    const focusedElement = document.activeElement;
+    let surface = sourceSurface (focusedElement);
+    if (!surface)
     {
-      focusedElem.vp_request_outline_for_selection ();
+      const selection = window.getSelection ();
+      if (selection && selection.rangeCount > 0)
+      {
+        const selectedSurface = sourceSurface (selection.anchorNode);
+        if (selectedSurface && selectedSurface === sourceSurface (selection.focusNode))
+          surface = selectedSurface;
+      }
+    }
+    if (surface && typeof surface.vp_request_outline_for_selection === "function")
+      return surface.vp_request_outline_for_selection () !== false;
+
+    if (focusedElement && typeof focusedElement.vp_request_outline_for_selection === "function")
+    {
+      focusedElement.vp_request_outline_for_selection ();
+      return true;
     }
     return false;
   }
@@ -160,7 +179,7 @@ class Controller
 
       // A late response must not attach connections to a deleted requestee.
       if (RequestInformation.CALLEE == requestInfo.requestDirection && requestee)
-        self._connection_createIfNotExisting (requestee, managedWindow);
+        self._connection_createIfNotExisting (requestee, managedWindow, requestInfo.sourceAnchor);
 
       // Start presentation only after attached sizing, final placement and wiring.
       if (created) managedWindow.vp_animateEntrance();
@@ -203,11 +222,11 @@ class Controller
    *  @return: success: connection between entities
    *           fail: null (if no connection could be created)
    **/
-  _connection_createIfNotExisting(dom_source_nullable, dom_target_nullable)
+  _connection_createIfNotExisting(dom_source_nullable, dom_target_nullable, sourceAnchor = null)
   {
     if (isObject(dom_source_nullable) && isObject (dom_target_nullable))
     {
-      return this._vp_world.connection_createIfNotExisting (dom_source_nullable, dom_target_nullable);
+      return this._vp_world.connection_createIfNotExisting (dom_source_nullable, dom_target_nullable, sourceAnchor);
     }
     return null;
   }
@@ -242,6 +261,11 @@ class Controller
     //this.show_debug_message ( JSON.stringify (message));
 
     let msg = new RequestMessage (message);
+    if (msg.isCancelled ())
+    {
+      this._request_getRequestInformation (msg.getRequestId ());
+      return true;
+    }
     if (msg.isMessage ()){
       this._visualizeOutline (msg);
     } else
@@ -326,7 +350,7 @@ class Controller
    **/
   outline_requestByFilePosition(uri,
                                 cursorStart, cursorEnd,
-                                requestee)
+                                requestee, sourceAnchor = null)
   {
     let data = {
       uri: uri,
@@ -336,10 +360,25 @@ class Controller
 
     let requestInformation = new RequestInformation();
     requestInformation.requestee = requestee;
+    requestInformation.sourceAnchor = sourceAnchor;
 
     this._outlineEntity_request ("outline_requestByFilePosition",
                                   data,
                                   requestInformation);
+  }
+
+  // -------------------------------------------------------
+
+  outline_reportError(requestee, title, message)
+  {
+    const requestInformation = new RequestInformation();
+    requestInformation.requestee = requestee;
+    const requestedId = this._request_memorize (requestInformation);
+    this._visualizeOutline (new RequestMessage ({
+      type: "messageBox",
+      data: [{type: "Error", title, message}],
+      requestedId,
+    }));
   }
 
   // -------------------------------------------------------
@@ -360,14 +399,14 @@ class Controller
   // -------------------------------------------------------
 
 
-  host_openRawSource(outlineEntity, requestee_nullable)
+  host_openRawSource(outlineEntity)
   {
-    let requestInformation = new RequestInformation();
-    requestInformation.requestee = requestee_nullable;
-
-    this._outlineEntity_request ("vp_host_openRawSource",
-                                 outlineEntity,
-                                 requestInformation);
+    // Opening an editor has no diagram reply and must not leave a request ticket.
+    gBackend.postMessage({
+      type: "vp_host_openRawSource",
+      requestId: null,
+      data: outlineEntity,
+    });
   }
 
 

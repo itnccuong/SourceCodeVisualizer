@@ -57,22 +57,20 @@ Registration stores an object for later use; it does not analyze the file yet.
 Inside `OutlineUtils`, the connected path is:
 
 ```text
-provideDefinitionOutline(adapter, document, position)
+provideDefinitionOutline(adapter, document, position, chooseTarget?)
   → _getDefinitionRanges(...)
-    → vscode_executeDefinitionProvider(uri, position)
-      → executeCommand("vscode.executeDefinitionProvider", uri, position)
-    → getDocumentSymbolAtPosition(definitionUri, definitionPosition)
-      → getDocumentSymbols(...)
-        → executeCommand("vscode.executeDocumentSymbolProvider", definitionUri)
-  → _provideSymbolDefinitionOutline(...)
-    → documentSymbol2outlineSymbol(...)
-      → adapter.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors})
-      → recursively build parts from child symbols and ordinary text
+    → normalize and deduplicate VS Code Location / LocationLink targets
+    → open one target directly, or await the host Quick Pick chooser
+    → file root: provideDocumentOutline(...)
+    → declaration: exact/smallest document symbol, or Python syntax-backed target
+  → documentSymbol2outlineSymbol(...)
+    → adapter.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors})
+    → recursively build parts from child declarations and ordinary text
 ```
 
 - **`vp.executeDefinitionProvider`** is this repository's command: build diagram-ready information.
 - **`vscode.executeDefinitionProvider`** is VS Code's command: find the identifier's definition. Different IDs mean no recursive command loop.
-- A definition location tells the extension **where** the class/function is. A document symbol supplies its full range and children.
+- A definition target retains URI, full range, selection range, and optional origin range. `DefinitionOutlineResult` is `Array<Symbol | File> | null`: `null` means cancelled, `[]` means unresolved, and a rejection is a concrete lookup/open/extraction failure. Multiple distinct targets require a chooser; non-UI callers without one reject rather than choosing silently.
 - `VpLspExtenderPython` is **not a language server**. It supplements symbols obtained through installed Python tooling, typically Python/Pylance, with Python-specific header/body ranges.
 - For `class Dog:` containing `def bark(self):`, the current adapter extracts headers `Dog` and `bark(self)`. Shared code creates nested `Symbol` and `Text` parts.
 - `VisualizingTab._translate_outlineRanges2outlineEntities()` fills `displayText` using `document.getText(range)` before sending the tree to the webview.
@@ -91,6 +89,9 @@ provideDefinitionOutline(adapter, document, position)
 - Python-related changes require live verification of `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`: file → `_build_dag` → `ingestion_dag`, plus affected variables. Do not execute or modify that Airflow file.
 - JavaScript callable variable/property/field/constant initializers become declaration rows. Only an immediate wrapper with exactly the same AST function/parenthesis range is transparent; its children are projected without changing the provider tree. Raw and effective child ranges retain strict overlap/crossing checks.
 - Assignment headings include their receiver. Their syntax-backed `definitionPosition` keeps row lookup on the callable, not on the receiver local. Definition requests normalize serialized webview positions into VS Code `Position` instances before comparisons. **Show in code** still selects the displayed heading's source start.
+- Empty `(0,0)` definition targets open files before declaration lookup. Full-document targets open files only when no declaration has exactly that range. File identity is URI-based, its display range is `(0,0)`, and its parts retain whitespace gaps and EOF. **Show in code** opens its beginning without inventing a symbol `totalRange`.
+- Python decorator attributes retain a `definitionRange` for the terminal callable identifier, including qualified and multiline decorators. Descriptive attributes such as `async` have no navigation range. The Python `getDefinitionSymbol` hook proves omitted assignment targets or direct parameter declarations from syntax; it never substitutes an enclosing method for an unmapped reference.
+- The selected target must have the origin document's language ID. Actual `.pyi` source is retained and labeled **Type stub — declaration only**; no implementation filename is guessed and no analyzed code is executed. Unsupported syntax remains an explicit extraction failure. For example, live `builtins.pyi` `bool` opened, while `str` failed on `capitalize`; this is not general stub-extraction parity.
 
 ### Canvas Window Geometry
 
@@ -98,12 +99,14 @@ provideDefinitionOutline(adapter, document, position)
 - `VgfWindowTitled.vp_fitToContent()` runs for every newly created node after themed world attachment, or on grip double-click. Intrinsic DOM measurement fits content up to 1200 world px wide, then measures height after heading reflow, with at most 400px initial body height. Code bodies scroll rather than wrap. Short nodes remain content-sized; manual resize can exceed 1200px. Later focus/zoom and existing-node reuse do not refit.
 - The outer frame owns a pointer-captured 14px grip and keeps visible overflow for dockers. Flex inner containers shrink into one `.VgfExpandableContent` scroll viewport. Declaration headings and declaration rows collapse display whitespace and wrap to the current node width; widening can join a multiline source signature onto one rendered line. Close/collapse controls stay fixed. Code bodies retain original formatting and horizontal/vertical scrolling. Ordinary/Shift-wheel scrolls the body only while its dominant axis can move further; otherwise it pans the canvas. Ctrl/Alt bubbles to zoom.
 - Resize uses screen delta divided by positive world scale, with 120px minimum width and title/chrome minimum height. Collapse saves/restores expanded height without changing width. Existing outer ResizeObserver events update edges; descendant scroll emits `vp_windowMoved`.
-- Connection origins retain their source-anchor semantics, then clamp to the outer frame and every nested clipping ancestor's client viewport. Fully scrolled-out rows pin to the nearest visible boundary instead of producing off-window edges. Display-hidden sources fall back to a visible ancestor.
+- `SourceNavigation` binds immutable source text/ranges to headings, compact decorator badges, and editable code rows. Double-click or F12 captures UTF-16 source offsets; heading reflow, CRLF normalization, tabs, Unicode, highlight spans, CSS gutters, and synthetic ellipses do not become source columns. Declaration rows/buttons retain their single-click action; non-code header chrome remains draggable.
+- Connections retain the captured URI/range and source offsets, not the current selection or a highlight-node identity. Their source point is the final code point's trailing edge and midpoint, clipped against the frame and every ancestor scrollport. Hidden source falls back to the owning heading, then frame; clipped compact metadata uses its own badge. Docker hover identifies the original location and fallback reason.
+- Source bindings cache text indexes and DOM ranges, invalidate on real text/child changes, and reuse owner movement/scroll/lifecycle events. Identical re-highlighting reconstructs ranges. Local edits that diverge from the immutable source produce **Source mapping unavailable** without sending stale coordinates; reopening restores mapping. Bindings and edges are cleaned through the owning window's deletion event.
 - A canvas-started wheel gesture stays on the canvas when crossing a box. After 180ms idle, the next gesture can begin as content scrolling. Pan uses subpixel CSS positions rather than rounded `offsetTop`/`offsetLeft`, preserving small touchpad and momentum deltas.
 - `WindowPositioner.placeWindow()` measures new attached frames, keeps 24 world px clearance, and advances only the new candidate downward. LEFT slots subtract the new width. Missing/deleted anchors use a viewport-relative slot and cannot receive connections.
 - After a batch, `revealWindow()` eases the minimum camera translation over 450ms with smooth acceleration/deceleration, showing the last new frame with a 20px viewport inset; oversized frames align their beginning. The clock starts on the first rendered frame so response layout cannot consume the transition before it is visible. A new response supersedes the old reveal. Native wheel, pointer/keyboard input, drag, deletion, or external camera changes cancel it without swallowing input or snapping later. Active user gestures take priority over auto-reveal.
 - New windows fade in while their inner presentation translates 20px over 300ms. The outer measured frame stays at its final geometry; per-frame movement notifications keep source connections attached. Interaction ends the entrance immediately. Reduced-motion preferences disable both animations. Reused windows keep their size/position and do not reanimate.
-- Editor selection endpoints both use the source block's start as their coordinate origin. Scrolling/resizing does not change source spans or `SelectionUtils` offsets.
+- Each navigation request carries a webview-only `sourceAnchor` in its local ticket; only `{uri, cursorStart, cursorEnd}` crosses to the host. The host validates positions and resolves `cursorStart`. Repeating the same range to the same target reuses its edge; different ranges on one surface keep distinct edges even when their target node is shared.
 - `VpwCodeEditor` reserves a shared line-number gutter from the rendered row count (minimum two digits). Right-aligned CSS counters sit outside code flow, with a 12px gap before the source column. They are non-selectable and ignore pointer events; no number text is added to source rows or selection offsets.
 
 
@@ -118,6 +121,8 @@ provideDefinitionOutline(adapter, document, position)
 | `vp_host_openRawSource` | Open source, reveal its range, and move the editor selection |
 
 Requests use `requestId`; outline replies use `requestedId`. The controller remembers which diagram element requested an outline so it can position/connect the response.
+- `visualizeOutline`, array-shaped `messageBox`, and `outline_cancelled` each settle a navigation ticket. Cancellation creates/focuses nothing. Errors retain provider/open/extraction details; unresolved locations use **Definition not found**. Late replies cannot attach to a deleted source or recreate a disposed/replaced requesting panel.
+- **Show in code** is fire-and-forget: it sends no pending diagram ticket because the host opens an editor without an outline reply.
 
 ### Debugging and Visible Updates
 

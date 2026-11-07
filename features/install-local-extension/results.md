@@ -63,3 +63,19 @@ Per user request to distinguish the local build from the upstream/old extension,
   4. Right-click on a function/class or open Command Palette (`Cmd+Shift+P`).
   5. Select **Visual Programming: Visualize This (Local)** or **Visualize This (Local)**.
   6. Confirm the diagram view opens and renders.
+
+## Group B rebuild and local replacement — 2026-11-08
+
+- Rebuilt the current source with `npm --prefix src/vscodeextension run publish`. Inspected successful stitcher, CSS, media-copy, TypeScript, and VSIX stages.
+- Recreated `src/vscodeextension/release/code-visualizer-local.vsix`: 236 files, 9.41 MB, version `0.1.9`.
+- Installed into regular VS Code with:
+  ```sh
+  '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code' \
+    --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force
+  ```
+  CLI reported successful installation.
+- `code --locate-extension visualprogrammingx.sourcecodevisualizer-local` resolved to `/Users/nguyencaocuong/.vscode/extensions/visualprogrammingx.sourcecodevisualizer-local-0.1.9`.
+- Verified the installed manifest identity and Local commands. Compared the complete installed `out/` tree and visualizer JS/CSS against rebuilt outputs; all matched.
+- `unzip -t` reported no archive errors. Loaded the installed Python parser dependency and parsed a synthetic function successfully.
+- VSIX SHA-256: `1015d3dfdc71f56fd3db5378a4a608c93432635e2fdcd35f1980e922ca53b947`.
+- Existing VS Code windows were not forcibly reloaded. Use **Developer: Reload Window**, then **Visual Programming: Visualize File (Local)** or **Visual Programming: Visualize This (Local)**. This installation check did not repeat the [Group B live diagram acceptance](../phase-one-group-b/results.md).

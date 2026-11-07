@@ -2,7 +2,7 @@
 
 Scope and ordering come from [the approved roadmap](../specs/roadmap.md). This is a delivery summary, not a change to that roadmap. Checked means implemented and validated; partial or unverified acceptance stays unchecked.
 
-**7 of 19 numbered requests complete. Phase 1 Group A is complete.** Python remains the primary validation target. Targeted TypeScript/JavaScript coverage does not establish full language parity.
+**11 of 19 numbered requests complete. Phase 1 Groups A and B are complete.** Python remains the primary validation target. Targeted TypeScript/JavaScript coverage does not establish full language parity.
 
 ## Foundations
 
@@ -37,12 +37,14 @@ Evidence: [Group A implementation and validation](../features/phase-one-group-a/
 
 Evidence: [recorded interaction fixes and installed-build validation](../features/canvas-interaction-followup/results.md).
 
-### Group B — Source navigation and connection anchors
+### Group B — Source navigation and connection anchors: complete
 
-- [ ] **R03 — Parameter-type navigation.** Open the connected type declaration; handle multiple candidates and unresolved references honestly. Basic navigation exists, but the full acceptance criteria are not verified.
-- [ ] **R14 — Imported module/file navigation.** Resolve and open the referenced source file as a connected node; distinguish file references from imported symbols and report missing or ambiguous results.
-- [ ] **R17 — Decorator and attribute navigation.** Navigate decorators and class/instance attributes to source definitions or assignments without claiming runtime certainty. Compact decorator metadata is complete; the full navigation feature is not.
-- [ ] **R16 — Clicked-expression connection anchors.** Start connections at the clicked token/expression, preferably its end, with stable behavior through movement, scrolling, comments, and compact decorator rendering. Offscreen clipping is fixed, but this full feature is not complete.
+- [x] **R03 — Parameter-type navigation.** Double-click or F12 on an opened heading resolves its original type token. Preserve single-click parameter/declaration-row opening; multiple targets use Quick Pick and unresolved types produce an honest error card.
+- [x] **R14 — Imported module/file navigation.** Open provider-confirmed file roots as reusable file nodes, distinct from imported symbols. Preserve complete source gaps/EOF and **Show in code** at the file start.
+- [x] **R17 — Decorator and attribute navigation.** Navigate compact decorators through original callable ranges and provider-confirmed fields through syntax-backed assignments. Preserve actual stub URIs with declaration-only explanation; do not evaluate properties or infer runtime receivers.
+- [x] **R16 — Clicked-expression connection anchors.** Store original URI/range/UTF-16 offsets; distinct tokens retain distinct edges. Verified movement, resize/reflow, zoom, nested scrolling, visibility, compact fallback, re-highlighting, deduplication, and connector redocking.
+
+Evidence: [Group B implementation and validation](../features/phase-one-group-b/results.md). Final integrated extension-host suite: **163 passing**, exit 0. Live Pylance fixture and actual Airflow diagram checks passed. This does not promise extraction of every library declaration: the real `builtins.pyi` `bool` target opened, while `str` produced a settled `capitalize` boundary error.
 
 ### Group C — Canvas navigation and graph interaction
 

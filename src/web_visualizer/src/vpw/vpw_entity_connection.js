@@ -1,6 +1,7 @@
 require ("../vgf/vgf_widget.js");
 require ("../vgf/vgf_line.js");
 require ("./vpw_button_movable_dockable.js");
+require ("../utils/source_navigation.js");
 
 
 /**
@@ -17,14 +18,23 @@ require ("./vpw_button_movable_dockable.js");
  *    `domSource` and `domTarget` must already be inside
  *     the active DOM.
  **/
-const VpwEntityConnection = (function (domSource, domTarget)
+const VpwEntityConnection = (function (domSource, domTarget, sourceAnchor = null)
 {
   let self = new VpwButtonMovableDockable ();
+  const dock = self.vp_dock;
+  self.vp_dock = function(target)
+  {
+    self._vp_domTarget = target.vp_isWorld() ? null : target;
+    return dock(target);
+  };
+  self.addEventListener("vp_windowBeforeStartMoving", () => { self._vp_domTarget = null; });
   self.constructor = function()
   {
     self._vp_domSource = domSource;
+    self._vp_domTarget = domTarget;
+    self._vp_sourceAnchor = sourceAnchor;
 
-    self._vp_line = new _VpwEntityConnectionSpecialLine (domSource, self);
+    self._vp_line = new _VpwEntityConnectionSpecialLine(domSource, self, sourceAnchor);
     self.vp_widget_add (self._vp_line);
 
 
@@ -52,8 +62,10 @@ const VpwEntityConnection = (function (domSource, domTarget)
   {
     let listener_source = self._vp_domSource.vp_getToplevelWidget();
 
-    let reg = self.vp_addEventListenerForForeignObject;
-    reg (new VpEventListener(listener_source, "vp_beforeDelete", self.vp_delete));
+    // Undocking clears dock-parent listeners. Source lifetime is independent.
+    listener_source.addEventListener("vp_beforeDelete", self.vp_delete);
+    self.addEventListener("vp_beforeDelete", () =>
+      listener_source.removeEventListener("vp_beforeDelete", self.vp_delete));
 
     self.addEventListener ("mousedown", self.vp_update);
     self.addEventListener ("vp_beforeDelete", self._vp_removeSelfFromSource);
@@ -98,7 +110,7 @@ const VpwEntityConnection = (function (domSource, domTarget)
  *  A VgfLine, that is tailored the the needs
  *   of a VpwEntityConnection
  **/
-const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget)
+const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget, sourceAnchor = null)
 {
   let self = new VgfLine ();
 
@@ -139,15 +151,17 @@ const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget)
   {
     let scale = self.vp_getWorld().vp_scale;
     let toplevel = self._vp_source.vp_getToplevelWidget();
-    let src = self._vp_getVisibleSource();
-    let source_offset = src.getBoundingClientRect();
-    let target_offset = self._vp_target.getBoundingClientRect();
-    let toplevel_offset = toplevel.getBoundingClientRect();
+    const endpoint = sourceAnchor ? SourceNavigation.endpoint(sourceAnchor) : null;
+    const src = endpoint?.element ?? self._vp_getVisibleSource();
+    const source_offset = endpoint?.rect ?? src.getBoundingClientRect();
+    const target_offset = self._vp_target.getBoundingClientRect();
+    const toplevel_offset = toplevel.getBoundingClientRect();
 
-    // Preserve the existing source anchor before clipping it in screen space.
-    let x = source_offset.left + src.offsetWidth * scale;
-    let y = source_offset.top;
-    if (src === self._vp_source)
+    // Legacy declaration buttons retain their geometry. Mapped source uses the
+    // last code point, not a highlight span or the user's current selection.
+    let x = source_offset.right;
+    let y = source_offset.top + (endpoint ? source_offset.height / 2 : 0);
+    if (!endpoint && src === self._vp_source)
     {
       x -= scale;
       y += src.offsetHeight / 5 * scale;
@@ -161,12 +175,31 @@ const _VpwEntityConnectionSpecialLine = (function (domSource, domTarget)
     };
     if (src !== toplevel)
       _clipSourceBounds (src.parentElement, toplevel, bounds, scale);
+    const preferredX = x, preferredY = y;
     x = Math.clamp (x, bounds.left, bounds.right);
     y = Math.clamp (y, bounds.top, bounds.bottom);
+    if (sourceAnchor)
+    {
+      let reason = endpoint?.fallbackReason;
+      if (!reason && (x !== preferredX || y !== preferredY))
+        reason = sourceAnchor.fallbackElement ? "Compact decorator source" : "Source is outside the visible area";
+      const position = sourceAnchor.range[0];
+      self._vp_target.title = `${sourceAnchor.uri}:${position.line + 1}:${position.character + 1}`
+        + (reason ? "\n" + reason : "");
+    }
 
-    // The line lives below the docking button's local top edge.
-    x = (x - target_offset.left) / scale;
-    y = (y - target_offset.top) / scale - self._vp_target.offsetHeight;
+    if (sourceAnchor)
+    {
+      // The line's layout origin includes the docker's padding/content flow.
+      const origin = self.getBoundingClientRect();
+      x = (x - origin.left) / scale;
+      y = (y - origin.top) / scale;
+    }
+    else
+    {
+      x = (x - target_offset.left) / scale;
+      y = (y - target_offset.top) / scale - self._vp_target.offsetHeight;
+    }
 
     return [x,y];
   }

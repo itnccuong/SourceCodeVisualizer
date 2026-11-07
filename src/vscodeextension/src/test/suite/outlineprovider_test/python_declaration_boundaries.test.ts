@@ -76,6 +76,26 @@ suite('Python declaration boundaries', () => {
     assert.deepStrictEqual(result.attributes.map(a => a.kind), ['@identity', 'async']);
   });
 
+  test('stacked qualified decorators retain original callable coordinates', async () => {
+    const declaration = '@dag\n    @pkg.decorators.dag(\n        schedule="daily",\n    )\n    async def build():\n        return 1';
+    const prefix = 'class Worker:\n    ';
+    const {document, symbol} = await fixture(declaration, 'build', vscode.SymbolKind.Method, prefix);
+    const result = new VpLspExtenderPython().getLanguageSpecificSymbolInformation(document, symbol);
+    assert.deepStrictEqual(result.attributes.map(attribute => attribute.kind),
+      ['@dag', '@pkg.decorators.dag(\n        schedule="daily",\n    )', 'async']);
+    for (let index = 0; index < 2; ++index) {
+      const attribute = result.attributes[index];
+      const start = prefix.length + declaration.indexOf(index === 0 ? 'dag' : 'dag(');
+      assert.strictEqual(document.getText(attribute.definitionRange!), 'dag');
+      AssertX.range_equals(attribute.definitionRange!,
+        new vscode.Range(document.positionAt(start), document.positionAt(start + 3)));
+      assert.strictEqual(document.getText(attribute.displayTextRange!), attribute.kind);
+    }
+    assert.strictEqual(result.attributes[2].definitionRange, undefined);
+    assert.strictEqual(document.getText(result.rangeHead), 'build()');
+    assert.strictEqual(document.getText(result.rangeBody!), '        return 1');
+  });
+
   test('accepts the decorated declaration start but not a decorator reference', async () => {
     const declaration = '@identity\nasync def build():\n    return 1';
     const {document, symbol} = await fixture(declaration, 'build', vscode.SymbolKind.Function);
