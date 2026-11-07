@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as Outline from '../SymbolDefinition';
 import * as utils from "../../utils";
 import {OutlineUtils} from './outlineutils';
-import {VpOutlineProvider} from "../outlineprovider";
+import {VpOutlineProvider, DefinitionTargetChooser, DefinitionOutlineResult} from "../outlineprovider";
 import {VpLspExtenderProvider} from "../lspextenderprovider";
 
 
@@ -37,10 +37,11 @@ export class VpOutlineProviderWrapper implements VpOutlineProvider
    * < See Interface VpOutlineProvider >
    **/
   public provideDefinitionOutline(document: vscode.TextDocument,
-                          position: vscode.Position)
-    : Promise<Outline.Symbol[]>
+                          position: vscode.Position,
+                          chooseTarget?: DefinitionTargetChooser)
+    : Promise<DefinitionOutlineResult>
   {
-    return OutlineUtils.provideDefinitionOutline (this.lspExtender, document, position);
+    return OutlineUtils.provideDefinitionOutline(this.lspExtender, document, position, chooseTarget);
   }
 
 

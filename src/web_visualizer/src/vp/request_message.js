@@ -26,4 +26,8 @@ class RequestMessage
   isMessage(){
     return (this._message.type == "messageBox");
   }
+
+  isCancelled(){
+    return (this._message.type == "outline_cancelled");
+  }
 }

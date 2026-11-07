@@ -58,22 +58,25 @@ const VpwWorld = (function()
    * @return: succcess: ConnectionLine object
    *          no success: null
    **/
-  self.connection_createIfNotExisting = function(dom_source_nullable, dom_target_nullable)
+  self.connection_createIfNotExisting = function(source, target, sourceAnchor = null)
   {
-    let conn = null;
-    // connection already there?
-    // (self would be obsolete, if we had a consistent model)
+    if (!source || !target) return null;
+    const connections = Connectable.getInterface(source)?.getConnections();
+    if (connections)
     {
-      // TODO:refactor:reimplement
-      //conn = self.domConnectionMgr.getConnectionBetween (dom_source_nullable, dom_target_nullable)
-      if (null != conn)
-        return conn;
+      for (const connection of connections)
+      {
+        if (connection._vp_domTarget !== target) continue;
+        const existing = connection._vp_sourceAnchor;
+        if (!existing && !sourceAnchor) return connection;
+        if (!existing || !sourceAnchor || existing.uri !== sourceAnchor.uri) continue;
+        if (existing.range.every((position, index) =>
+          position.line === sourceAnchor.range[index].line
+          && position.character === sourceAnchor.range[index].character))
+          return connection;
+      }
     }
-
-    // create connection line
-    conn = self._connection_create (dom_source_nullable, dom_target_nullable);
-
-    return conn;
+    return self._connection_create(source, target, sourceAnchor);
   }
 
   // ---------------------------------------------------
@@ -82,18 +85,10 @@ const VpwWorld = (function()
    * @return: succcess: ConnectionLine object
    *          no success: null
    **/
-  self._connection_create = function(source_nullable, target_nullable)
+  self._connection_create = function(source, target, sourceAnchor = null)
   {
-    let connLine = null;
-    if (!target_nullable || !source_nullable)
-      return null;
-
-    let source = source_nullable;
-    let target = target_nullable;
-
-    connLine = new VpwEntityConnection (source, target);
-
-    return connLine;
+    if (!target || !source) return null;
+    return new VpwEntityConnection(source, target, sourceAnchor);
   }
 
 
@@ -127,16 +122,16 @@ const VpwWorld = (function()
 
 
 
-  self.vp_host_openRawSource = function(outlineEntity, requestee_nullable)
+  self.vp_host_openRawSource = function(outlineEntity)
   {
-    gController.host_openRawSource (outlineEntity, requestee_nullable);
+    gController.host_openRawSource(outlineEntity);
   }
 
 
 
-  self.vp_outline_openSymbolAt = function (uri, selectionStart, selectionEnd, requestee_nullable)
+  self.vp_outline_openSymbolAt = function (uri, selectionStart, selectionEnd, requestee_nullable, sourceAnchor = null)
   {
-    gController.outline_requestByFilePosition (uri, selectionStart, selectionEnd, requestee_nullable);
+    gController.outline_requestByFilePosition (uri, selectionStart, selectionEnd, requestee_nullable, sourceAnchor);
   }
 
 

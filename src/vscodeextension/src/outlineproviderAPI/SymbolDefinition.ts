@@ -81,6 +81,7 @@ export class Attribute extends Text
   //  the same as `generic`
   // Examples: "comment" / "visibility" / "annotation" / "generic"
   public kind: string = "";
+  public definitionRange?: vscode.Range;
 }
 
 // ==================================================================

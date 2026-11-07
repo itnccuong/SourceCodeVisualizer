@@ -6,6 +6,7 @@ require ("./vpw_btn_open_definition.js");
 require ("./vpw_code_editor.js");
 require ("../utils/misc_utils.js");
 require ("../vgf/vgf_menu.js");
+require ("../utils/source_navigation.js");
 
 require ("vpw_view_entity_window.js");
 
@@ -41,21 +42,10 @@ const VpwOutlineWindow = (function(viewEntity_outline)
         {
           let tsOutlineSymbol = tsOutlineRange;
 
-          {
-            // Keep multiline decorators out of the one-line metadata label.
-            for (let i = 0; i<tsOutlineSymbol.attributes.length;++i)
-            {
-              let attribute = tsOutlineSymbol.attributes[i].kind;
-              let firstLine = attribute.split(/\r?\n/, 1)[0].trim();
-              metatype += firstLine + (attribute.includes("\n") ? "…" : "") + " ";
-              quickhelp += attribute + "\n";
-            }
-
-            if (metatype.trim() == "")
-              metatype += tsOutlineSymbol.kind;
-
-            quickhelp += tsOutlineSymbol.displayText;
-          }
+          metatype = tsOutlineSymbol.kind;
+          for (const attribute of tsOutlineSymbol.attributes)
+            quickhelp += attribute.kind + "\n";
+          quickhelp += tsOutlineSymbol.displayText;
         }
         break;
       case "Text":
@@ -67,7 +57,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     let titletext = SyntaxHighlighter.run (tsOutlineRange.displayText,
                                             tsOutlineRange.language);
 
-    self._vp_createClientTitle (self.vp_title, metatype, titletext, quickhelp);
+    self._vp_createClientTitle (self.vp_title, metatype, titletext, quickhelp, tsOutlineRange);
     self._vp_fillClientarea (self, self.vp_window_clientarea, tsOutlineRange);
 
     self.vp_getUri = function(){
@@ -89,8 +79,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
         //menu.vp_addEntry ("Open callers", function(){ alarm ("not yet implemented"); });
         menu.vp_addSeparator ();
         menu.vp_addEntry ("Show in code", function(){
-          self.vp_getWorld ().vp_host_openRawSource (
-            self.viewEntity.vp_model, self);
+          self.vp_getWorld().vp_host_openRawSource(self.viewEntity.vp_model);
         });
 
         self.vp_getWorld ().vp_runPopup (menu, e.x, e.y);
@@ -104,22 +93,58 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
 
 
-  self._vp_createClientTitle = function(root, metatype, titleString, quickhelp)
+  self._vp_createClientTitle = function(root, metatype, titleString, quickhelp, model)
   {
-    let node = null;
+    const metadata = document.createElement ("div");
+    metadata.classList.add ("Window_Titlebar_MetatypeDiv");
+    metadata.title = quickhelp;
+    root.appendChild (metadata);
+
+    const attributes = model.CLASS_TYPE === "Symbol" ? model.attributes : [];
+    if (attributes.length === 0)
+      metadata.textContent = metatype;
+    else
     {
-      node = document.createElement ("div");
-      node.classList.add ("Window_Titlebar_MetatypeDiv");
-      node.innerText = metatype;
-      node.title = quickhelp;
-      root.appendChild (node);
+      for (const attribute of attributes)
+      {
+        if (metadata.childNodes.length > 0)
+          metadata.appendChild (document.createTextNode (" "));
+
+        const badge = document.createElement ("span");
+        badge.classList.add ("Window_Titlebar_Attribute");
+        badge.title = attribute.kind;
+        const firstLine = attribute.kind.split (/\r?\n/, 1)[0];
+        badge.appendChild (document.createTextNode (firstLine));
+        if (attribute.kind.includes ("\n"))
+        {
+          const ellipsis = document.createElement ("span");
+          ellipsis.dataset.vpSourceIgnore = "";
+          ellipsis.textContent = "…";
+          badge.appendChild (ellipsis);
+        }
+        metadata.appendChild (badge);
+
+        if (attribute.definitionRange)
+        {
+          badge.tabIndex = 0;
+          SourceNavigation.bind (badge, {
+            ...attribute,
+            uri: attribute.uri || model.uri,
+            language: attribute.language || model.language,
+          }, self, {rows: false});
+        }
+      }
     }
+
+    const title = document.createElement ("div");
+    title.classList.add ("Window_Titlebar_Title");
+    title.title = quickhelp;
+    title.innerHTML = titleString;
+    root.appendChild (title);
+    if (model.CLASS_TYPE === "Symbol" && model.displayTextRange)
     {
-      node = document.createElement ("div");
-      node.classList.add ("Window_Titlebar_Title");
-      node.title = quickhelp;
-      node.innerHTML = titleString;
-      root.appendChild (node);
+      title.tabIndex = 0;
+      SourceNavigation.bind (title, model, self, {rows: false});
     }
   }
 
@@ -205,11 +230,7 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
 
   /**
-   *  @brief: Adds a textarea for code editing.
-   *          Adding following attributes to textarea:
-   *           - model:            reference to outlineEntity
-   *          - getOriginalCursorStart(): calculates the cursor start pos in file
-   *          - getOriginalCursorEnd  (): calculates the cursor end pos in file
+   *  @brief: Adds a source-backed code editor.
    **/
    self._vp_addCodeblock = function(root, tsOutlineSymbolText, content, editable, groupParent)
    {

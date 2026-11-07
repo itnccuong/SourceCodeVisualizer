@@ -5,6 +5,13 @@ import * as utils from '../utils';
 import { promises } from 'dns';
 import { request } from 'http';
 import { VsCodeWindow } from './adapter/vscodewindow';
+import { DefinitionOutlineResult, DefinitionTarget } from '../outlineproviderAPI/outlineprovider';
+
+interface OutlineResponse {
+  type: 'visualizeOutline' | 'outline_cancelled' | 'messageBox';
+  requestedId: string | null;
+  data?: unknown;
+}
 
 export class VisualizingTab
 {
@@ -34,14 +41,18 @@ export class VisualizingTab
   private getWebviewPanel()
   {
     if (null == this.__webviewPanel) {
-      this.__webviewPanel = WebviewCreator.createWebview (this._context,
-                                                          this._vscodeWindow2);
-      this.__webviewPanel.onDidDispose(
-          () => { this.__webviewPanel = null; },
+      const panel = WebviewCreator.createWebview(this._context, this._vscodeWindow2);
+      this.__webviewPanel = panel;
+      panel.onDidDispose(
+          () => {
+            if (this.__webviewPanel === panel) {
+              this.__webviewPanel = null;
+            }
+          },
           null, this._context.subscriptions
         );
-      this.__webviewPanel?.webview.onDidReceiveMessage(message => {
-        return this._receiveMessage(message);
+      panel.webview.onDidReceiveMessage(message => {
+        return this._receiveMessage(message, panel);
       });
     }
     return this.__webviewPanel;
@@ -140,28 +151,30 @@ export class VisualizingTab
     selections.forEach ( (selection) =>
     {
       let position = selection.start;
-      this._getOutlineAndSend (document.uri, position, null);
+      this._getOutlineAndSend(document.uri, position, null, position);
     });
   }
 
 
   // -------------------------------------------------------------------------
 
-  private _receiveMessage(JSONmessage: any)
+  private _receiveMessage(JSONmessage: unknown,
+                          requestPanel: vscode.WebviewPanel | null = this.__webviewPanel)
   {
-    // common data
-    let requestId = JSONmessage.requestId;
-    let type: string = JSONmessage.type
-    let data = JSONmessage.data;
+    if (!this._isRecord(JSONmessage)) {
+      return;
+    }
+    const requestId = typeof JSONmessage.requestId === 'string' ? JSONmessage.requestId : null;
+    const type = JSONmessage.type;
+    const data = JSONmessage.data;
 
     switch (type) {
       case "outline_requestByFilePosition":
         {
-          let filename: string = data.uri;
-          let position = data.cursorStart;
-          this._getOutlineAndSend (vscode.Uri.parse (filename), position, requestId);
+          const navigationData: Record<string, unknown> = this._isRecord(data) ? data : {};
+          return this._getOutlineAndSend(navigationData.uri, navigationData.cursorStart, requestId,
+                                        navigationData.cursorEnd, requestPanel);
         }
-        break;
       case "outline_requestLocationDefiner":
         {
           // return the parent entity of a given outlineEntity.
@@ -169,8 +182,7 @@ export class VisualizingTab
           //            a child class. Instead, it will return
           //            the file or namespace the child class
           //            is in.
-          let outlineEntity: Outline.OutlineRange = data;
-          this._outline_requestLocationDefinerAndSend (outlineEntity, requestId);
+          this._outline_requestLocationDefinerAndSend(data, requestId, requestPanel);
         }
         break;
       case "vp_host_openRawSource":
@@ -212,21 +224,56 @@ export class VisualizingTab
 
   // ------------------------------------------------------------------------
 
-  private _getOutlineAndSend(uri: vscode.Uri,
-                            position: vscode.Position,
-                            requestedId: string | null)
+  private async _getOutlineAndSend(uri: unknown,
+                                  cursorStart: unknown,
+                                  requestedId: string | null,
+                                  cursorEnd: unknown,
+                                  requestPanel: vscode.WebviewPanel | null = this.__webviewPanel)
   {
-    let self = this;
-    let promise = self._getOutlineEntitiesFromPos (uri, position);
-    promise.then ( (foundEntities) =>
-    {
-      self._processFoundOutlineEntities (foundEntities, requestedId);
-    });
+    let response: OutlineResponse;
+    try {
+      const position = this._normalizeNavigationPosition(cursorStart, 'cursorStart');
+      this._normalizeNavigationPosition(cursorEnd, 'cursorEnd');
+      let documentUri: vscode.Uri;
+      if (uri instanceof vscode.Uri) {
+        documentUri = uri;
+      } else if (typeof uri === 'string' && uri.length > 0) {
+        documentUri = vscode.Uri.parse(uri, true);
+      } else {
+        throw new Error('A source navigation request must include a valid URI.');
+      }
+
+      const definitionResults = await vscode.commands.executeCommand<DefinitionOutlineResult>(
+        'vp.executeDefinitionProvider', documentUri, position,
+        (targets: readonly DefinitionTarget[]) => this._chooseDefinitionTarget(targets));
+      if (definitionResults === null) {
+        response = {type: 'outline_cancelled', requestedId};
+      } else if (definitionResults === undefined) {
+        throw new Error('The definition provider did not return a result.');
+      } else if (definitionResults.length === 0) {
+        response = this._definitionNotFoundMessage(requestedId);
+      } else {
+        const entities = await this._translate_outlineRanges2outlineEntities(definitionResults);
+        response = {type: 'visualizeOutline', requestedId, data: entities};
+      }
+    } catch (error) {
+      const message = this._isRecord(error) && 'message' in error
+        ? String(error.message)
+        : String(error);
+      response = {
+        type: 'messageBox',
+        requestedId,
+        data: [{type: 'Error', title: 'Source navigation failed', message}]
+      };
+    }
+    this._postOutlineMessage(response, requestPanel);
   }
 
   // -------------------------------------------------------------------------
 
-  private _processFoundOutlineEntities (foundEntities: any, requestedId: string | null)
+  private _processFoundOutlineEntities(foundEntities: Outline.OutlineRange[] | Error | undefined,
+                                       requestedId: string | null,
+                                       requestPanel: vscode.WebviewPanel | null)
   {
     if(!foundEntities)
     {
@@ -239,7 +286,7 @@ export class VisualizingTab
     else
     {
       // send current selection to outliner
-      this._postOutlineEntities(foundEntities, requestedId);
+      this._postOutlineEntities(foundEntities, requestedId, requestPanel);
     }
   }
 
@@ -255,26 +302,28 @@ export class VisualizingTab
    *    |
    *    |-- class2
    **/
-  private _outline_requestLocationDefinerAndSend(outlineEntity: any,
-                                          requestId: string | null)
+  private _outline_requestLocationDefinerAndSend(outlineEntity: unknown,
+                                          requestId: string | null,
+                                          requestPanel: vscode.WebviewPanel | null)
   {
     let self = this;
 
-    let uri = vscode.Uri.parse (outlineEntity.uri);
-
-    if (!outlineEntity.displayTextRange)
+    if (!this._isRecord(outlineEntity) || typeof outlineEntity.uri !== 'string'
+        || !Array.isArray(outlineEntity.displayTextRange))
     {
-      self._processFoundOutlineEntities ([], requestId);
+      self._processFoundOutlineEntities([], requestId, requestPanel);
       return false;
     }
+    const uri = vscode.Uri.parse(outlineEntity.uri);
 
-    let position = outlineEntity.displayTextRange[0];
+    const position = this._normalizeNavigationPosition(outlineEntity.displayTextRange[0],
+                                                       'displayTextRange.start');
 
 
     let promise = self._outline_getLocationDefiner (uri, position);
     promise.then ( (foundEntities) =>
     {
-      self._processFoundOutlineEntities (foundEntities, requestId);
+      self._processFoundOutlineEntities(foundEntities, requestId, requestPanel);
     });
 
     return true;
@@ -283,19 +332,61 @@ export class VisualizingTab
 
   // -------------------------------------------------------------------------
 
-  private async _getOutlineEntitiesFromPos(document: vscode.Uri, //vscode.TextDocument,
-                                           position: vscode.Position):
-    Promise<Outline.OutlineRange[] | Error | undefined>
+  private _isRecord(value: unknown): value is Record<string, unknown>
   {
-    let definitionResults = await vscode.commands.executeCommand<Outline.Symbol[]>(
-                          "vp.executeDefinitionProvider", document, position);
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
 
-    // translate
-    if (definitionResults){
-      return this._translate_outlineRanges2outlineEntities (definitionResults);
+  private _normalizeNavigationPosition(position: unknown, name: string): vscode.Position
+  {
+    if (this._isRecord(position)) {
+      const {line, character} = position;
+      if (typeof line === 'number' && Number.isSafeInteger(line) && line >= 0
+          && typeof character === 'number' && Number.isSafeInteger(character) && character >= 0) {
+        return new vscode.Position(line, character);
+      }
     }
+    throw new Error(`Invalid ${name}: expected nonnegative integer line and character values.`);
+  }
 
-    return definitionResults;
+  private async _chooseDefinitionTarget(targets: readonly DefinitionTarget[])
+    : Promise<DefinitionTarget | undefined>
+  {
+    const items = await Promise.all(targets.map(async target => {
+      const {uri, selectionRange} = target;
+      const filename = utils.path_getFilename(uri.path);
+      let label = filename;
+      let detail = uri.toString();
+      if (/\.pyi$/i.test(uri.path)) {
+        detail += '\nType stub — declaration only';
+      }
+      try {
+        const document = await vscode.workspace.openTextDocument(uri);
+        const isFileRoot = selectionRange.isEmpty
+          && selectionRange.start.line === 0 && selectionRange.start.character === 0;
+        if (!isFileRoot) {
+          const firstLine = document.getText(selectionRange).split(/\r?\n/, 1)[0].trim();
+          if (firstLine) {
+            label = firstLine;
+          }
+        }
+      } catch {
+        detail += '\nSource unavailable';
+      }
+      return {
+        label,
+        description: `${vscode.workspace.asRelativePath(uri)}:${selectionRange.start.line + 1}:${selectionRange.start.character + 1}`,
+        detail,
+        target
+      };
+    }));
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select a definition to open',
+      matchOnDescription: true,
+      matchOnDetail: true,
+      canPickMany: false
+    });
+    return selected?.target;
   }
 
   // -------------------------------------------------------------------------
@@ -345,6 +436,14 @@ export class VisualizingTab
           outlineRange.displayText = doc.getText( outlineRange.displayTextRange );
         else
           outlineRange.displayText = "<UNKNOWN>";
+        if (/\.pyi$/i.test(doc.uri.path)
+            && !outlineRange.attributes.some(attribute => attribute.kind === 'Type stub — declaration only')) {
+          const attribute = new Outline.Attribute();
+          attribute.kind = 'Type stub — declaration only';
+          attribute.uri = outlineRange.uri;
+          attribute.language = outlineRange.language;
+          outlineRange.attributes.push(attribute);
+        }
       }
       else
       if (outlineRange instanceof Outline.File){
@@ -371,13 +470,14 @@ export class VisualizingTab
   // ------------------------------------------------------------------------
 
   private _postOutlineEntities(outlineEntities: Outline.OutlineRange[],
-                                requestedId: string | null = null)
+                                requestedId: string | null = null,
+                                requestPanel: vscode.WebviewPanel | null = this.__webviewPanel)
   {
     if (0 == outlineEntities.length) {
-      this.message_post_error_identifierNotFound(requestedId);
+      this._postOutlineMessage(this._definitionNotFoundMessage(requestedId), requestPanel);
       return false;
     } else {
-      this.message_post_visualizeOutline(outlineEntities, requestedId);
+      this.message_post_visualizeOutline(outlineEntities, requestedId, requestPanel);
       return true;
     }
   }
@@ -385,28 +485,36 @@ export class VisualizingTab
   // -------------------------------------------------------------------------
 
   private message_post_visualizeOutline(entities: Outline.OutlineRange[],
-    requestedId: string | null = null) {
-    this.getWebviewPanel()?.webview.postMessage({
+    requestedId: string | null = null,
+    requestPanel: vscode.WebviewPanel | null = this.__webviewPanel) {
+    this._postOutlineMessage({
       type: 'visualizeOutline',
       data: entities,
-      requestedId: requestedId
-    });
+      requestedId
+    }, requestPanel);
   }
 
   // -------------------------------------------------------------------------
 
-  private message_post_error_identifierNotFound(requestedId: string | null = null) {
-    let data = {
-      type: "Error",
-      title: "Implementation not found",
-      message: "Implementation could not be found."
-    }
-
-    this.getWebviewPanel()?.webview.postMessage({
+  private _definitionNotFoundMessage(requestedId: string | null): OutlineResponse {
+    return {
       type: 'messageBox',
-      requestedId: requestedId,
-      data: [data],
-    });
+      requestedId,
+      data: [{
+        type: 'Error',
+        title: 'Definition not found',
+        message: 'No source definition was returned for this location.'
+      }]
+    };
+  }
+
+  private _postOutlineMessage(message: OutlineResponse,
+                              requestPanel: vscode.WebviewPanel | null) {
+    const panel = message.requestedId === null ? this.getWebviewPanel() : requestPanel;
+    if (!panel || (message.requestedId !== null && panel !== this.__webviewPanel)) {
+      return;
+    }
+    panel.webview.postMessage(message);
   }
 
   // ------------------------------------------------------------------------

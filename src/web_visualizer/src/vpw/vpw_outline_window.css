@@ -51,3 +51,15 @@
   padding-left:4px;
   box-shadow: 0px 0px 1px black;*/
 }
+
+.Window_Titlebar_Title[data-vp-source-surface],
+.Window_Titlebar_Attribute[data-vp-source-surface] {
+  user-select: text;
+  cursor: text;
+}
+
+.Window_Titlebar_Attribute[data-vp-source-surface]:focus-visible,
+.Window_Titlebar_Title[data-vp-source-surface]:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+}

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import {VpOutlineProvider} from "./outlineprovider";
+import type {DefinitionTargetChooser, DefinitionOutlineResult} from './outlineprovider';
 import {VpLspExtenderProvider} from "./lspextenderprovider";
 import {LanguageFeatureRegistry} from "./utils/languagefeatureregistry";
 import * as Outline from './SymbolDefinition';
@@ -72,19 +73,12 @@ function _getProvider (document: vscode.TextDocument)
 //-----------------------------------------------------------------
 
 export async function executeDefinitionProviderForPosition(uri: vscode.Uri,
-                                                           position: vscode.Position)
-      : Promise<Outline.Symbol[]>
+                                                           position: vscode.Position,
+                                                           chooseTarget?: DefinitionTargetChooser)
+      : Promise<DefinitionOutlineResult>
 {
-  let document = await vscode.workspace.openTextDocument(uri);
-  return executeDefinitionProviderForPositionOnDocument (document, position).
-    then(symbols =>
-    {
-      return symbols;
-    }).catch (err =>
-    {
-      vscode.window.showWarningMessage (err.message + "\n" + err.stack);
-      return err;
-    });
+  const document = await vscode.workspace.openTextDocument(uri);
+  return executeDefinitionProviderForPositionOnDocument(document, position, chooseTarget);
 }
 
 //-----------------------------------------------------------------
@@ -107,20 +101,15 @@ export async function executeLocationDefinerProvider(uri: vscode.Uri,
 
 //-----------------------------------------------------------------
 
-export function executeDefinitionProviderForPositionOnDocument(
+export async function executeDefinitionProviderForPositionOnDocument(
               document: vscode.TextDocument,
-              position: vscode.Position)
-              : Promise<Outline.Symbol[]>
+              position: vscode.Position,
+              chooseTarget?: DefinitionTargetChooser)
+              : Promise<DefinitionOutlineResult>
 {
-  let provider = _getProvider (document);
-
-  if (provider instanceof Error) {
-    vscode.window.showWarningMessage (provider.message);
-    return new Promise (((resolve, reject) => {return [];}));
-  }
-
-  let symbols = provider.provideDefinitionOutline(document, position);
-  return symbols;
+  const provider = _getProvider(document);
+  if (provider instanceof Error) { throw provider; }
+  return provider.provideDefinitionOutline(document, position, chooseTarget);
 }
 
 

@@ -57,6 +57,12 @@ export interface VpLspExtenderProvider
     context?: SymbolExtractionContext
   ): LanguageSpecificSymbolInformation;
 
+  getDefinitionSymbol?(
+    document: vscode.TextDocument,
+    position: vscode.Position,
+    context?: SymbolExtractionContext
+  ): vscode.DocumentSymbol | undefined;
+
   /**
    * Opt a variable, constant, property, or field into declaration rendering.
    * Other symbol kinds retain the shared traversal's existing inclusion rules.

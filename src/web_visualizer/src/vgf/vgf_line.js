@@ -104,8 +104,8 @@ const VgfLine = ( function()
     // update size
     {
       // if w/h == 0 then line would be invisible, so prevent!
-      self._vp_canvas.width  =  g.width  + PADDING*2;
-      self._vp_canvas.height =  g.height + PADDING*2;
+      self._vp_canvas.width  = Math.ceil(g.width + PADDING*2);
+      self._vp_canvas.height = Math.ceil(g.height + PADDING*2);
 
       self._vp_canvas.style.top  = (g.top  - PADDING) + "px";
       self._vp_canvas.style.left = (g.left - PADDING) + "px";
@@ -113,10 +113,10 @@ const VgfLine = ( function()
 
     // draw line
     {
-      let x1 = g.pos.start[0] <= g.pos.end[0] ?   0 + PADDING   :    self._vp_canvas.width  - PADDING/2 ;
-      let y1 = g.pos.start[1] <= g.pos.end[1] ?   0 + PADDING   :    self._vp_canvas.height - PADDING/2 ;
-      let x2 = g.pos.start[0]  > g.pos.end[0] ?   0 + PADDING   :    self._vp_canvas.width  - PADDING/2 ;
-      let y2 = g.pos.start[1]  > g.pos.end[1] ?   0 + PADDING   :    self._vp_canvas.height - PADDING/2 ;
+      const x1 = g.pos.start[0] - g.left + PADDING;
+      const y1 = g.pos.start[1] - g.top + PADDING;
+      const x2 = g.pos.end[0] - g.left + PADDING;
+      const y2 = g.pos.end[1] - g.top + PADDING;
 
       let context = self._vp_canvas.getContext ("2d");
       context.strokeStyle = self._vp_color;

@@ -12,16 +12,13 @@ class OutlineEntityFunctions {
    **/
   static equals (obj1, obj2)
   {
-    if (   (obj1.CLASS_TYPE == obj2.CLASS_TYPE)
-        && (obj1.uri   == obj2.uri)
-        && (obj1.totalRange[0].line == obj2.totalRange[0].line)
-        && (obj1.totalRange[0].character == obj2.totalRange[0].character)
-       )
-    {
-      return true;
-    }
-
-    return false;
+    if (!obj1 || !obj2 || obj1.CLASS_TYPE !== obj2.CLASS_TYPE || obj1.uri !== obj2.uri)
+      return false;
+    if (obj1.CLASS_TYPE === "File") return true;
+    if (obj1.CLASS_TYPE !== "Symbol") return false;
+    const start1 = obj1.totalRange?.[0], start2 = obj2.totalRange?.[0];
+    return !!start1 && !!start2
+      && start1.line === start2.line && start1.character === start2.character;
   }
 
   // ------------------------------------------------------

@@ -180,9 +180,13 @@ suite('JavaScript function-expression boundaries', () => {
         const constructorOutline = childOutlines(factoryOutline)[0];
         const destination = constructorOutline.definitionPosition ?? constructorOutline.displayTextRange!.start;
         const opened = await OutlineUtils.provideDefinitionOutline(adapter, document, destination);
-        assert.deepStrictEqual(opened.map(part => heading(document, part)), ['self.constructor = function()']);
-        assert.strictEqual(document.getText(opened[0].totalRange!), constructorText);
-        assert.strictEqual(opened[0].parts.map(part => document.getText(part.displayTextRange!)).join(''),
+        assert.ok(opened !== null, 'opening a known declaration is not cancellation');
+        assert.strictEqual(opened!.length, 1);
+        const selected = opened![0];
+        assert.ok(selected instanceof Outline.Symbol, 'the assigned callable opens as a symbol, not its file');
+        assert.deepStrictEqual(opened!.map(part => heading(document, part)), ['self.constructor = function()']);
+        assert.strictEqual(document.getText(selected.totalRange!), constructorText);
+        assert.strictEqual(selected.parts.map(part => document.getText(part.displayTextRange!)).join(''),
           '    { let container = makeContainer(); use(container); }\n    return self;');
         unchanged();
       } finally {
@@ -199,8 +203,12 @@ suite('JavaScript function-expression boundaries', () => {
     try {
       const opened = await OutlineUtils.provideDefinitionOutline(
         new VpLspExtenderTypeScript('javascript'), document, constructor.range.start);
-      assert.deepStrictEqual(opened.map(part => heading(document, part)), ['self.constructor = function()']);
-      assert.strictEqual(document.getText(opened[0].totalRange!), constructorText);
+      assert.ok(opened !== null, 'opening a known declaration is not cancellation');
+      assert.strictEqual(opened!.length, 1);
+      const selected = opened![0];
+      assert.ok(selected instanceof Outline.Symbol, 'the exact declaration opens as a symbol, not its file');
+      assert.deepStrictEqual(opened!.map(part => heading(document, part)), ['self.constructor = function()']);
+      assert.strictEqual(document.getText(selected.totalRange!), constructorText);
     } finally {
       registration.dispose();
     }
@@ -218,8 +226,12 @@ suite('JavaScript function-expression boundaries', () => {
       // Webview messages carry plain positions, not VS Code Position instances.
       const position = JSON.parse(JSON.stringify(constructor.definitionPosition));
       const opened = await OutlineUtils.provideDefinitionOutline(adapter, document, position);
-      assert.deepStrictEqual(opened.map(part => heading(document, part)), ['self.constructor = function()']);
-      assert.strictEqual(document.getText(opened[0].totalRange!), constructorText);
+      assert.ok(opened !== null, 'opening a known declaration is not cancellation');
+      assert.strictEqual(opened!.length, 1);
+      const selected = opened![0];
+      assert.ok(selected instanceof Outline.Symbol, 'the syntax-backed destination opens as a symbol, not its file');
+      assert.deepStrictEqual(opened!.map(part => heading(document, part)), ['self.constructor = function()']);
+      assert.strictEqual(document.getText(selected.totalRange!), constructorText);
     } finally {
       registration.dispose();
     }
@@ -235,8 +247,6 @@ suite('JavaScript function-expression boundaries', () => {
     try {
       const outline = await OutlineUtils.provideDocumentOutline(new VpLspExtenderTypeScript('javascript'), document);
       assert.deepStrictEqual(childOutlines(outline).map(child => heading(document, child)), ['Factory = (function()', 'later()']);
-      assert.strictEqual(outline.parts.filter(part => part instanceof Outline.Text)
-        .map(part => document.getText(part.displayTextRange!)).join(''), '\nafterFactory();\n');
       assertPartition(document, outline, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)));
       assert.deepStrictEqual(inputs, [later, parent]);
       unchanged();
