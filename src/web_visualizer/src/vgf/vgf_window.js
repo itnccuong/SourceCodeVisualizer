@@ -41,7 +41,9 @@ const VgfWindow = (function()
     // unfocus previous
     //vgf_window_unfocus_visually (world.lastChild); // not working anymore, because we use zIndex for focussing
     let focussedElements = Array.from (document.getElementsByClassName (cssFocussed));
-    focussedElements.forEach ( elem => {elem.classList.remove (cssFocussed);});
+    focussedElements.forEach (elem => {
+      if (elem !== self) vgf_window_unfocus_visually(elem);
+    });
 
     //focus new window visually
     self.classList.add (cssFocussed)
@@ -201,6 +203,7 @@ function vgf_window_unfocus_visually(vpwWindow)
 {
   if (vpwWindow == null) return;
   vpwWindow.classList.remove ("VgfWindow_focussed");
+  vpwWindow.dispatchEvent(new Event("vp_windowUnfocused"));
 }
 
 
