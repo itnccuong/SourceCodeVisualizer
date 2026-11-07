@@ -36,6 +36,7 @@ const VgfNavigationArea = (function(world)
         vgf_window_unfocus_visually(window);
     });
 
+    _setup_bodyScrollLock(self, world);
     setup_mouse_dragElement (self._vp_interactionArea, world);
     _setup_mouseWheelScrolling (self, world);
     _setup_scaleViewpoint (self, world);
@@ -65,6 +66,53 @@ const VgfNavigationArea = (function(world)
   self.constructor();
   return self;
 });
+
+function _setup_bodyScrollLock(navigationArea, world)
+{
+  let body = null;
+  let owner = null;
+  const clear = () => {
+    body?.classList.remove("VgfBodyScrollLocked");
+    owner?.removeEventListener("vp_beforeDelete", clear);
+    body = null;
+    owner = null;
+  };
+  const selectBody = event => {
+    if (event.button !== 0) return;
+    const candidate = event.target.closest(".VgfExpandableContent");
+    if (candidate === body) return;
+    clear();
+    if (!candidate || !world.contains(candidate) || !candidate.querySelector(".VpwCodeEditor")) return;
+    body = candidate;
+    owner = body.closest(".Window_OuterFrame");
+    body.classList.add("VgfBodyScrollLocked");
+    owner.addEventListener("vp_beforeDelete", clear);
+    // A click explicitly changes wheel ownership, even during touchpad momentum.
+    world._vp_wheelGesture.panning = false;
+  };
+  const scrollBody = event => {
+    if (!body || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (!body.isConnected || !body.getClientRects().length || body.clientHeight === 0)
+    {
+      clear();
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? body.clientHeight : 1;
+    body.scrollLeft += (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * unit;
+    if (!event.shiftKey) body.scrollTop += event.deltaY * unit;
+  };
+  // Capture outside clicks before source selection handlers stop propagation.
+  document.addEventListener("mousedown", selectBody, true);
+  navigationArea.addEventListener("wheel", scrollBody, {capture: true, passive: false});
+  navigationArea.addEventListener("vp_beforeDelete", () => {
+    clear();
+    document.removeEventListener("mousedown", selectBody, true);
+    navigationArea.removeEventListener("wheel", scrollBody, true);
+  });
+}
 
 
 function _setup_mouseWheelScrolling(interactionArea,

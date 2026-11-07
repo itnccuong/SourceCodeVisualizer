@@ -41,6 +41,16 @@
   scrollbar-gutter: stable;
 }
 
+.Window_OuterFrame .VgfBodyScrollLocked {
+  outline: 2px solid #d99a16;
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+.VgfBodyScrollLocked .VpwCodeEditor:focus {
+  outline: none;
+}
+
 .Window_InnerFrame hr {
   color: rgb(192, 192, 192);
   margin-top:0px;
