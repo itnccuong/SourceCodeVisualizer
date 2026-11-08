@@ -4,6 +4,11 @@ require ("window_positioner.js");
 require ("view_entity.js");
 require ("request_message.js");
 require ("outline_object_functions.js");
+require ("canvas_graph.js");
+require ("canvas_selection.js");
+require ("canvas_camera.js");
+require ("canvas_controls.js");
+require ("canvas_persistence.js");
 
 
 class RequestInformation
@@ -34,7 +39,15 @@ class Controller
   {
 
     this._vp_world = new VpwWorld();
+    this._graph = new CanvasGraph(this._vp_world, this);
+    this._vp_world.vp_graph = this._graph;
     let navigationArea = new VgfNavigationArea (this._vp_world);
+    this._selection = new CanvasSelection (this._graph, this._vp_world, navigationArea);
+    this._vp_world.vp_selection = this._selection;
+    this._camera = new CanvasCamera (this._vp_world, navigationArea, this._graph);
+    this._vp_world.vp_camera = this._camera;
+    this._controls = new CanvasControls (this._graph, this._vp_world, navigationArea, this._camera, this);
+    this._vp_world.vp_controls = this._controls;
     systemDomRoot.appendChild (navigationArea);
 
 
@@ -46,6 +59,7 @@ class Controller
     // used for creating unique IDs for requesting outlines
     // ONLY USE VIA ACCESS FUNCTION!
     this._nextRequestId = 0;
+    this._canvasOperations = new Map();
 
     let self = this;
     window.addEventListener('message', function(e){
@@ -147,11 +161,16 @@ class Controller
   {
     let self = this;
 
-    let requestInfo = this._request_getRequestInformation (requestMessage.getRequestId ());
+    const requestedId = requestMessage.getRequestId();
+    let requestInfo = this._request_getRequestInformation (requestedId);
     if (!requestInfo)
+    {
+      if (requestedId !== null)
+        return;
       requestInfo = new RequestInformation ();
+    }
 
-
+    const isRoot = (requestedId === null) || (requestInfo.requestDirection === RequestInformation.CALLER);
     // translate direction
     let visualizingLocation = this._requestDirection2visualizationLocation (requestInfo.requestDirection);
 
@@ -171,10 +190,15 @@ class Controller
 
       if (!managedWindow)
       {
-        managedWindow = self._managedWindow_create(requestMessage, outlineEntity, 0, 0);
+        managedWindow = self._managedWindow_create(requestMessage, outlineEntity, 0, 0, isRoot);
         const position = positioner.placeWindow(managedWindow);
         managedWindow.vp_setXY(position.x, position.y);
         lastCreatedWindow = managedWindow;
+      }
+      else
+      {
+        if (isRoot && managedWindow.vp_canvasNodeId && self._graph)
+          self._graph.promoteToRoot(managedWindow.vp_canvasNodeId);
       }
 
       // A late response must not attach connections to a deleted requestee.
@@ -237,18 +261,64 @@ class Controller
    *   @return: entity corresponding to `outlineEntity`
    *           null, if there is none
    **/
-  _managedWindow_create(msg, outlineEntity, windowX, windowY)
+  _managedWindow_create(msg, outlineEntity, windowX, windowY, isRoot = true)
   {
     let viewEntity = new SViewEntity (outlineEntity, windowX, windowY);
 
     // Add to GUI
     if (msg.isOutline()){
-      return this._vp_world.visualizeOutline (viewEntity);
+      return this._vp_world.visualizeOutline (viewEntity, isRoot);
     }else if (msg.isMessage())
-      return this._vp_world.visualizeMessageBox (viewEntity);
+      return this._vp_world.visualizeMessageBox (viewEntity, isRoot);
 
     return null;
   }
+
+  cancelRequestsForFrames(nodeIdSet)
+  {
+    for (const [reqId, reqInfo] of Object.entries(this._request_awaitingRequests))
+    {
+      if (reqInfo && reqInfo.requestee)
+      {
+        const topFrame = reqInfo.requestee.closest(".Window_OuterFrame");
+        if (topFrame && topFrame.vp_canvasNodeId && nodeIdSet.has(topFrame.vp_canvasNodeId))
+          delete this._request_awaitingRequests[reqId];
+      }
+    }
+  }
+  requestSaveCanvas()
+  {
+    this._requestCanvasOperation("save");
+  }
+
+  requestLoadCanvas()
+  {
+    this._requestCanvasOperation("load");
+  }
+
+  _requestCanvasOperation(operation)
+  {
+    if (this._canvasOperations.has(operation)) return;
+    if (typeof gBackend === "undefined" || !gBackend || typeof gBackend.postMessage !== "function")
+    {
+      this._controls.setStatus("Canvas files require the VS Code extension host.");
+      return;
+    }
+    const requestId = this._requestId_get();
+    this._canvasOperations.set(operation, requestId);
+    this._controls.setOperationPending(operation, true);
+    try
+    {
+      gBackend.postMessage({type: `canvas_${operation}`, requestId});
+    }
+    catch (err)
+    {
+      this._canvasOperations.delete(operation);
+      this._controls.setOperationPending(operation, false);
+      this._controls.setStatus("Error: " + (err instanceof Error ? err.message : String(err)));
+    }
+  }
+
 
   // -------------------------------------------------------
 
@@ -257,8 +327,89 @@ class Controller
    **/
   _message_receive(event){
     const message = event.data;
-    // debug
-    //this.show_debug_message ( JSON.stringify (message));
+    if (!message) return false;
+
+    if (message.type === "canvas_export_request")
+    {
+      const requestId = message.requestId;
+      try
+      {
+        WindowPositioner.cancelReveal(this._vp_world);
+        for (const node of this._graph.nodes.values())
+          node.window.vp_finishEntrance?.();
+        const canvasData = CanvasPersistence.serialize(this._graph, this._camera);
+        const pendingNav = Object.keys(this._request_awaitingRequests).length > 0;
+        if (typeof gBackend !== "undefined" && gBackend && typeof gBackend.postMessage === "function")
+        {
+          gBackend.postMessage({
+            type: "canvas_export_response",
+            requestId,
+            data: canvasData,
+            pendingNavigation: pendingNav
+          });
+        }
+      }
+      catch (err)
+      {
+        if (typeof gBackend !== "undefined" && gBackend && typeof gBackend.postMessage === "function")
+        {
+          gBackend.postMessage({
+            type: "canvas_export_response",
+            requestId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+      }
+      return true;
+    }
+
+    if (message.type === "canvas_restore")
+    {
+      const requestId = message.requestId;
+      try
+      {
+        CanvasPersistence.restore(message.data, this._vp_world, this._graph, this._camera);
+        if (typeof gBackend !== "undefined" && gBackend && typeof gBackend.postMessage === "function")
+        {
+          gBackend.postMessage({
+            type: "canvas_restore_result",
+            requestId,
+            error: null
+          });
+        }
+      }
+      catch (err)
+      {
+        if (typeof gBackend !== "undefined" && gBackend && typeof gBackend.postMessage === "function")
+        {
+          gBackend.postMessage({
+            type: "canvas_restore_result",
+            requestId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+      }
+      return true;
+    }
+
+    if (message.type === "canvas_operation_result")
+    {
+      const resultData = message.data;
+      if (!resultData || !["saved", "loaded", "cancelled", "error"].includes(resultData.status))
+        return false;
+      if (message.requestedId !== null)
+      {
+        const pending = Array.from(this._canvasOperations).find(([, id]) => id === message.requestedId);
+        if (!pending) return false;
+        this._canvasOperations.delete(pending[0]);
+        this._controls.setOperationPending(pending[0], false);
+      }
+      if (resultData.status === "error")
+        this._controls.setStatus("Error: " + resultData.message);
+      else if (resultData.status !== "cancelled")
+        this._controls.setStatus(resultData.message);
+      return true;
+    }
 
     let msg = new RequestMessage (message);
     if (msg.isCancelled ())

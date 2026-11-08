@@ -1,0 +1,150 @@
+.VgfControlsToolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 12px;
+  user-select: none;
+}
+
+.VgfControlsButton {
+  background: var(--vscode-button-secondaryBackground, var(--vscode-button-background, #0e639c));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground, #ffffff));
+  border: 1px solid var(--vscode-button-border, transparent);
+  padding: 4px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.VgfControlsButton:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground, #1177bb));
+}
+
+.VgfControlsButton:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: 1px;
+}
+
+.VgfControlsStatus {
+  color: var(--vscode-descriptionForeground, #888888);
+  font-size: 11px;
+  margin-left: 8px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.VgfNodesDropdown {
+  position: absolute;
+  top: 42px;
+  left: 12px;
+  z-index: 9500;
+  background: var(--vscode-editorWidget-background, #252526);
+  color: var(--vscode-editorWidget-foreground, #cccccc);
+  border: 1px solid var(--vscode-editorWidget-border, #454545);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  max-width: 280px;
+  width: 280px;
+  max-height: 40vh;
+  overflow-y: auto;
+  border-radius: 3px;
+  display: none;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 12px;
+}
+
+.VgfNodesDropdown.open {
+  display: block;
+}
+
+.VgfNodeItem {
+  padding: 6px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--vscode-editorWidget-border, #333333);
+}
+
+.VgfNodeItem:hover,
+.VgfNodeItem:focus {
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+  color: var(--vscode-list-hoverForeground, #ffffff);
+  outline: none;
+}
+
+.VgfNodeName {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.VgfNodeSecondary {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #888888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.VgfNodesEmpty {
+  padding: 12px 10px;
+  color: var(--vscode-descriptionForeground, #888888);
+  font-style: italic;
+  text-align: center;
+}
+
+.VgfMinimap {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 180px;
+  height: 120px;
+  max-width: 25vw;
+  max-height: 25vh;
+  z-index: 9000;
+  background: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-editorWidget-border, #454545);
+  box-sizing: border-box;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.VgfMinimapShield {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: default;
+}
+
+.VgfMinimapSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+}
+
+.VgfMinimapNode {
+  fill: var(--vscode-editorWidget-background, #2d2d2d);
+  stroke: var(--vscode-editorWidget-border, #555555);
+  stroke-width: 1;
+}
+
+.VgfMinimapNodeSelected {
+  stroke: var(--vscode-focusBorder, #007acc);
+  stroke-width: 1.5;
+}
+
+.VgfMinimapViewport {
+  fill: rgba(0, 122, 204, 0.12);
+  stroke: var(--vscode-focusBorder, #007acc);
+  stroke-width: 1;
+}

@@ -1,3 +1,5 @@
+import {SourceReference} from './source_reference';
+
 import * as vscode from 'vscode'
 import {Range} from 'vscode'
 import { range_new } from "../utils";
@@ -6,6 +8,11 @@ import { range_fromArray } from "../utils";
 
 
 // ==================================================================
+
+export interface CommentRange {
+  range: vscode.Range;
+  kind: 'comment' | 'docstring';
+}
 
 export abstract class OutlineRange
 {
@@ -16,12 +23,14 @@ export abstract class OutlineRange
 
   // Range of text that is going to be displayed for this OutlineRange
   public displayTextRange:  null | Range  = null;
+  public commentRanges?: CommentRange[];
+  public commentHidingError?: string;
+  public sourceReference?: SourceReference;
   // added by 3rd party extension if needed
   //public displayText: string             = "";
 
   // enable dynamic extension of properties
   [key: string]: any;
-
   /**
    * This method is used for object comming back
    * from webview; aparently on the webview `Range`s
@@ -59,6 +68,7 @@ export class Symbol extends OutlineRange
   public attributes: Attribute[]   = [];
   public declarationOnly = false;
   public definitionPosition?: vscode.Position;
+  public isCallable?: boolean;
 }
 
 // ==================================================================

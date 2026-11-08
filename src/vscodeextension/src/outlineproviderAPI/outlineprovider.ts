@@ -14,6 +14,8 @@ export type DefinitionTargetChooser =
   (targets: readonly DefinitionTarget[]) => Promise<DefinitionTarget | undefined>;
 export type DefinitionOutlineResult = Array<Outline.Symbol | Outline.File> | null;
 
+import {SourceReference} from './source_reference';
+
 export interface VpOutlineProvider
 {
   // TODO:future: maybe it's better to use a uri instead of a TextDocument?
@@ -59,5 +61,9 @@ export interface VpOutlineProvider
   provideLocationDefiner(document: vscode.TextDocument,
                            position: vscode.Position)
     : Promise<Outline.OutlineRange[]>;
+
+  provideSavedOutline?(document: vscode.TextDocument,
+                       reference: SourceReference)
+    : Promise<Outline.File | Outline.Symbol>;
 
 }

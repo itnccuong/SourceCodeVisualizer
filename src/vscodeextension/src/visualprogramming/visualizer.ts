@@ -6,11 +6,32 @@ import { promises } from 'dns';
 import { request } from 'http';
 import { VsCodeWindow } from './adapter/vscodewindow';
 import { DefinitionOutlineResult, DefinitionTarget } from '../outlineproviderAPI/outlineprovider';
+import {translateOutlineRanges} from './outline_entities';
+import {CanvasFileV1, parseCanvasFile} from './canvas_format';
+
+export interface ResolvedCanvas {
+  canvas: CanvasFileV1;
+  nodes: Array<{
+    id: string;
+    outline?: Outline.File | Outline.Symbol;
+    unavailable?: string;
+  }>;
+  edges: Array<{
+    id: string;
+    anchorStatus: 'exact' | 'changed' | 'missing';
+  }>;
+}
 
 interface OutlineResponse {
   type: 'visualizeOutline' | 'outline_cancelled' | 'messageBox';
   requestedId: string | null;
   data?: unknown;
+}
+
+interface CanvasTabManager {
+  saveCanvas(tab?: VisualizingTab, requestedId?: string | null): Promise<void>;
+  loadCanvas(tab?: VisualizingTab, requestedId?: string | null): Promise<void>;
+  onTabDisposed(tab: VisualizingTab): void;
 }
 
 export class VisualizingTab
@@ -19,18 +40,90 @@ export class VisualizingTab
   private _vscodeWindow2: VsCodeWindow;
   private _context: any;
 
-  // lazy init; use ONLY through getWebviewPanel()
   private __webviewPanel: vscode.WebviewPanel | null = null;
+  private _isReady = false;
+  private readonly _queuedMessages: unknown[] = [];
+  private readonly _readyDeferred: Array<{ resolve: () => void; reject: (err: Error) => void }> = [];
+  private _nextOperationId = 0;
+  private readonly _pendingExportRequests = new Map<string, { resolve: (val: { canvas: CanvasFileV1; pendingNavigation: boolean }) => void; reject: (err: Error) => void }>();
+  private readonly _pendingRestoreRequests = new Map<string, { resolve: () => void; reject: (err: Error) => void }>();
+  private _manager?: CanvasTabManager;
 
   // -------------------------------------------------------------------------
 
   public constructor(vscodeWindow:  any,
-                     context:       any)
+                     context:       any,
+                     title = 'Code Diagram',
+                     manager?: CanvasTabManager)
   {
     this._vscodeWindow = vscodeWindow;
     this._vscodeWindow2 = new VsCodeWindow (vscodeWindow);
-
     this._context = context;
+    this._manager = manager;
+
+    const panel = WebviewCreator.createWebview(this._context, this._vscodeWindow2, title);
+    this.__webviewPanel = panel;
+    panel.onDidDispose(
+      () => {
+        this.__webviewPanel = null;
+        this._isReady = false;
+        this._queuedMessages.length = 0;
+        for (const waiter of this._readyDeferred) waiter.reject(new Error('Panel disposed'));
+        this._readyDeferred.length = 0;
+        for (const req of this._pendingExportRequests.values()) {
+          req.reject(new Error('Panel disposed'));
+        }
+        this._pendingExportRequests.clear();
+        for (const req of this._pendingRestoreRequests.values()) {
+          req.reject(new Error('Panel disposed'));
+        }
+        this._pendingRestoreRequests.clear();
+        this._manager?.onTabDisposed(this);
+      },
+      null, this._context.subscriptions
+    );
+    panel.webview.onDidReceiveMessage(message => {
+      return this._receiveMessage(message, panel);
+    });
+  }
+
+  public get panel(): vscode.WebviewPanel | null {
+    return this.__webviewPanel;
+  }
+
+  public reveal(): void {
+    this.__webviewPanel?.reveal();
+  }
+
+  public waitReady(): Promise<void> {
+    if (!this.__webviewPanel) return Promise.reject(new Error('Canvas tab is closed'));
+    if (this._isReady) return Promise.resolve();
+    return new Promise<void>((resolve, reject) => this._readyDeferred.push({ resolve, reject }));
+  }
+
+  public postMessageToPanel(message: unknown): void {
+    if (!this.__webviewPanel) return;
+    if (!this._isReady) {
+      this._queuedMessages.push(message);
+    } else {
+      this._sendMessage(message);
+    }
+  }
+
+  private _sendMessage(message: unknown): void {
+    const panel = this.__webviewPanel;
+    if (!panel) return;
+    const rejectRequest = (error: unknown) => {
+      if (!this._isRecord(message) || typeof message.requestId !== 'string') return;
+      const id = message.requestId;
+      const pending = this._pendingExportRequests.get(id) ?? this._pendingRestoreRequests.get(id);
+      this._pendingExportRequests.delete(id);
+      this._pendingRestoreRequests.delete(id);
+      pending?.reject(error instanceof Error ? error : new Error(String(error)));
+    };
+    panel.webview.postMessage(message).then(delivered => {
+      if (!delivered) rejectRequest(new Error('Canvas did not receive the operation request'));
+    }, rejectRequest);
   }
 
   // ------------------------------------------------------------------------
@@ -38,23 +131,8 @@ export class VisualizingTab
   /**
    *  Lazy initialization of webview
    **/
-  private getWebviewPanel()
+  public getWebviewPanel(): vscode.WebviewPanel | null
   {
-    if (null == this.__webviewPanel) {
-      const panel = WebviewCreator.createWebview(this._context, this._vscodeWindow2);
-      this.__webviewPanel = panel;
-      panel.onDidDispose(
-          () => {
-            if (this.__webviewPanel === panel) {
-              this.__webviewPanel = null;
-            }
-          },
-          null, this._context.subscriptions
-        );
-      panel.webview.onDidReceiveMessage(message => {
-        return this._receiveMessage(message, panel);
-      });
-    }
     return this.__webviewPanel;
   }
 
@@ -78,24 +156,6 @@ export class VisualizingTab
 
   // -------------------------------------------------------------------------
 
-  /**
-   * Visualize definition OF THE BEGINNING of a selection
-   **/
-  public visualizeDocumentFromUri(uri: vscode.Uri): void
-  {
-    // setup
-    vscode.workspace.openTextDocument (uri).
-    then ( document =>
-    {
-      if (!document)
-      this._vscodeWindow.showErrorMessage("Cannot visualize. No document is focussed. Please focus a document.");
-
-      // run
-      this.visualizeDocument(document);
-    });
-  }
-
-  // -------------------------------------------------------------------------
 
   public async visualizeDocument(document: vscode.TextDocument)
   {
@@ -116,7 +176,7 @@ export class VisualizingTab
       return;
     }
 
-    await this._translate_outlineRanges2outlineEntities ([outlineFile]);
+    await translateOutlineRanges ([outlineFile]);
 
     // run
     this._postOutlineEntities([outlineFile], requestedId);
@@ -128,31 +188,14 @@ export class VisualizingTab
   /**
    * Visualize definition OF THE BEGINNING of a selection
    **/
-  public visualizeFromCursorPositions(): void
+  public async visualizeSelections(document: vscode.TextDocument, selections: readonly vscode.Selection[]): Promise<void>
   {
-    // setup
-    const activeEditor = this._vscodeWindow.activeTextEditor;
-    if (null == activeEditor) {
-      this._vscodeWindow.showErrorMessage("Cannot visualize. No document is focussed. Please focus a document.");
+    if (!this.__webviewPanel) return;
+    this.reveal();
+    const panel = this.__webviewPanel;
+    for (const selection of selections) {
+      await this._getOutlineAndSend(document.uri, selection.start, null, selection.start, panel);
     }
-    let document   = activeEditor.document;
-    let selections = activeEditor.selections
-
-    // run
-    this._visualizeSelectionInDocument(document, selections);
-  }
-
-  // -------------------------------------------------------------------------
-
-  private _visualizeSelectionInDocument(document: vscode.TextDocument,
-                                        selections: vscode.Selection[])
-  {
-    // run
-    selections.forEach ( (selection) =>
-    {
-      let position = selection.start;
-      this._getOutlineAndSend(document.uri, position, null, position);
-    });
   }
 
 
@@ -164,11 +207,65 @@ export class VisualizingTab
     if (!this._isRecord(JSONmessage)) {
       return;
     }
+    if (!requestPanel || requestPanel !== this.__webviewPanel) {
+      return;
+    }
     const requestId = typeof JSONmessage.requestId === 'string' ? JSONmessage.requestId : null;
     const type = JSONmessage.type;
     const data = JSONmessage.data;
 
     switch (type) {
+      case "canvas_ready":
+        {
+          if (this._isReady) break;
+          this._isReady = true;
+          for (const queued of this._queuedMessages) this._sendMessage(queued);
+          this._queuedMessages.length = 0;
+          for (const waiter of this._readyDeferred) waiter.resolve();
+          this._readyDeferred.length = 0;
+        }
+        break;
+      case "canvas_save":
+        {
+          if (requestId) void this._manager?.saveCanvas(this, requestId);
+        }
+        break;
+      case "canvas_load":
+        {
+          if (requestId) void this._manager?.loadCanvas(this, requestId);
+        }
+        break;
+      case "canvas_export_response":
+        {
+          if (requestId && this._pendingExportRequests.has(requestId)) {
+            const req = this._pendingExportRequests.get(requestId)!;
+            this._pendingExportRequests.delete(requestId);
+            try {
+              if (JSONmessage.error) throw new Error(String(JSONmessage.error));
+              if (typeof JSONmessage.pendingNavigation !== 'boolean') throw new Error('Invalid canvas export response');
+              req.resolve({
+                canvas: parseCanvasFile(JSONmessage.data),
+                pendingNavigation: JSONmessage.pendingNavigation
+              });
+            } catch (error) {
+              req.reject(error instanceof Error ? error : new Error(String(error)));
+            }
+          }
+        }
+        break;
+      case "canvas_restore_result":
+        {
+          if (requestId && this._pendingRestoreRequests.has(requestId)) {
+            const req = this._pendingRestoreRequests.get(requestId)!;
+            this._pendingRestoreRequests.delete(requestId);
+            if (JSONmessage.error !== null) {
+              req.reject(new Error(typeof JSONmessage.error === 'string' ? JSONmessage.error : 'Invalid canvas restore response'));
+            } else {
+              req.resolve();
+            }
+          }
+        }
+        break;
       case "outline_requestByFilePosition":
         {
           const navigationData: Record<string, unknown> = this._isRecord(data) ? data : {};
@@ -253,7 +350,7 @@ export class VisualizingTab
       } else if (definitionResults.length === 0) {
         response = this._definitionNotFoundMessage(requestedId);
       } else {
-        const entities = await this._translate_outlineRanges2outlineEntities(definitionResults);
+        const entities = await translateOutlineRanges(definitionResults);
         response = {type: 'visualizeOutline', requestedId, data: entities};
       }
     } catch (error) {
@@ -403,7 +500,7 @@ export class VisualizingTab
 
     // translate
     if (definitionResults){
-      return this._translate_outlineRanges2outlineEntities (definitionResults);
+      return translateOutlineRanges (definitionResults);
     }
 
     return definitionResults;
@@ -411,61 +508,6 @@ export class VisualizingTab
 
   // ------------------------------------------------------------------------
 
-  /**
-   * OutlineSymbols do not contain strings of their content.
-   * OutlineEntities are like OutlineSymbols, but with strings for their content
-   **/
-  private async _translate_outlineRanges2outlineEntities (outlineRanges: Outline.OutlineRange[])
-  {
-    for (let i=0; i<outlineRanges.length; ++i){
-      let outlineRange: Outline.OutlineRange = outlineRanges[i];
-      let doc = await vscode.workspace.openTextDocument ( vscode.Uri.parse (outlineRange.uri));
-      _outlineRange2outlineEntity (outlineRange, doc);
-    }
-    return outlineRanges;
-
-    // ----------
-
-    function _outlineRange2outlineEntity(outlineRange: Outline.OutlineRange,
-                                         doc:          vscode.TextDocument)
-    {
-
-      if (outlineRange instanceof Outline.Symbol){
-        // fill displayText
-        if (outlineRange.displayTextRange)
-          outlineRange.displayText = doc.getText( outlineRange.displayTextRange );
-        else
-          outlineRange.displayText = "<UNKNOWN>";
-        if (/\.pyi$/i.test(doc.uri.path)
-            && !outlineRange.attributes.some(attribute => attribute.kind === 'Type stub — declaration only')) {
-          const attribute = new Outline.Attribute();
-          attribute.kind = 'Type stub — declaration only';
-          attribute.uri = outlineRange.uri;
-          attribute.language = outlineRange.language;
-          outlineRange.attributes.push(attribute);
-        }
-      }
-      else
-      if (outlineRange instanceof Outline.File){
-        outlineRange.displayText = utils.path_getFilename (outlineRange.uri);
-      }
-      else
-      if (outlineRange instanceof Outline.Text){
-        let outlineText = outlineRange;
-
-        // fill `displayText`
-        outlineText.displayText = "<UNKNOWN>";
-        if (outlineText.displayTextRange)
-          outlineText.displayText = doc.getText( outlineText.displayTextRange );
-      }
-
-      for (let i = 0; i < outlineRange.parts.length; ++i)
-      {
-        let part = outlineRange.parts[i];
-        _outlineRange2outlineEntity (part, doc);
-      }
-    }
-  }
 
   // ------------------------------------------------------------------------
 
@@ -509,14 +551,44 @@ export class VisualizingTab
   }
 
   private _postOutlineMessage(message: OutlineResponse,
-                              requestPanel: vscode.WebviewPanel | null) {
-    const panel = message.requestedId === null ? this.getWebviewPanel() : requestPanel;
-    if (!panel || (message.requestedId !== null && panel !== this.__webviewPanel)) {
+                              requestPanel: vscode.WebviewPanel | null = this.__webviewPanel) {
+    const panel = requestPanel ?? this.__webviewPanel;
+    if (!panel || panel !== this.__webviewPanel) {
       return;
     }
-    panel.webview.postMessage(message);
+    this.postMessageToPanel(message);
   }
 
+  public exportCanvasState(): Promise<{ canvas: CanvasFileV1; pendingNavigation: boolean }> {
+    if (!this.__webviewPanel) {
+      return Promise.reject(new Error('Canvas tab is closed'));
+    }
+    const requestId = 'export_' + (++this._nextOperationId);
+    return new Promise((resolve, reject) => {
+      this._pendingExportRequests.set(requestId, { resolve, reject });
+      this.postMessageToPanel({
+        type: 'canvas_export_request',
+        requestId
+      });
+    });
+  }
+
+  public async restoreCanvas(state: ResolvedCanvas): Promise<void> {
+    if (!this.__webviewPanel) {
+      throw new Error('Canvas tab is closed');
+    }
+    await this.waitReady();
+    if (!this.__webviewPanel) throw new Error('Canvas tab is closed');
+    const requestId = 'restore_' + (++this._nextOperationId);
+    return new Promise<void>((resolve, reject) => {
+      this._pendingRestoreRequests.set(requestId, { resolve, reject });
+      this.postMessageToPanel({
+        type: 'canvas_restore',
+        requestId,
+        data: state
+      });
+    });
+  }
   // ------------------------------------------------------------------------
 
 }

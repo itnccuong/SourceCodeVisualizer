@@ -10,9 +10,11 @@ import * as utils from '../../utils';
 import type {DefinitionTarget, DefinitionTargetChooser, DefinitionOutlineResult} from '../outlineprovider';
 import { SymbolExtractionContext, VpLspExtenderProvider } from '../lspextenderprovider';
 import { DocumentSymbolX } from './documentsymbolx';
+import {SavedRange, SymbolPathEntry, SourceReference, computeDocumentHash} from '../source_reference';
 
 export class OutlineUtils {
   private static readonly symbolParents = new WeakMap<vscode.DocumentSymbol, vscode.DocumentSymbol>();
+  private static readonly providerSymbols = new WeakSet<vscode.DocumentSymbol>();
 
   private static _getSymbolExtractionContext(symbol: vscode.DocumentSymbol): SymbolExtractionContext {
     const ancestors: vscode.DocumentSymbol[] = [];
@@ -21,6 +23,62 @@ export class OutlineUtils {
     }
     return {ancestors};
   }
+  private static _commentRangesCache = new WeakMap<vscode.TextDocument, {
+    version: number;
+    ranges: readonly Outline.CommentRange[] | null;
+    error?: string;
+  }>();
+
+  private static _getCommentClassification(document: vscode.TextDocument, provider: VpLspExtenderProvider): {
+    version: number;
+    ranges: readonly Outline.CommentRange[] | null;
+    error?: string;
+  } {
+    const cached = this._commentRangesCache.get(document);
+    if (cached && cached.version === document.version) {
+      return cached;
+    }
+    if (typeof provider.getCommentRanges !== 'function') {
+      const res = { version: document.version, ranges: null };
+      this._commentRangesCache.set(document, res);
+      return res;
+    }
+    try {
+      const ranges = provider.getCommentRanges(document);
+      const res = { version: document.version, ranges };
+      this._commentRangesCache.set(document, res);
+      return res;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      const res = { version: document.version, ranges: [] as readonly Outline.CommentRange[], error: reason };
+      this._commentRangesCache.set(document, res);
+      return res;
+    }
+  }
+
+  private static _attachCommentRanges(rangeOwner: Outline.OutlineRange, document: vscode.TextDocument, provider: VpLspExtenderProvider, targetRange: vscode.Range | null) {
+    const classification = this._getCommentClassification(document, provider);
+    if (classification.error) {
+      rangeOwner.commentHidingError = classification.error;
+    }
+    if (classification.ranges === null) {
+      return;
+    }
+    if (!targetRange) {
+      rangeOwner.commentRanges = [];
+      return;
+    }
+    const intersected: Outline.CommentRange[] = [];
+    for (const c of classification.ranges) {
+      const start = c.range.start.isAfter(targetRange.start) ? c.range.start : targetRange.start;
+      const end = c.range.end.isBefore(targetRange.end) ? c.range.end : targetRange.end;
+      if (start.isBefore(end)) {
+        intersected.push({ range: new vscode.Range(start, end), kind: c.kind });
+      }
+    }
+    rangeOwner.commentRanges = intersected;
+  }
+
 
 
   /**
@@ -94,6 +152,7 @@ export class OutlineUtils {
       } else {
         this.symbolParents.delete(symbol);
       }
+      this.providerSymbols.add(symbol);
       flatSymbolList.push(symbol);
       for (const child of symbol.children) { visit(child, symbol); }
     };
@@ -300,6 +359,7 @@ export class OutlineUtils {
       text.language = provider.getLanguageStr();
       text.uri = document.uri.toString();
       text.displayTextRange = new vscode.Range(cursor, end);
+      this._attachCommentRanges(text, document, provider, text.displayTextRange);
       if (preserveSourceGaps || this._shouldAddTextOutline(document, text)) { parts.push(text); }
     };
     for (const outline of outlines) {
@@ -327,7 +387,14 @@ export class OutlineUtils {
     filesymbol.uri = document.uri.toString ();
     filesymbol.language = provider.getLanguageStr();
     filesymbol.displayTextRange = new vscode.Range(0, 0, 0, 0);
-
+    filesymbol.sourceReference = {
+      type: 'file',
+      uri: filesymbol.uri,
+      language: filesymbol.language,
+      documentHash: '',
+      symbol: null
+    };
+    this._attachCommentRanges(filesymbol, document, provider, utils.document_getRange(document));
     let documentSymbols = await this.getDocumentSymbols (document.uri);
     if (!documentSymbols) documentSymbols = [];
 
@@ -433,6 +500,46 @@ export class OutlineUtils {
     symbol.attributes = information.attributes;
     symbol.declarationOnly = information.declarationOnly;
     symbol.definitionPosition = information.definitionPosition;
+    symbol.isCallable = information.isCallable !== undefined
+      ? information.isCallable
+      : (docSymbol.kind === vscode.SymbolKind.Function
+        || docSymbol.kind === vscode.SymbolKind.Method
+        || docSymbol.kind === vscode.SymbolKind.Constructor);
+    this._attachCommentRanges(symbol, document, provider, symbol.displayTextRange);
+    for (const attribute of symbol.attributes) {
+      this._attachCommentRanges(attribute, document, provider, attribute.displayTextRange);
+    }
+
+    const toSavedRange = (r: vscode.Range): SavedRange => [
+      { line: r.start.line, character: r.start.character },
+      { line: r.end.line, character: r.end.character }
+    ];
+
+    let path: SymbolPathEntry[] | null = null;
+    if (this.providerSymbols.has(docSymbol)) {
+      const ancestry: SymbolPathEntry[] = [];
+      let curr: vscode.DocumentSymbol | undefined = docSymbol;
+      while (curr) {
+        ancestry.unshift({ name: curr.name, kind: curr.kind });
+        curr = this.symbolParents.get(curr);
+      }
+      path = ancestry;
+    }
+
+    symbol.sourceReference = {
+      type: 'symbol',
+      uri: symbol.uri,
+      language: symbol.language,
+      documentHash: '',
+      symbol: {
+        name: docSymbol.name,
+        kind: docSymbol.kind,
+        path,
+        selection: toSavedRange(docSymbol.selectionRange),
+        declaration: toSavedRange(symbol.totalRange ?? docSymbol.range)
+      }
+    };
+
     symbol.parts = information.rangeBody === null || information.rangeBody.isEmpty
       ? []
       : this._provideOutlineForRange(
@@ -456,6 +563,102 @@ export class OutlineUtils {
 
     let codeBlock = document.getText (textoutline.displayTextRange).replace ("\n", "");
     return (codeBlock.trim() != "");
+  }
+
+  public static async provideSavedOutline(
+    document: vscode.TextDocument,
+    reference: SourceReference,
+    provider: VpLspExtenderProvider
+  ): Promise<Outline.File | Outline.Symbol> {
+    if (document.languageId !== reference.language) {
+      throw new Error(`Language changed from ${reference.language} to ${document.languageId}`);
+    }
+
+    if (reference.type === 'file') {
+      return this.provideDocumentOutline(provider, document);
+    }
+
+    const symRef = reference.symbol;
+    if (!symRef) {
+      throw new Error('Missing symbol reference');
+    }
+
+    const currentHash = computeDocumentHash(document.getText());
+    const hashUnchanged = (currentHash === reference.documentHash);
+    const flatSymbols = await this._getFlatDocumentSymbols(document.uri);
+
+    const matchesAncestry = (sym: vscode.DocumentSymbol, targetPath: SymbolPathEntry[] | null): boolean => {
+      if (!targetPath) return false;
+      const ancestry: SymbolPathEntry[] = [];
+      let curr: vscode.DocumentSymbol | undefined = sym;
+      while (curr) {
+        ancestry.unshift({ name: curr.name, kind: curr.kind });
+        curr = this.symbolParents.get(curr);
+      }
+      if (ancestry.length !== targetPath.length) return false;
+      return ancestry.every((entry, i) => entry.name === targetPath[i].name && entry.kind === targetPath[i].kind);
+    };
+
+    if (hashUnchanged) {
+      for (const sym of flatSymbols) {
+        if (
+          sym.name === symRef.name &&
+          sym.kind === symRef.kind &&
+          sym.selectionRange.start.line === symRef.selection[0].line &&
+          sym.selectionRange.start.character === symRef.selection[0].character &&
+          sym.selectionRange.end.line === symRef.selection[1].line &&
+          sym.selectionRange.end.character === symRef.selection[1].character
+        ) {
+          if (symRef.path && !matchesAncestry(sym, symRef.path)) {
+            continue;
+          }
+          const outline = this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(sym, document.uri), provider);
+          const decl = outline.totalRange ?? sym.range;
+          if (
+            decl.start.line === symRef.declaration[0].line &&
+            decl.start.character === symRef.declaration[0].character &&
+            decl.end.line === symRef.declaration[1].line &&
+            decl.end.character === symRef.declaration[1].character
+          ) {
+            return outline;
+          }
+        }
+      }
+
+      if (symRef.path === null && typeof provider.getDefinitionSymbol === 'function') {
+        const pos = new vscode.Position(symRef.selection[0].line, symRef.selection[0].character);
+        const enclosing = flatSymbols.filter(s => s.range.contains(pos));
+        const syntaxSym = provider.getDefinitionSymbol(document, pos, { ancestors: enclosing });
+        if (syntaxSym && syntaxSym.name === symRef.name && syntaxSym.kind === symRef.kind) {
+          const outline = this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(syntaxSym, document.uri), provider);
+          const decl = outline.totalRange ?? syntaxSym.range;
+          if (
+            decl.start.line === symRef.declaration[0].line &&
+            decl.start.character === symRef.declaration[0].character &&
+            decl.end.line === symRef.declaration[1].line &&
+            decl.end.character === symRef.declaration[1].character
+          ) {
+            return outline;
+          }
+        }
+      }
+
+      throw new Error(`Declaration "${symRef.name}" could not be resolved at saved coordinates`);
+    }
+
+    if (!symRef.path || symRef.path.length === 0) {
+      throw new Error(`Cannot locate declaration "${symRef.name}": document modified and symbol has no ancestry path`);
+    }
+
+    const candidates = flatSymbols.filter(sym => matchesAncestry(sym, symRef.path));
+    if (candidates.length === 0) {
+      throw new Error(`Symbol "${symRef.name}" not found in modified document`);
+    }
+    if (candidates.length > 1) {
+      throw new Error(`Ambiguous symbol: multiple declarations match ancestry path for "${symRef.name}"`);
+    }
+
+    return this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(candidates[0], document.uri), provider);
   }
 
 }

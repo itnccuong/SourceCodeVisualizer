@@ -25,7 +25,7 @@ class SourceNavigation
     const text = this._normalize(original);
     const state = {
       surface, ownerWindow, rows, original, text,
-      uri: model.uri || ownerWindow.viewEntity?.vp_model?.uri,
+      uri: model.uri || ownerWindow?.viewEntity?.vp_model?.uri,
       sourceRange: this._copyRange(model.displayTextRange),
       definitionRange: this._copyRange(model.definitionRange),
       compact: model.CLASS_TYPE === "Attribute",
@@ -41,7 +41,7 @@ class SourceNavigation
       if (event.button !== 0 || !this._hitsSource(state, event)) return;
       event.stopPropagation();
       // Focusing the window changes its stacking order, not the native selection.
-      ownerWindow.vp_focus();
+      ownerWindow?.vp_focus();
     };
     const onDoubleClick = event => {
       if (!this._hitsSource(state, event)) return;
@@ -67,12 +67,12 @@ class SourceNavigation
       state.observer?.disconnect();
       surface.removeEventListener("mousedown", onMouseDown);
       surface.removeEventListener("dblclick", onDoubleClick);
-      ownerWindow.removeEventListener("vp_beforeDelete", state.dispose);
+      ownerWindow?.removeEventListener("vp_beforeDelete", state.dispose);
       surface.removeEventListener("vp_beforeDelete", state.dispose);
       this._surfaces.delete(surface);
     };
     // Plain descendants are not necessarily visited by widget deletion traversal.
-    ownerWindow.addEventListener("vp_beforeDelete", state.dispose);
+    ownerWindow?.addEventListener("vp_beforeDelete", state.dispose);
     surface.addEventListener("vp_beforeDelete", state.dispose);
     this._ensureIndex(state);
     return surface;
@@ -498,5 +498,80 @@ class SourceNavigation
     gController.outline_reportError(state.surface, "Source mapping unavailable",
       "The displayed text no longer matches its source. Reopen the node before navigating.");
     return true;
+  }
+
+  static isDiverged(surface)
+  {
+    const state = this._surfaces.get(surface);
+    return state ? !this._ensureIndex(state) : false;
+  }
+
+  static describe(anchor)
+  {
+    if (!anchor || !anchor.surface) return null;
+    const state = this._surfaces.get(anchor.surface);
+    if (!state) return null;
+    const docHash = state.ownerWindow?.viewEntity?.vp_model?.sourceReference?.documentHash || "";
+    let surfaceKind = "heading";
+    if (state.compact) surfaceKind = "attribute";
+    else if (state.rows) surfaceKind = "body";
+    return {
+      kind: "source",
+      uri: anchor.uri,
+      documentHash: docHash,
+      surface: {
+        kind: surfaceKind,
+        range: this._copyRange(state.sourceRange)
+      },
+      range: this._copyRange(anchor.range),
+      offsets: [anchor.offsets[0], anchor.offsets[1]]
+    };
+  }
+
+  static restore(ownerWindow, savedOrigin)
+  {
+    if (!savedOrigin || savedOrigin.kind !== "source" || !ownerWindow) return { anchor: null, status: "missing" };
+    const currentHash = ownerWindow.viewEntity?.vp_model?.sourceReference?.documentHash;
+    const hashMatches = (currentHash === savedOrigin.documentHash);
+
+    const matchingSurfaces = [];
+    for (const surface of ownerWindow.querySelectorAll("[data-vp-source-surface]"))
+    {
+      const state = this._surfaces.get(surface);
+      if (state && state.ownerWindow === ownerWindow && surface.isConnected)
+      {
+        let kind = "heading";
+        if (state.compact) kind = "attribute";
+        else if (state.rows) kind = "body";
+        if (kind === savedOrigin.surface.kind)
+        {
+          const sr = state.sourceRange;
+          const tr = savedOrigin.surface.range;
+          if (sr && tr && sr[0].line === tr[0].line && sr[0].character === tr[0].character
+              && sr[1].line === tr[1].line && sr[1].character === tr[1].character)
+          {
+            matchingSurfaces.push({ surface, state });
+          }
+        }
+      }
+    }
+
+    if (hashMatches && matchingSurfaces.length === 1)
+    {
+      const { surface, state } = matchingSurfaces[0];
+      const anchor = {
+        surface,
+        uri: savedOrigin.uri,
+        range: this._copyRange(savedOrigin.range),
+        offsets: [savedOrigin.offsets[0], savedOrigin.offsets[1]],
+        fallbackElement: state.compact ? surface : null
+      };
+      if (this._anchorMatches(state, anchor))
+      {
+        return { anchor, status: "exact" };
+      }
+    }
+
+    return { anchor: null, status: hashMatches ? "missing" : "changed" };
   }
 }

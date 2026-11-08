@@ -73,6 +73,8 @@ class BackendMock
     // object to return back to the webview
     let type = "visualizeOutline";
 
+    if (!message || !message.data || !message.data.uri)
+      return;
     let filename = message.data.uri;
     let file = this._outlineData[filename];
     if (file == null){

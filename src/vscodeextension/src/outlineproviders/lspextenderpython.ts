@@ -20,7 +20,7 @@ export class VpLspExtenderPython
 implements VpLspExtenderProvider
 {
   private readonly declarations = new WeakMap<vscode.TextDocument, ParsedPythonDeclaration>();
-
+  private readonly commentRangesCache = new WeakMap<vscode.TextDocument, { version: number; ranges: readonly Outline.CommentRange[] }>();
   private parseDeclaration(document: vscode.TextDocument, range: vscode.Range): ParsedPythonDeclaration {
     const start = document.offsetAt(range.start);
     const end = document.offsetAt(range.end);
@@ -197,6 +197,137 @@ implements VpLspExtenderProvider
                       position: vscode.Position): boolean
   {
     return false;
+  }
+  public getCommentRanges(document: vscode.TextDocument): readonly Outline.CommentRange[] {
+    const cached = this.commentRangesCache.get(document);
+    if (cached && cached.version === document.version) {
+      return cached.ranges;
+    }
+
+    const parser: typeof Python.parser = require('@lezer/python').parser;
+    const code = document.getText();
+    const tree = parser.parse(code);
+    const ranges: Outline.CommentRange[] = [];
+
+    const hasError = (node: SyntaxNode | null): boolean => {
+      if (!node) return false;
+      if (node.type.isError) return true;
+      for (let c = node.firstChild; c; c = c.nextSibling) {
+        if (hasError(c)) return true;
+      }
+      return false;
+    };
+
+    const isPureString = (node: SyntaxNode | null): boolean => {
+      if (!node || hasError(node)) return false;
+      if (node.name === 'ParenthesizedExpression') {
+        let hasInner = false;
+        for (let c = node.firstChild; c; c = c.nextSibling) {
+          if (c.name === '(' || c.name === ')' || c.name === 'Comment') continue;
+          hasInner = true;
+          if (!isPureString(c)) return false;
+        }
+        return hasInner;
+      }
+      if (node.name === 'ContinuedString') {
+        let hasStr = false;
+        for (let c = node.firstChild; c; c = c.nextSibling) {
+          if (c.name === 'Comment') continue;
+          hasStr = true;
+          if (!isPureString(c)) return false;
+        }
+        return hasStr;
+      }
+      if (node.name === 'String') {
+        const raw = code.slice(node.from, node.to);
+        if (/^[bB]/i.test(raw) || /^[rR][bB]/i.test(raw)) return false;
+        if (/^[fF]/i.test(raw)) return false;
+        return true;
+      }
+      return false;
+    };
+
+    const findDocstring = (scopeNode: SyntaxNode): { from: number; to: number } | null => {
+      let startChild = scopeNode.firstChild;
+      if (scopeNode.name === 'Body' && startChild && startChild.name === ':') {
+        startChild = startChild.nextSibling;
+      }
+      let firstStmt: SyntaxNode | null = null;
+      let curr = startChild;
+      while (curr) {
+        if (curr.name !== 'Comment') {
+          firstStmt = curr;
+          break;
+        }
+        curr = curr.nextSibling;
+      }
+      if (!firstStmt || hasError(firstStmt)) return null;
+
+      if (firstStmt.name === 'ExpressionStatement') {
+        const expr = firstStmt.firstChild;
+        if (expr && isPureString(expr)) {
+          return { from: firstStmt.from, to: firstStmt.to };
+        }
+      } else if (firstStmt.name === 'StatementGroup') {
+        let exprStmt: SyntaxNode | null = null;
+        let cChild = firstStmt.firstChild;
+        while (cChild) {
+          if (cChild.name !== 'Comment') {
+            exprStmt = cChild;
+            break;
+          }
+          cChild = cChild.nextSibling;
+        }
+        if (exprStmt && exprStmt.name === 'ExpressionStatement' && exprStmt.firstChild && isPureString(exprStmt.firstChild)) {
+          let to = exprStmt.to;
+          const semi = exprStmt.nextSibling;
+          if (semi && semi.name === ';' && semi.nextSibling) {
+            to = semi.to;
+          }
+          return { from: exprStmt.from, to };
+        }
+      }
+      return null;
+    };
+
+    // Collect docstring for top-level Script
+    const scriptDoc = findDocstring(tree.topNode);
+    if (scriptDoc) {
+      ranges.push({
+        range: new vscode.Range(document.positionAt(scriptDoc.from), document.positionAt(scriptDoc.to)),
+        kind: 'docstring'
+      });
+    }
+
+    // Walk all nodes for Comment and Function/Class Body docstrings
+    const visit = (node: SyntaxNode) => {
+      if (node.name === 'Comment') {
+        ranges.push({
+          range: new vscode.Range(document.positionAt(node.from), document.positionAt(node.to)),
+          kind: 'comment'
+        });
+      } else if (node.name === 'FunctionDefinition' || node.name === 'ClassDefinition') {
+        for (let c = node.firstChild; c; c = c.nextSibling) {
+          if (c.name === 'Body') {
+            const doc = findDocstring(c);
+            if (doc) {
+              ranges.push({
+                range: new vscode.Range(document.positionAt(doc.from), document.positionAt(doc.to)),
+                kind: 'docstring'
+              });
+            }
+          }
+        }
+      }
+      for (let c = node.firstChild; c; c = c.nextSibling) {
+        visit(c);
+      }
+    };
+    visit(tree.topNode);
+
+    ranges.sort((a, b) => a.range.start.compareTo(b.range.start));
+    this.commentRangesCache.set(document, { version: document.version, ranges });
+    return ranges;
   }
 
 

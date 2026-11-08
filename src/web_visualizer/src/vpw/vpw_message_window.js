@@ -9,9 +9,9 @@ const VpwMessageWindow = (function(viewEntity_message)
   {
     let msgData = viewEntity_message.vp_model;
 
-    self.vp_title.innerText = msgData.title;
-    self.vp_window_clientarea.innerHTML = msgData.message;
-
+    self.vp_title.textContent = msgData.title;
+    self.vp_window_clientarea.textContent = msgData.message;
+    self.vp_window_clientarea.style.whiteSpace = "pre-wrap";
     // --- styling ---
     self.classList.add ("VpwMessageWindow");
     self.classList.add (msgData.type.replace(" ", "_"));

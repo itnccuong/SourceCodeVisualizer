@@ -16,16 +16,15 @@ export class WebviewCreator
   // ------------------------------------------------------------------------
 
   public static createWebview(context: vscode.ExtensionContext,
-                              vscodeWindow: VsCodeWindow): vscode.WebviewPanel
+                              vscodeWindow: VsCodeWindow,
+                              title = 'Code Diagram'): vscode.WebviewPanel
   {
     const self = new WebviewCreator (context, vscodeWindow);
     const colorThemekind = self._vscodeWindow.activeColorTheme().kind;
-
-    let tab = self._createNewTabInVsCode ();
+    let tab = self._createNewTabInVsCode (title);
     if (tab != null) {
       self._createWebviewContent(tab.webview, colorThemekind);
     }
-
     return tab;
   }
   // ------------------------------------------------------------------------
@@ -71,10 +70,10 @@ export class WebviewCreator
 
   // ------------------------------------------------------------------------
 
-  private _createNewTabInVsCode() {
+  private _createNewTabInVsCode(title: string) {
     let panel = vscode.window.createWebviewPanel(
       'codeVisualizer',  // View Type: used internally in vscode
-      'Code Diagram',    // title of tab
+      title,             // title of tab
       vscode.ViewColumn.One, // "column" = tab
       {
         enableScripts: true // Enable javascript in webview

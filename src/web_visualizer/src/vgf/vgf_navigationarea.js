@@ -37,7 +37,7 @@ const VgfNavigationArea = (function(world)
     });
 
     _setup_bodyScrollLock(self, world);
-    setup_mouse_dragElement (self._vp_interactionArea, world);
+    world.style.position = "absolute";
     _setup_mouseWheelScrolling (self, world);
     _setup_scaleViewpoint (self, world);
   }
@@ -74,6 +74,7 @@ function _setup_bodyScrollLock(navigationArea, world)
   const clear = () => {
     body?.classList.remove("VgfBodyScrollLocked");
     owner?.removeEventListener("vp_beforeDelete", clear);
+    owner?.removeEventListener("vp_windowUnfocused", clear);
     body = null;
     owner = null;
   };
@@ -87,6 +88,7 @@ function _setup_bodyScrollLock(navigationArea, world)
     owner = body.closest(".Window_OuterFrame");
     body.classList.add("VgfBodyScrollLocked");
     owner.addEventListener("vp_beforeDelete", clear);
+    owner.addEventListener("vp_windowUnfocused", clear);
     // A click explicitly changes wheel ownership, even during touchpad momentum.
     world._vp_wheelGesture.panning = false;
   };
@@ -104,12 +106,13 @@ function _setup_bodyScrollLock(navigationArea, world)
     body.scrollLeft += (event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX) * unit;
     if (!event.shiftKey) body.scrollTop += event.deltaY * unit;
   };
-  // Capture outside clicks before source selection handlers stop propagation.
-  document.addEventListener("mousedown", selectBody, true);
+  // Pointer gestures can suppress compatibility mousedown events.
+  // Capture before source/header handlers consume the pointer event.
+  document.addEventListener("pointerdown", selectBody, true);
   navigationArea.addEventListener("wheel", scrollBody, {capture: true, passive: false});
   navigationArea.addEventListener("vp_beforeDelete", () => {
     clear();
-    document.removeEventListener("mousedown", selectBody, true);
+    document.removeEventListener("pointerdown", selectBody, true);
     navigationArea.removeEventListener("wheel", scrollBody, true);
   });
 }
@@ -136,6 +139,7 @@ function _setup_mouseWheelScrolling(interactionArea,
       gesture.panning = true;
       scrolledObject.style.top = (parseFloat(scrolledObject.style.top) || 0) - e.deltaY + "px";
       scrolledObject.style.left = (parseFloat(scrolledObject.style.left) || 0) - e.deltaX + "px";
+      scrolledObject.dispatchEvent(new Event("vp_cameraChanged"));
     }
 
     // horizontal scrolling
@@ -145,6 +149,7 @@ function _setup_mouseWheelScrolling(interactionArea,
       gesture.panning = true;
       const delta = e.deltaX || e.deltaY;
       scrolledObject.style.left = (parseFloat(scrolledObject.style.left) || 0) - delta + "px";
+      scrolledObject.dispatchEvent(new Event("vp_cameraChanged"));
     }
   });
 }
@@ -197,5 +202,6 @@ function zoom (mouseevent, scalingObject)
       + e.clientX - (newRect.left + worldX * newScale) + "px";
     scalingObject.style.top = (parseFloat(scalingObject.style.top) || 0)
       + e.clientY - (newRect.top + worldY * newScale) + "px";
+    scalingObject.dispatchEvent(new Event("vp_cameraChanged"));
   }
 }

@@ -136,6 +136,41 @@ const VgfWindowTitled = (function()
     }
   };
 
+  self.vp_getFrameState = function()
+  {
+    const collapsed = self._vp_expandable?._vp_button_expand?.vp_getState() === 0;
+    return {
+      x: self.offsetLeft,
+      y: self.offsetTop,
+      width: Math.max(120, self.offsetWidth),
+      height: Math.max(_minimumHeight(), self.offsetHeight),
+      collapsed: collapsed,
+      expandedHeight: _expandedHeight !== null ? _expandedHeight : Math.max(_minimumHeight(), self.offsetHeight)
+    };
+  };
+
+  self.vp_restoreFrameState = function(state)
+  {
+    if (!state) return;
+    self.vp_setXY(state.x, state.y);
+    const minW = 120;
+    const width = Math.max(minW, state.width);
+    self.style.width = width + "px";
+
+    const expandedHeight = Math.max(_minimumHeight(), state.expandedHeight);
+    const toggle = self._vp_expandable._vp_button_expand;
+    const desiredState = state.collapsed ? 0 : 1;
+    if (toggle.vp_getState() !== desiredState)
+      toggle.vp_onClick();
+    // The normal collapse listener captures the current height. Restore the
+    // persisted expanded height afterward so the next expand uses saved geometry.
+    _expandedHeight = expandedHeight;
+    self.style.height = (state.collapsed
+      ? _minimumHeight()
+      : Math.max(_minimumHeight(), state.height)) + "px";
+    self.dispatchEvent(new Event("vp_windowMoved"));
+  };
+
   let _createResizeHandle = function()
   {
     let handle = document.createElement ("div");
@@ -214,10 +249,38 @@ const VgfWindowTitled = (function()
     let node = document.createElement ("div");
     node.classList.add ("Window_Titlearea");
 
-    node.addEventListener ("mousedown",function (event ) {
+    node.addEventListener ("pointerdown", function(event) {
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_selection && self.vp_canvasNodeId)
+      {
+        if (world.vp_selection.onHeaderPointerDown(self, event))
+          event.stopPropagation();
+      }
+    });
+
+    node.addEventListener ("mousedown", function (event) {
       if (event.button != 0)
         return;
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_selection && self.vp_canvasNodeId)
+      {
+        event.stopPropagation();
+        return;
+      }
       self.vp_startMoving_fromEvent (event);
+    });
+
+    node.addEventListener ("dblclick", function(event) {
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_selection && self.vp_canvasNodeId)
+      {
+        if (!event.target.closest("button, .Window_btn, [data-vp-source-surface], a, input, textarea, [contenteditable='true']"))
+        {
+          world.vp_selection.selectConnectedComponent(self.vp_canvasNodeId);
+          event.stopPropagation();
+          event.preventDefault();
+        }
+      }
     });
 
     return node;
@@ -231,7 +294,9 @@ const VgfWindowTitled = (function()
 
     let topRow = _create_title_area();
 
-    topRow.append (self.vp_title)
+    topRow.append (self.vp_title);
+    self._vp_btn_comments = _create_btn_comments (self);
+    topRow.append (self._vp_btn_comments);
     topRow.append (_create_btn_close (self));
 
     expandible.vp_appendTitle (topRow);
@@ -264,10 +329,46 @@ const VgfWindowTitled = (function()
     });
 
     node.addEventListener ("click",e => {
-      self.vp_delete();
+      if (typeof self.vp_requestClose === "function") {
+        self.vp_requestClose();
+      } else {
+        self.vp_delete();
+      }
     });
     return node;
   }
+
+  _create_btn_comments = function (self)
+  {
+    let node = document.createElement("div");
+    node.classList.add("Window_Titlebarelement");
+    node.classList.add("Window_btn");
+    node.classList.add("Window_btnComments");
+    node.textContent = "//";
+    node.setAttribute("role", "button");
+    node.setAttribute("aria-pressed", "false");
+    node.title = "Show comments and docstrings";
+
+    node.addEventListener ("mousedown", e => {
+      e.stopPropagation();
+    });
+
+    node.addEventListener ("click", e => {
+      e.stopPropagation();
+      if (node.getAttribute("aria-disabled") === "true")
+      {
+        const world = self.vp_getWorld ? self.vp_getWorld() : null;
+        if (world && world.vp_controls && self._vp_commentHidingError)
+          world.vp_controls.setStatus("Comment hiding unavailable: " + self._vp_commentHidingError);
+        return;
+      }
+      if (typeof self.vp_setCommentsVisible === "function")
+      {
+        self.vp_setCommentsVisible(!self.vp_commentsVisible);
+      }
+    });
+    return node;
+  };
 
   // --------------------------------------------------------------------------
 

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import {VpOutlineProvider} from "./outlineprovider";
 import type {DefinitionTargetChooser, DefinitionOutlineResult} from './outlineprovider';
+import type {SourceReference} from './source_reference';
 import {VpLspExtenderProvider} from "./lspextenderprovider";
 import {LanguageFeatureRegistry} from "./utils/languagefeatureregistry";
 import * as Outline from './SymbolDefinition';
@@ -39,6 +40,7 @@ export function activate(context: vscode.ExtensionContext)
   //      ( returns the Symbol, that is defining the symbol at `position`
   utils.registerCommand (context, "vp.executeLocationDefinerProvider", executeLocationDefinerProvider);
 
+  utils.registerCommand (context, "vp.executeSavedOutlineProvider", executeSavedOutlineProvider);
 
   // register outline provider
   utils.registerCommand (context, "vp.registerOutlineProvider", registerProvider);
@@ -91,8 +93,7 @@ export async function executeLocationDefinerProvider(uri: vscode.Uri,
   let provider = _getProvider (document);
 
   if (provider instanceof Error) {
-    vscode.window.showWarningMessage (provider.message);
-    return new Promise (((resolve, reject) => {return [];}));
+    throw provider;
   }
 
   let outlineRanges = provider.provideLocationDefiner(document, position);
@@ -125,14 +126,29 @@ export async function executeDocumentDefinitionProvider(
   let provider = _getProvider (document);
 
   if (provider instanceof Error) {
-    vscode.window.showWarningMessage (provider.message);
-    return new Promise (((resolve, reject) => {return [];}));
+    throw provider;
   }
 
 
   let fileSymbol = provider.provideDocumentOutline(document);
 
   return fileSymbol;
+}
+
+//-----------------------------------------------------------------
+
+export async function executeSavedOutlineProvider(reference: SourceReference): Promise<Outline.File | Outline.Symbol>
+{
+  const uri = vscode.Uri.parse(reference.uri);
+  const document = await vscode.workspace.openTextDocument(uri);
+  const provider = _getProvider(document);
+  if (provider instanceof Error) {
+    throw provider;
+  }
+  if (typeof provider.provideSavedOutline !== 'function') {
+    throw new Error('Provider does not support saved outline restoration');
+  }
+  return provider.provideSavedOutline(document, reference);
 }
 
 

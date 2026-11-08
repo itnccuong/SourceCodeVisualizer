@@ -24,7 +24,7 @@ const BtnOpenDefinition = ( function(outlineEntity,
     self.vp_getParentGroup = parentGroup;
     self.vp_getParentWindow = parentWindow;
     self.title = "Open defintion";
-
+    self.vp_model = outlineEntity;
     // Needed because vscode webview places the arrow
     //  strangely in the bottom. Therefore browser preview
     //  looks ugly now.

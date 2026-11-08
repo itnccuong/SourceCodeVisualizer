@@ -1,0 +1,13 @@
+.Window_OuterFrame.VpwNode_selected {
+  outline: 2px solid var(--vscode-focusBorder, #007acc) !important;
+  outline-offset: 1px;
+}
+
+.VgfSelectionMarquee {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed var(--vscode-focusBorder, #007acc);
+  background-color: rgba(0, 122, 204, 0.12);
+  pointer-events: none;
+  z-index: 10000;
+}

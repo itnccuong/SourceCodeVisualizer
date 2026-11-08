@@ -22,12 +22,40 @@ const VpwEntityConnection = (function (domSource, domTarget, sourceAnchor = null
 {
   let self = new VpwButtonMovableDockable ();
   const dock = self.vp_dock;
-  self.vp_dock = function(target)
+  self.vp_dock = function(target, options = {})
   {
-    self._vp_domTarget = target.vp_isWorld() ? null : target;
-    return dock(target);
+    self._vp_domTarget = (target && !target.vp_isWorld()) ? target : null;
+    const res = dock(target, options);
+    if (self._vp_canvasEdgeId)
+    {
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_graph)
+      {
+        const targetWindow = self._vp_domTarget?.closest(".Window_OuterFrame");
+        const targetId = targetWindow?.vp_canvasNodeId ?? null;
+        world.vp_graph.setTarget(self._vp_canvasEdgeId, targetId);
+      }
+    }
+    return res;
   };
-  self.addEventListener("vp_windowBeforeStartMoving", () => { self._vp_domTarget = null; });
+  self.addEventListener("vp_windowBeforeStartMoving", () => {
+    self._vp_domTarget = null;
+    if (self._vp_canvasEdgeId)
+    {
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_graph)
+        world.vp_graph.setTarget(self._vp_canvasEdgeId, null);
+    }
+  });
+  self.addEventListener("vp_beforeDelete", () => {
+    if (self._vp_canvasEdgeId)
+    {
+      const world = self.vp_getWorld ? self.vp_getWorld() : null;
+      if (world && world.vp_graph)
+        world.vp_graph.removeEdge(self._vp_canvasEdgeId);
+      self._vp_canvasEdgeId = null;
+    }
+  });
   self.constructor = function()
   {
     self._vp_domSource = domSource;
