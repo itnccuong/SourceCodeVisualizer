@@ -144,6 +144,11 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
          const line = lines[rowIndex];
          const row = document.createElement ("div");
          row.setAttribute("data-vp-line-number", String(rowIndex + 1));
+         if (tsOutlineSymbolText.language === "yaml" && Number.isFinite(groupParent?.vp_yamlIndent))
+         {
+            const column = rowIndex === 0 ? baseStart.character : 0;
+            row.style.textIndent = `${column - groupParent.vp_yamlIndent}ch`;
+         }
          if (line.trim().length === 0)
             row.setAttribute("data-vp-blank", "true");
          const range = document.createRange();

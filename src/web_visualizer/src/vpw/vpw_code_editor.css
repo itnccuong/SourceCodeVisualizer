@@ -60,3 +60,22 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* YAML rows share a source column; indentation is a visual offset only. */
+.vp-yaml-body {
+  --vp-yaml-gutter: calc(2ch + 12px);
+}
+.vp-yaml-body .VpwCodeEditor {
+  padding-left: var(--vp-yaml-gutter);
+}
+.vp-yaml-body .VpwCodeEditor > div::before {
+  text-indent: 0;
+}
+.vp-yaml-body .Window_Clientarea_OpenDeclarationBlock {
+  margin-left: 5px;
+  padding-left: 0;
+}
+.vp-yaml-body .Window_Clientarea_OpenDeclarationBlock td {
+  padding-top: 0;
+  padding-bottom: 0;
+}
