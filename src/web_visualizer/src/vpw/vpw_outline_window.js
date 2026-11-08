@@ -194,6 +194,25 @@ const VpwOutlineWindow = (function(viewEntity_outline)
       return;
     }
 
+    if (tsOutlineSymbol.language === "yaml")
+    {
+      root.classList.add("vp-yaml-body");
+      const columns = [];
+      for (const part of tsOutlineSymbol.parts)
+      {
+        const start = part.displayTextRange?.[0] ?? part.displayTextRange?.start;
+        const column = start?.character ?? 0;
+        if (part.CLASS_TYPE === "Symbol") columns.push(column);
+        else if (part.CLASS_TYPE === "Text")
+        {
+          const lines = part.displayText.replace(/\r\n/g, "\n").split("\n");
+          lines.forEach((line, index) => {
+            if (line.trim()) columns.push((index === 0 ? column : 0) + line.match(/^ */)[0].length);
+          });
+        }
+      }
+      window.vp_yamlIndent = columns.length ? Math.min(...columns) : 0;
+    }
     for (let i=0; i<tsOutlineSymbol.parts.length; ++i)
     {
       let part = tsOutlineSymbol.parts[i];
@@ -245,6 +264,12 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
     let td1 = document.createElement("td");
     td1.textContent = tsOutlineSymbol.displayText;
+    if (theWindow.viewEntity.vp_model.language === "yaml")
+    {
+      const start = tsOutlineSymbol.displayTextRange?.[0] ?? tsOutlineSymbol.displayTextRange?.start;
+      const indent = Math.max(0, (start?.character ?? 0) - theWindow.vp_yamlIndent);
+      td1.style.paddingLeft = `calc(var(--vp-yaml-gutter) + ${indent}ch)`;
+    }
     line.append (td1);
 
     let td2 = document.createElement("td");

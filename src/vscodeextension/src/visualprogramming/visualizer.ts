@@ -159,28 +159,27 @@ export class VisualizingTab
 
   public async visualizeDocument(document: vscode.TextDocument)
   {
-    // setup
-    let requestedId: any = null;
-    let outlineFile: Outline.File | undefined = undefined;
-
+    const requestPanel = this.__webviewPanel;
+    const requestedId: string | null = null;
     try {
-      outlineFile = await vscode.commands.executeCommand <Outline.File>(
-                        "vp.executeDocumentDefinitionProvider", document)
-    } catch (e) {
-      this._vscodeWindow.showErrorMessage(e);
+      const outlineFile = await vscode.commands.executeCommand <Outline.File>(
+                            "vp.executeDocumentDefinitionProvider", document);
+      if (!outlineFile) {
+        throw new Error("The document outline provider did not return a result.");
+      }
+      await translateOutlineRanges([outlineFile]);
+      this._postOutlineEntities([outlineFile], requestedId, requestPanel);
+    } catch (error) {
+      const message = this._isRecord(error) && 'message' in error
+        ? String(error.message)
+        : String(error);
+      const response: OutlineResponse = {
+        type: 'messageBox',
+        requestedId: null,
+        data: [{type: 'Error', title: 'Source navigation failed', message}]
+      };
+      this._postOutlineMessage(response, requestPanel);
     }
-
-    if (!outlineFile)
-    {
-      this._vscodeWindow.showErrorMessage("Could not visualize");
-      return;
-    }
-
-    await translateOutlineRanges ([outlineFile]);
-
-    // run
-    this._postOutlineEntities([outlineFile], requestedId);
-
   }
 
   // -------------------------------------------------------------------------
@@ -378,7 +377,12 @@ export class VisualizingTab
     }
 
     if (foundEntities instanceof Error){
-      vscode.window.showErrorMessage(foundEntities.message);
+      const message = String(foundEntities.message);
+      this._postOutlineMessage({
+        type: 'messageBox',
+        requestedId,
+        data: [{type: 'Error', title: 'Source navigation failed', message}]
+      }, requestPanel);
     }
     else
     {
@@ -413,14 +417,36 @@ export class VisualizingTab
     }
     const uri = vscode.Uri.parse(outlineEntity.uri);
 
-    const position = this._normalizeNavigationPosition(outlineEntity.displayTextRange[0],
-                                                       'displayTextRange.start');
-
+    let position: vscode.Position;
+    try {
+      position = this._normalizeNavigationPosition(outlineEntity.displayTextRange[0],
+                                                   'displayTextRange.start');
+    } catch (error) {
+      const message = this._isRecord(error) && 'message' in error
+        ? String(error.message)
+        : String(error);
+      this._postOutlineMessage({
+        type: 'messageBox',
+        requestedId: requestId,
+        data: [{type: 'Error', title: 'Source navigation failed', message}]
+      }, requestPanel);
+      return false;
+    }
 
     let promise = self._outline_getLocationDefiner (uri, position);
     promise.then ( (foundEntities) =>
     {
       self._processFoundOutlineEntities(foundEntities, requestId, requestPanel);
+    }, (error) =>
+    {
+      const message = self._isRecord(error) && 'message' in error
+        ? String(error.message)
+        : String(error);
+      self._postOutlineMessage({
+        type: 'messageBox',
+        requestedId: requestId,
+        data: [{type: 'Error', title: 'Source navigation failed', message}]
+      }, requestPanel);
     });
 
     return true;

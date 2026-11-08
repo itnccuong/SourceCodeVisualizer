@@ -4,6 +4,7 @@ import {VpLspExtenderPython} from './lspextenderpython';
 import {VpLspExtenderTypeScript} from './lspextendertypescript';
 import {VpLspExtenderProvider} from '../outlineproviderAPI/lspextenderprovider';
 import { VpOutlineProvider } from '../outlineproviderAPI/outlineprovider';
+import { VpOutlineProviderYaml } from './outlineprovideryaml';
 
 //-----------------------------------------------------------------------------
 
@@ -14,7 +15,7 @@ export function activate(vscode: any) // Hi bitch, just want to test
 {
   // register pure `VPOutlineProvider`s
   {
-    //registerProvider (vscode, "Python", new VpOutlineProviderPython2 ());
+    registerProvider(vscode, "yaml", new VpOutlineProviderYaml());
   }
 
   // register `VP LSP Extender`s

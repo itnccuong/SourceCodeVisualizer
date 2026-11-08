@@ -93,7 +93,7 @@ class CanvasSelection
 
     // Check if clicking empty canvas (not inside a window, connection, line, or control)
     const target = event.target;
-    if (target.closest(".Window, .VgfLine, .VpwButtonMovableDockable, .VpwButtonMovable, .VgfControlsToolbar, .VgfMinimap, .VgfNodesDropdown, .VgfSelectionMarquee"))
+    if (target.closest(".Window, .VgfPopupWindow, .VgfLine, .VpwButtonMovableDockable, .VpwButtonMovable, .VgfControlsToolbar, .VgfMinimap, .VgfNodesDropdown, .VgfSelectionMarquee"))
       return;
 
     const isPan = (event.button === 1) || (event.button === 0 && this._spacePressed);

@@ -1,0 +1,19 @@
+# Shared defaults
+image: &image alpine:3.20
+defaults: &base
+  retries: 3
+  script: |
+    echo "# literal"
+    echo "hello"
+jobs:
+  - name: build
+    config: *base
+    image: *image
+    env: { FLAGS: [fast, safe] }
+  - name: test
+    config: *base
+---
+service:
+  metadata:
+    name: demo
+  ports: [8080, 9090]
