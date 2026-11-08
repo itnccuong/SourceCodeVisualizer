@@ -73,7 +73,7 @@ function vgf_make_dockable_leftSide (vgf_widget)
   }
 
 
-  self.vp_dock = function(target)
+  self.vp_dock = function(target, options = {})
   {
     let parent = target;
     vgf_widget_dock (self, parent);
@@ -87,8 +87,11 @@ function vgf_make_dockable_leftSide (vgf_widget)
 
       // adjust to left side outside of window
       let x = -self.offsetWidth;
-      let y = vgf_button_movable_dockable_getYWithinElement (self, target);
-      moveAnimated (self, x, y, 500, vgf_window_setXY);
+      let y = vgf_button_movable_dockable_getYWithinElement (self, target, options.y);
+      if (options.animate === false)
+        vgf_window_setXY (self, x, y);
+      else
+        moveAnimated (self, x, y, 500, vgf_window_setXY);
 
       self._vp_yPositionAtDockingTime = y;
     }
@@ -110,7 +113,7 @@ function vgf_make_dockable_leftSide (vgf_widget)
  **/
 function vgf_button_movable_dockable_getYWithinElement (self, element, preferablePosition_undefiendable)
 {
-  if (preferablePosition_undefiendable)
+  if (preferablePosition_undefiendable !== undefined && preferablePosition_undefiendable !== null)
     return Math.clamp (preferablePosition_undefiendable, 0, element.offsetHeight - self.offsetHeight);
 
   return Math.clamp (self.offsetTop, 0, element.offsetHeight - self.offsetHeight);

@@ -115,19 +115,25 @@ class SyntaxHighlighter
    **/
   static run (strSource, strLanguage = "")
   {
-    let hightlighted = "";
+    let html = "";
+    let exactLanguage = false;
     try {
       if ("" == strLanguage)
-        hightlighted = hljs.highlightAuto (strSource).value
+      {
+        html = hljs.highlightAuto (strSource).value;
+      }
       else
-        hightlighted = hljs.highlight (strSource, {language: strLanguage}).value
+      {
+        html = hljs.highlight (strSource, {language: strLanguage}).value;
+        exactLanguage = true;
+      }
     }
     catch(error)
     {
-      hightlighted = hljs.highlightAuto (strSource).value;
+      html = hljs.highlightAuto (strSource).value;
     }
 
-    return hightlighted;
+    return { html, exactLanguage };
   }
 }
 

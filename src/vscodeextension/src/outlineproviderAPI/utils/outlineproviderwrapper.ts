@@ -10,6 +10,8 @@ import {VpLspExtenderProvider} from "../lspextenderprovider";
  *  Class, that is internally used to wrap an VpLspExtenderProvider
  *  into an VpOutlineProvider
  **/
+import {SourceReference} from '../source_reference';
+
 export class VpOutlineProviderWrapper implements VpOutlineProvider
 {
   private lspExtender: VpLspExtenderProvider;
@@ -64,5 +66,12 @@ export class VpOutlineProviderWrapper implements VpOutlineProvider
     : Promise<Outline.OutlineRange[]>
   {
     return OutlineUtils.provideLocationDefiner (this.lspExtender, document, position);
+  }
+
+  public provideSavedOutline(document: vscode.TextDocument,
+                             reference: SourceReference)
+    : Promise<Outline.File | Outline.Symbol>
+  {
+    return OutlineUtils.provideSavedOutline(document, reference, this.lspExtender);
   }
 }

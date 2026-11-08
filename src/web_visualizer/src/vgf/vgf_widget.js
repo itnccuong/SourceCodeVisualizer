@@ -114,8 +114,12 @@ function VgfWidget_createFrom(self)
 
 
   self.vp_delete = function(){
+    if (self._vp_isDeleted || self._vp_isDeleting) return;
+    self._vp_isDeleting = true;
     self._vp_delete_triggerEvents();
     self._vp_onDeletionRequested_overridable();
+    self._vp_isDeleted = true;
+    self._vp_isDeleting = false;
   }
 
 

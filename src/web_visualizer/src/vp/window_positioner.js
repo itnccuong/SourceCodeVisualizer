@@ -18,7 +18,7 @@ const WindowPositioner = (function()
   {
     const navigationArea = world.parentElement;
     const wheelGesture = world._vp_wheelGesture;
-    if (_Mover.currentlyManipulatedWindow
+    if (_Mover.currentlyManipulatedWindow || world._vp_gestureActive
       || (wheelGesture && performance.now() - wheelGesture.lastTime <= 180))
       return;
     const startX = parseFloat(world.style.left) || 0;
@@ -70,7 +70,7 @@ const WindowPositioner = (function()
     {
       // Also yield to programmatic movement, scale changes and detached targets.
       if (!world.isConnected || !world.contains(managedWindow)
-        || _Mover.currentlyManipulatedWindow
+        || _Mover.currentlyManipulatedWindow || world._vp_gestureActive
         || world.vp_scale !== startScale || world.style.transform !== startTransform
         || world.style.left !== expectedLeft || world.style.top !== expectedTop)
       {
@@ -87,6 +87,7 @@ const WindowPositioner = (function()
       world.style.top = startY + dy * eased + "px";
       expectedLeft = world.style.left;
       expectedTop = world.style.top;
+      world.dispatchEvent(new Event("vp_cameraChanged"));
       // Nodes and their connections share this translation; no local geometry changes.
       if (progress === 1) cancel();
       else frame = requestAnimationFrame (step);
@@ -108,6 +109,10 @@ const WindowPositioner = (function()
 
   return class WindowPositioner
   {
+    static cancelReveal(world)
+    {
+      cancelReveal(world);
+    }
     constructor(parentOfTarget, domAnchor_nullable, anchorOffsetLocation = Direction.RIGHT)
     {
       // A newer response supersedes the old reveal at its current subpixel position.

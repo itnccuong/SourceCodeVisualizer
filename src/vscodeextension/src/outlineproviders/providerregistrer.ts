@@ -10,7 +10,7 @@ import { VpOutlineProvider } from '../outlineproviderAPI/outlineprovider';
 /**
  * Register all providers this extension ships by defaul.
  **/
-export function activate(vscode: any)
+export function activate(vscode: any) // Hi bitch, just want to test
 {
   // register pure `VPOutlineProvider`s
   {
@@ -28,6 +28,7 @@ export function activate(vscode: any)
     registerLspExtender (vscode, "Javascript", new VpLspExtenderTypeScript ("javascript"));
     registerLspExtender (vscode, "Java",       new VpLspExtenderCurlyBraces ("java"));
     registerLspExtender (vscode, "Python",     new VpLspExtenderPython ());
+    registerLspExtender (vscode, "magicpython", new VpLspExtenderPython ());
   }
 }
 

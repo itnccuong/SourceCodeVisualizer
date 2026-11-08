@@ -12,6 +12,7 @@ export interface LanguageSpecificSymbolInformation {
   rangeDeclaration?: vscode.Range; // syntax-backed Python assignment or JavaScript RHS-only assignment
   children?: readonly vscode.DocumentSymbol[]; // display projection; absent keeps the provider's children
   definitionPosition?: vscode.Position; // callable lookup may differ from an assignment heading's receiver
+  isCallable?: boolean;
 }
 
 export interface SymbolExtractionContext {
@@ -72,6 +73,10 @@ export interface VpLspExtenderProvider
     symbol: vscode.DocumentSymbol,
     context?: SymbolExtractionContext
   ): boolean;
+
+  getCommentRanges?(
+    document: vscode.TextDocument
+  ): readonly Outline.CommentRange[];
 
 
 

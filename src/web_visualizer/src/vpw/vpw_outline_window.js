@@ -55,10 +55,29 @@ const VpwOutlineWindow = (function(viewEntity_outline)
     }
 
     let titletext = SyntaxHighlighter.run (tsOutlineRange.displayText,
-                                            tsOutlineRange.language);
+                                            tsOutlineRange.language).html;
 
     self._vp_createClientTitle (self.vp_title, metatype, titletext, quickhelp, tsOutlineRange);
     self._vp_fillClientarea (self, self.vp_window_clientarea, tsOutlineRange);
+
+    self.vp_commentsVisible = (tsOutlineRange.CLASS_TYPE === "File");
+    if (tsOutlineRange.commentHidingError)
+    {
+      self._vp_commentHidingError = tsOutlineRange.commentHidingError;
+      if (self._vp_btn_comments)
+      {
+        self._vp_btn_comments.setAttribute("aria-disabled", "true");
+        self._vp_btn_comments.title = "Comment hiding unavailable: " + tsOutlineRange.commentHidingError;
+        self._vp_btn_comments.classList.add("disabled");
+      }
+    }
+    else if (self._vp_btn_comments)
+    {
+      self._vp_btn_comments.setAttribute("aria-pressed", self.vp_commentsVisible ? "true" : "false");
+      self._vp_btn_comments.title = self.vp_commentsVisible ? "Hide comments and docstrings" : "Show comments and docstrings";
+    }
+
+    self.vp_setCommentsVisible (self.vp_commentsVisible);
 
     self.vp_getUri = function(){
       return viewEntity_outline.vp_model.uri;
@@ -89,6 +108,24 @@ const VpwOutlineWindow = (function(viewEntity_outline)
 
 
     return self;
+  };
+  self.vp_setCommentsVisible = function(visible)
+  {
+    self.vp_commentsVisible = visible;
+    if (self._vp_btn_comments && self._vp_btn_comments.getAttribute("aria-disabled") !== "true")
+    {
+      self._vp_btn_comments.setAttribute("aria-pressed", visible ? "true" : "false");
+      self._vp_btn_comments.title = visible ? "Hide comments and docstrings" : "Show comments and docstrings";
+    }
+    const editors = self.querySelectorAll(".VpwCodeEditor");
+    for (const editor of editors)
+    {
+      if (typeof editor.vp_setCommentsVisible === "function")
+        editor.vp_setCommentsVisible(visible);
+    }
+    if (typeof SourceNavigation !== "undefined")
+      SourceNavigation.invalidate(self);
+    self.dispatchEvent(new Event("vp_windowMoved"));
   };
 
 

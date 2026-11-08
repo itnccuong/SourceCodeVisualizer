@@ -33,7 +33,7 @@ interface SelectedTypeScriptDeclaration {
 
 export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
   private readonly declarations = new WeakMap<vscode.TextDocument, ParsedTypeScriptDeclaration>();
-
+  private readonly commentRangesCache = new WeakMap<vscode.TextDocument, { version: number; ranges: readonly Outline.CommentRange[] }>();
   public constructor(language: 'typescript' | 'typescriptreact' | 'javascript') {
     super(language);
   }
@@ -443,6 +443,86 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
     // symbol requests (assignment target versus the entire RHS function).
     const definitionPosition = javascript && ts.isBinaryExpression(declaration) && callable
       ? document.positionAt(toDocument(callable.getStart(tree))) : undefined;
-    return {rangeHead, rangeBody, attributes, declarationOnly, rangeDeclaration, children, definitionPosition};
+    const isCallable = !!callable || ts.isFunctionDeclaration(declaration)
+      || ts.isMethodDeclaration(declaration) || ts.isConstructorDeclaration(declaration);
+    return {rangeHead, rangeBody, attributes, declarationOnly, rangeDeclaration, children, definitionPosition, isCallable};
+  }
+
+  public getCommentRanges(document: vscode.TextDocument): readonly Outline.CommentRange[] {
+    const cached = this.commentRangesCache.get(document);
+    if (cached && cached.version === document.version) {
+      return cached.ranges;
+    }
+
+    const ts: typeof TypeScript = require('typescript');
+    const isTsx = this.getLanguageStr() === 'typescriptreact' || document.fileName.endsWith('.tsx');
+    const isJsx = document.fileName.endsWith('.jsx');
+    const isJs = this.getLanguageStr() === 'javascript' || isJsx;
+    const scriptKind = isTsx ? ts.ScriptKind.TSX : (isJsx ? ts.ScriptKind.JSX : (isJs ? ts.ScriptKind.JS : ts.ScriptKind.TS));
+    const code = document.getText();
+    const sourceFile = ts.createSourceFile(document.fileName, code, ts.ScriptTarget.Latest, true, scriptKind);
+
+    const tokens: { start: number; end: number }[] = [];
+    const collectTokens = (node: TypeScript.Node) => {
+      if (ts.isJSDoc(node)) return;
+      if (ts.isJsxText(node)) {
+        tokens.push({ start: node.pos, end: node.end });
+        return;
+      }
+      const children = node.getChildren(sourceFile);
+      if (children.length === 0) {
+        const start = node.getStart(sourceFile);
+        const end = node.end;
+        if (end > start) tokens.push({ start, end });
+      } else {
+        for (const child of children) collectTokens(child);
+      }
+    };
+    collectTokens(sourceFile);
+    tokens.sort((a, b) => a.start - b.start);
+
+    const merged: { start: number; end: number }[] = [];
+    for (const t of tokens) {
+      if (merged.length > 0 && t.start <= merged[merged.length - 1].end) {
+        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, t.end);
+      } else {
+        merged.push({ start: t.start, end: t.end });
+      }
+    }
+
+    const gaps: { start: number; end: number }[] = [];
+    let cursor = 0;
+    for (const m of merged) {
+      if (m.start > cursor) {
+        gaps.push({ start: cursor, end: m.start });
+      }
+      cursor = Math.max(cursor, m.end);
+    }
+    if (cursor < code.length) {
+      gaps.push({ start: cursor, end: code.length });
+    }
+
+    const languageVariant = (isTsx || isJsx) ? ts.LanguageVariant.JSX : ts.LanguageVariant.Standard;
+    const ranges: Outline.CommentRange[] = [];
+    for (const gap of gaps) {
+      const gapText = code.slice(gap.start, gap.end);
+      const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, languageVariant, gapText);
+      let tok = scanner.scan();
+      while (tok !== ts.SyntaxKind.EndOfFileToken) {
+        if (tok === ts.SyntaxKind.SingleLineCommentTrivia || tok === ts.SyntaxKind.MultiLineCommentTrivia) {
+          const cStart = gap.start + scanner.getTokenPos();
+          const cEnd = gap.start + scanner.getTextPos();
+          ranges.push({
+            range: new vscode.Range(document.positionAt(cStart), document.positionAt(cEnd)),
+            kind: 'comment'
+          });
+        }
+        tok = scanner.scan();
+      }
+    }
+
+    ranges.sort((a, b) => a.range.start.compareTo(b.range.start));
+    this.commentRangesCache.set(document, { version: document.version, ranges });
+    return ranges;
   }
 }

@@ -42,12 +42,20 @@
         "title": "Visualize This (Local)"
       },
       {
+        "command": "code-visualizerzer-local.visualize.fromExplorer",
+        "title": "Visualize This (Local)"
+      },
+      {
         "command": "code-visualizerzer-local.visualizeFile",
         "title": "Visual Programming: Visualize File (Local)"
       },
       {
-        "command": "code-visualizerzer-local.visualizeFile.fromContextMenu",
-        "title": "Visualize File (Local)"
+        "command": "code-visualizerzer-local.saveCanvas",
+        "title": "Visual Programming: Save Canvas (Local)"
+      },
+      {
+        "command": "code-visualizerzer-local.loadCanvas",
+        "title": "Visual Programming: Load from Canvas (Local)"
       }
     ],
     "menus": {
@@ -58,7 +66,14 @@
       ],
       "explorer/context": [
         {
-          "command": "code-visualizerzer-local.visualizeFile.fromContextMenu"
+          "command": "code-visualizerzer-local.visualize.fromExplorer",
+          "when": "!explorerResourceIsFolder"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "code-visualizerzer-local.visualize.fromExplorer",
+          "when": "false"
         }
       ]
     }

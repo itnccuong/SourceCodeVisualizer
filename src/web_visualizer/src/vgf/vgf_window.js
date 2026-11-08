@@ -28,6 +28,12 @@ const VgfWindow = (function()
       self.dispatchEvent (new Event ("vp_windowResizedByUser"));
     });
     self.resizeObserver.observe (self);
+    self.addEventListener ("vp_beforeDelete", function() {
+      if (self.resizeObserver) {
+        self.resizeObserver.disconnect();
+        self.resizeObserver = null;
+      }
+    });
   }
 
 

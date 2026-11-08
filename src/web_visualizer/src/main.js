@@ -12,6 +12,10 @@ function initSystem()
   window.vp_controller = gController;
 
   _setupGlobalShortcuts(gController);
+
+  if (typeof gBackend !== "undefined" && gBackend && typeof gBackend.postMessage === "function") {
+    gBackend.postMessage({ type: "canvas_ready" });
+  }
 }
 
 

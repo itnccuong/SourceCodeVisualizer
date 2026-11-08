@@ -30,9 +30,11 @@ const VpwWorld = (function()
   /**
    *  @brief: Create an interactive message box window on screen
    **/
-  self.visualizeMessageBox = function(viewEntity_message){
+  self.visualizeMessageBox = function(viewEntity_message, isRoot = true){
     let outlineWindow = new VpwMessageWindow (viewEntity_message);
     self.vp_addWindow (outlineWindow);
+    if (self.vp_graph)
+      self.vp_graph.addNode(outlineWindow, isRoot);
     outlineWindow.vp_fitToContent();
     return outlineWindow;
   }
@@ -42,10 +44,12 @@ const VpwWorld = (function()
   /**
    *  @brief: Create an interactive window containing code outline on screen
    **/
-  self.visualizeOutline = function(viewEntity){
+  self.visualizeOutline = function(viewEntity, isRoot = true){
     let outlineWindow = VpwOutlineWindow (viewEntity);
 
     self.vp_addWindow (outlineWindow);
+    if (self.vp_graph)
+      self.vp_graph.addNode(outlineWindow, isRoot);
     outlineWindow.vp_fitToContent();
 
     return outlineWindow;
@@ -88,7 +92,17 @@ const VpwWorld = (function()
   self._connection_create = function(source, target, sourceAnchor = null)
   {
     if (!target || !source) return null;
-    return new VpwEntityConnection(source, target, sourceAnchor);
+    let connection = new VpwEntityConnection(source, target, sourceAnchor);
+    if (self.vp_graph)
+    {
+      const sourceWindow = source.closest(".Window_OuterFrame");
+      const targetWindow = target.closest(".Window_OuterFrame");
+      const sourceId = sourceWindow?.vp_canvasNodeId ?? null;
+      const targetId = targetWindow?.vp_canvasNodeId ?? null;
+      if (sourceId)
+        self.vp_graph.addEdge(connection, sourceId, targetId);
+    }
+    return connection;
   }
 
 

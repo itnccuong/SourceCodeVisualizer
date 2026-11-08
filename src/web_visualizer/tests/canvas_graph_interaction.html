@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Canvas Graph Interaction Tests</title>
+<link rel="stylesheet" type="text/css" href="../release/web_visualizer.css">
+<link rel="stylesheet" type="text/css" href="./shared_files/browserSystem.css">
+<script type="text/javascript" src="./shared_files/backendEmulation.js"></script>
+<script type="text/javascript" src="./shared_files/exampleoutlineData.js"></script>
+<script type="text/javascript" src="../release/web_visualizer.js"></script>
+<style>
+  #test-log {
+    font-family: monospace;
+    font-size: 13px;
+    padding: 16px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    max-height: 80vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .pass { color: #4ec9b0; }
+  .fail { color: #f14c4c; font-weight: bold; }
+</style>
+</head>
+<body class="vscode-dark">
+<div id="diagramWindow" class="diagramWindow" style="position: absolute; width: 800px; height: 600px; visibility: hidden;"></div>
+<div id="test-log">Running tests...</div>
+
+<script type="text/javascript">
+window.__testResults = { passed: 0, failed: 0, errors: [] };
+
+function log(msg, status = "info") {
+  const el = document.getElementById("test-log");
+  const span = document.createElement("div");
+  span.className = status;
+  span.textContent = msg;
+  el.appendChild(span);
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    window.__testResults.failed++;
+    window.__testResults.errors.push(message);
+    log("FAIL: " + message, "fail");
+    throw new Error(message);
+  }
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    window.__testResults.passed++;
+    log("PASS: " + name, "pass");
+  } catch (err) {
+    // Already counted in assert
+    if (!window.__testResults.errors.includes(err.message)) {
+      window.__testResults.failed++;
+      window.__testResults.errors.push(err.message);
+      log("FAIL: " + name + " -> " + err.message, "fail");
+    }
+  }
+}
+
+window.onload = function() {
+  const logEl = document.getElementById("test-log");
+  logEl.textContent = "";
+
+  // -------------------------------------------------------------
+  // Test Set 1: CloseSet 7 Table Cases
+  // -------------------------------------------------------------
+  test("CloseSet Case 1: A(root) -> B -> C; close B -> {B, C} deleted, A survives", () => {
+    const graph = new CanvasGraph(null, null);
+    const nA = graph.addNode({ vp_delete: () => {} }, true, "A");
+    const nB = graph.addNode({ vp_delete: () => {} }, false, "B");
+    const nC = graph.addNode({ vp_delete: () => {} }, false, "C");
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+    graph.addEdge({ vp_delete: () => {} }, "B", "C", "e2");
+
+    const deleteSet = graph.closeSet("B");
+    assert(deleteSet.has("B") && deleteSet.has("C") && !deleteSet.has("A"), "Delete set should be {B, C}");
+  });
+
+  test("CloseSet Case 2: A -> B -> C; X -> C -> D; close B -> only {B} deleted", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "A");
+    graph.addNode({ vp_delete: () => {} }, false, "B");
+    graph.addNode({ vp_delete: () => {} }, false, "C");
+    graph.addNode({ vp_delete: () => {} }, true, "X");
+    graph.addNode({ vp_delete: () => {} }, false, "D");
+
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+    graph.addEdge({ vp_delete: () => {} }, "B", "C", "e2");
+    graph.addEdge({ vp_delete: () => {} }, "X", "C", "e3");
+    graph.addEdge({ vp_delete: () => {} }, "C", "D", "e4");
+
+    const deleteSet = graph.closeSet("B");
+    assert(deleteSet.size === 1 && deleteSet.has("B"), "Only B should be deleted because C is protected by X");
+  });
+
+  test("CloseSet Case 3: A(root) -> B -> C -> A; close B -> {B, C} deleted, A survives", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "A");
+    graph.addNode({ vp_delete: () => {} }, false, "B");
+    graph.addNode({ vp_delete: () => {} }, false, "C");
+
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+    graph.addEdge({ vp_delete: () => {} }, "B", "C", "e2");
+    graph.addEdge({ vp_delete: () => {} }, "C", "A", "e3");
+
+    const deleteSet = graph.closeSet("B");
+    assert(deleteSet.has("B") && deleteSet.has("C") && !deleteSet.has("A"), "Delete set should be {B, C}, root A survives");
+  });
+
+  test("CloseSet Case 4: A(root) -> B; B <-> C; close A -> all deleted", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "A");
+    graph.addNode({ vp_delete: () => {} }, false, "B");
+    graph.addNode({ vp_delete: () => {} }, false, "C");
+
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+    graph.addEdge({ vp_delete: () => {} }, "B", "C", "e2");
+    graph.addEdge({ vp_delete: () => {} }, "C", "B", "e3");
+
+    const deleteSet = graph.closeSet("A");
+    assert(deleteSet.size === 3 && deleteSet.has("A") && deleteSet.has("B") && deleteSet.has("C"), "All deleted");
+  });
+
+  test("CloseSet Case 5: A -> B; B <-> C; X -> C; close A -> only {A} deleted", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "A");
+    graph.addNode({ vp_delete: () => {} }, false, "B");
+    graph.addNode({ vp_delete: () => {} }, false, "C");
+    graph.addNode({ vp_delete: () => {} }, true, "X");
+
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+    graph.addEdge({ vp_delete: () => {} }, "B", "C", "e2");
+    graph.addEdge({ vp_delete: () => {} }, "C", "B", "e3");
+    graph.addEdge({ vp_delete: () => {} }, "X", "C", "e4");
+
+    const deleteSet = graph.closeSet("A");
+    assert(deleteSet.size === 1 && deleteSet.has("A"), "Only A deleted; B and C protected by incoming edge from X");
+  });
+
+  test("CloseSet Case 6: A -> B; B explicitly reopened from editor; close A -> only A deleted", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "A");
+    graph.addNode({ vp_delete: () => {} }, false, "B");
+    graph.addEdge({ vp_delete: () => {} }, "A", "B", "e1");
+
+    // Promote B to independent root
+    graph.promoteToRoot("B");
+
+    const deleteSet = graph.closeSet("A");
+    assert(deleteSet.size === 1 && deleteSet.has("A"), "Only A deleted; B is independent root");
+  });
+
+  test("CloseSet Case 7: K -> K (self loop); close K -> {K} deleted", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({ vp_delete: () => {} }, true, "K");
+    graph.addEdge({ vp_delete: () => {} }, "K", "K", "e1");
+
+    const deleteSet = graph.closeSet("K");
+    assert(deleteSet.size === 1 && deleteSet.has("K"), "Self loop K deleted");
+  });
+
+  // -------------------------------------------------------------
+  // Test Set 2: Connected Component
+  // -------------------------------------------------------------
+  test("Connected Component undirected traversal", () => {
+    const graph = new CanvasGraph(null, null);
+    graph.addNode({}, true, "n1");
+    graph.addNode({}, false, "n2");
+    graph.addNode({}, false, "n3");
+    graph.addNode({}, true, "n4"); // isolated
+
+    graph.addEdge({}, "n1", "n2", "e1");
+    graph.addEdge({}, "n3", "n2", "e2"); // n3 connects to n2
+
+    const comp2 = graph.connectedComponent("n2");
+    assert(comp2.has("n1") && comp2.has("n2") && comp2.has("n3") && !comp2.has("n4"), "Component of n2 should contain n1, n2, n3");
+
+    const comp4 = graph.connectedComponent("n4");
+    assert(comp4.size === 1 && comp4.has("n4"), "Isolated node n4 has component of size 1");
+  });
+
+  // -------------------------------------------------------------
+  // Test Set 3: Serialization & Restore
+  // -------------------------------------------------------------
+  test("CanvasPersistence serialize and restore round-trip", () => {
+    const world = new VpwWorld();
+    const graph = new CanvasGraph(world, null);
+    world.vp_graph = graph;
+    const nav = new VgfNavigationArea(world);
+    const root = document.getElementById("diagramWindow");
+    root.appendChild(nav);
+    const camera = new CanvasCamera(world, nav, graph);
+    const win1 = new VgfWindowTitled();
+    win1.vp_setXY(50, 100);
+    win1.style.width = "200px";
+    win1.style.height = "150px";
+    win1.viewEntity = {
+      vp_model: {
+        sourceReference: {
+          type: "file",
+          uri: "file:///test.py",
+          language: "python",
+          documentHash: "b".repeat(64),
+          symbol: null
+        }
+      }
+    };
+    world.vp_addWindow(win1);
+    graph.addNode(win1, true, "n1");
+
+    const serialized = CanvasPersistence.serialize(graph, camera);
+    assert(serialized.format === "source-code-visualizer-canvas", "Serialized format tag matches");
+    assert(serialized.nodes.length === 1, "Serialized 1 node");
+    assert(serialized.nodes[0].id === "n1", "Node id is n1");
+    assert(serialized.nodes[0].frame.x === 50, "Frame x is 50");
+    assert(serialized.nodes[0].frame.y === 100, "Frame y is 100");
+  });
+
+  test("Selection marquee requires whole enclosure, not mere intersection", () => {
+    const world = new VpwWorld();
+    const graph = new CanvasGraph(world, null);
+    world.vp_graph = graph;
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const sel = new CanvasSelection(graph, world, nav);
+
+    const winA = new VgfWindowTitled();
+    winA.vp_setXY(100, 100);
+    winA.style.width = "100px";
+    winA.style.height = "100px";
+    world.vp_addWindow(winA);
+    graph.addNode(winA, true, "nA");
+
+    const winB = new VgfWindowTitled();
+    winB.vp_setXY(300, 100);
+    winB.style.width = "100px";
+    winB.style.height = "100px";
+    world.vp_addWindow(winB);
+    graph.addNode(winB, false, "nB");
+
+    // Rectangle that completely encloses winA [50, 50] to [250, 250], but merely intersects or misses winB
+    const selLeft = 50, selTop = 50, selRight = 250, selBottom = 250;
+    const enclosedIds = [];
+    for (const [id, node] of graph.nodes) {
+      const r = node.window.getBoundingClientRect();
+      // In our unit simulation:
+      const left = node.window.offsetLeft;
+      const top = node.window.offsetTop;
+      const right = left + node.window.offsetWidth;
+      const bottom = top + node.window.offsetHeight;
+      if (left >= selLeft && right <= selRight && top >= selTop && bottom <= selBottom) {
+        enclosedIds.push(id);
+      }
+    }
+    graph.setSelection(enclosedIds);
+    assert(graph.selection.has("nA") && !graph.selection.has("nB"), "Only wholly enclosed nA should be selected");
+  });
+
+  test("Group movement applies screen delta divided by scale without offsets accumulation", () => {
+    const world = new VpwWorld();
+    world.vp_scale = 0.5;
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const graph = new CanvasGraph(world, null);
+
+    const win1 = new VgfWindowTitled();
+    world.vp_addWindow(win1);
+    win1.vp_setXY(100, 100);
+    const win2 = new VgfWindowTitled();
+    world.vp_addWindow(win2);
+    win2.vp_setXY(200, 300);
+
+    graph.addNode(win1, true, "w1");
+    graph.addNode(win2, false, "w2");
+    graph.setSelection(["w1", "w2"]);
+
+    const screenDx = 50;
+    const screenDy = 20;
+    const worldDx = screenDx / world.vp_scale; // 100
+    const worldDy = screenDy / world.vp_scale; // 40
+
+    win1.vp_setXY(100 + worldDx, 100 + worldDy);
+    win2.vp_setXY(200 + worldDx, 300 + worldDy);
+
+    assert(win1.offsetLeft === 200 && win1.offsetTop === 140, "win1 moved by 100, 40");
+    assert(win2.offsetLeft === 300 && win2.offsetTop === 340, "win2 moved by 100, 40");
+  });
+
+  test("Edge target updates on dock, undock, and delete", () => {
+    const world = new VpwWorld();
+    const graph = new CanvasGraph(world, null);
+    world.vp_graph = graph;
+
+    const n1 = graph.addNode({ vp_delete: () => {} }, true, "n1");
+    const n2 = graph.addNode({ vp_delete: () => {} }, false, "n2");
+    const edgeId = graph.addEdge({ vp_delete: () => {} }, "n1", "n2", "e1");
+
+    assert(graph.edges.get(edgeId).targetId === "n2", "Target is initially n2");
+
+    // Undock
+    graph.setTarget(edgeId, null);
+    assert(graph.edges.get(edgeId).targetId === null, "Target becomes null after undock");
+
+    // Re-dock
+    graph.setTarget(edgeId, "n1");
+    assert(graph.edges.get(edgeId).targetId === "n1", "Target updated to n1");
+
+    // Remove edge
+    graph.removeEdge(edgeId);
+    assert(!graph.edges.has(edgeId), "Edge removed from graph");
+  });
+
+  test("Code editor comment hiding preserves data-vp-line-number gaps and source indexing", () => {
+    const tsModel = {
+      CLASS_TYPE: "Symbol",
+      uri: "file:///usr/myfile.py",
+      displayText: "def foo():\n    # comment\n    return 1\n",
+      displayTextRange: [{ line: 0, character: 0 }, { line: 4, character: 0 }],
+      commentRanges: [
+        { range: [{ line: 1, character: 4 }, { line: 1, character: 13 }], kind: "comment" }
+      ]
+    };
+    const content = "def foo():\n    # comment\n    return 1\n";
+    const win = new VgfWindowTitled();
+    const editor = new VpwCodeEditor(tsModel, content, win);
+    win.vp_window_clientarea.appendChild(editor);
+    document.getElementById("diagramWindow").appendChild(win);
+    editor.vp_setContent(content, "python");
+
+    const rows = Array.from(editor.children);
+    assert(rows.length === 4, "4 rows created");
+    assert(rows[0].getAttribute("data-vp-line-number") === "1", "Row 1 ordinal is 1");
+    assert(rows[1].getAttribute("data-vp-line-number") === "2", "Row 2 ordinal is 2");
+    assert(rows[1].getAttribute("data-vp-comment-only") === "true", "Row 2 is comment only");
+
+    // Hide comments
+    editor.vp_setCommentsVisible(false);
+    assert(rows[1].style.display === "none", "Row 2 is hidden with display:none");
+    assert(rows[0].style.display !== "none", "Row 1 remains visible");
+    assert(rows[2].style.display !== "none", "Row 3 remains visible");
+    assert(editor.contentEditable === "false", "contentEditable is false while comments hidden");
+
+    // Show comments
+    editor.vp_setCommentsVisible(true);
+    assert(rows[1].style.display === "", "Row 2 is restored to visible");
+    assert(editor.contentEditable === "true", "contentEditable is restored to true");
+  });
+
+  test("Outside pointer input releases body wheel ownership without mousedown", () => {
+    const world = new VpwWorld();
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const graph = new CanvasGraph(world, null);
+    const selection = new CanvasSelection(graph, world, nav);
+    const frame = new VgfWindowTitled();
+    world.vp_addWindow(frame);
+    frame.style.width = "300px";
+    frame.style.height = "200px";
+    const editor = document.createElement("div");
+    editor.classList.add("VpwCodeEditor");
+    editor.textContent = "source body";
+    frame.vp_window_clientarea.appendChild(editor);
+    const body = frame.querySelector(".VgfExpandableContent");
+    const press = target => target.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, button: 0, pointerId: 1
+    }));
+    const wheel = () => nav.dispatchEvent(new WheelEvent("wheel", {
+      bubbles: true, cancelable: true, deltaY: 40
+    }));
+    press(editor);
+    assert(body.classList.contains("VgfBodyScrollLocked"), "Body owns wheel after pointer press");
+    const top = world.style.top;
+    wheel();
+    assert(world.style.top === top, "Locked wheel does not pan canvas");
+    press(nav);
+    assert(!body.classList.contains("VgfBodyScrollLocked"), "Outside pointer press releases lock");
+    wheel();
+    assert(world.style.top !== top, "Wheel pans canvas after outside press");
+    press(editor);
+    frame.vp_focus();
+    assert(body.classList.contains("VgfBodyScrollLocked"), "Refocusing the same frame preserves its lock");
+    const child = new VgfWindowTitled();
+    world.vp_addWindow(child);
+    assert(!body.classList.contains("VgfBodyScrollLocked"), "New focused child releases parent body ownership");
+    const beforeChildWheel = world.style.top;
+    wheel();
+    assert(world.style.top !== beforeChildWheel, "Canvas wheel works immediately after child focus");
+    selection.dispose();
+    nav.vp_delete();
+  });
+
+  test("Connected navigation registers owning frames and supports redocking", () => {
+    const world = new VpwWorld();
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const graph = world.vp_graph = new CanvasGraph(world, null);
+    const source = new VgfWindowTitled();
+    const target = new VgfWindowTitled();
+    world.vp_addWindow(source);
+    world.vp_addWindow(target);
+    const sourceId = graph.addNode(source, true);
+    const targetId = graph.addNode(target, false);
+    const heading = document.createElement("span");
+    source.vp_title.appendChild(heading);
+    Connectable.makeConnectable(heading);
+    VgfWidget_createFrom(heading);
+    const connection = world.connection_createIfNotExisting(heading, target);
+    const edge = graph.edges.get(connection._vp_canvasEdgeId);
+    assert(edge.sourceId === sourceId && edge.targetId === targetId, "Source surface belongs to outer frame");
+    connection.vp_dock(world, {animate: false});
+    assert(edge.targetId === null, "Undocked edge has no target");
+    connection.vp_dock(target, {animate: false, y: 0});
+    assert(edge.targetId === targetId, "Redocked edge retains target identity");
+    nav.vp_delete();
+  });
+
+  test("Heading source pointer input is not consumed by group dragging", () => {
+    const world = new VpwWorld();
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const graph = world.vp_graph = new CanvasGraph(world, null);
+    const selection = world.vp_selection = new CanvasSelection(graph, world, nav);
+    const frame = new VgfWindowTitled();
+    world.vp_addWindow(frame);
+    graph.addNode(frame, true);
+    const heading = document.createElement("span");
+    heading.setAttribute("data-vp-source-surface", "");
+    heading.textContent = "run(config: Config)";
+    frame.vp_title.appendChild(heading);
+    const event = new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, button: 0, pointerId: 1
+    });
+    heading.dispatchEvent(event);
+    assert(!event.defaultPrevented, "Native source selection remains available");
+    assert(graph.selection.size === 0, "Source click does not select a graph group");
+    selection.dispose();
+    nav.vp_delete();
+  });
+
+  test("Hidden comments compact blank rows and empty blocks without changing source identity", () => {
+    const frame = new VgfWindowTitled();
+    document.getElementById("diagramWindow").appendChild(frame);
+    const text = "// comment\n \t\nconst value = 1;\n\n";
+    const model = {
+      CLASS_TYPE: "Text", uri: "file:///compact.ts", language: "typescript",
+      displayText: text,
+      displayTextRange: [{line: 0, character: 0}, {line: 4, character: 0}],
+      commentRanges: [{range: [{line: 0, character: 0}, {line: 0, character: 10}], kind: "comment"}]
+    };
+    const editor = new VpwCodeEditor(model, text, frame);
+    frame.vp_window_clientarea.appendChild(editor);
+    editor.vp_setCommentsVisible(false);
+    const visible = Array.from(editor.children).filter(row => row.style.display !== "none");
+    assert(visible.length === 1 && visible[0].textContent === "const value = 1;", "Only executable row remains visible");
+    assert(visible[0].getAttribute("data-vp-line-number") === "3", "Original source line number remains");
+    assert(!SourceNavigation.isDiverged(editor), "Hidden rows retain original source mapping");
+    editor.vp_setCommentsVisible(true);
+    assert(Array.from(editor.children).every(row => row.style.display === ""), "Showing comments restores blank rows");
+
+    const emptyText = "// comment\n \t\n";
+    const emptyModel = {...model, displayText: emptyText,
+      displayTextRange: [{line: 0, character: 0}, {line: 2, character: 0}]};
+    const empty = new VpwCodeEditor(emptyModel, emptyText, frame);
+    frame.vp_window_clientarea.appendChild(empty);
+    empty.vp_setCommentsVisible(false);
+    assert(empty.style.display === "none", "Entire blank/comment-only block has no visible spacing");
+    assert(!SourceNavigation.isDiverged(empty), "Hidden block retains source identity");
+    empty.vp_setCommentsVisible(true);
+    assert(empty.style.display === "" && empty.children[0].textContent === "// comment", "Showing comments restores full block");
+    frame.vp_delete();
+  });
+
+  test("Nodes picker includes every frame kind and reveals existing nodes", () => {
+    const world = new VpwWorld();
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const graph = world.vp_graph = new CanvasGraph(world, null);
+    const camera = new CanvasCamera(world, nav, graph);
+    const controls = new CanvasControls(graph, world, nav, camera, null);
+    const base = {uri: "file:///nodes.ts", language: "typescript", attributes: [], parts: [],
+      displayTextRange: [{line: 0, character: 0}, {line: 0, character: 3}]};
+    for (const [type, kind, name] of [
+      ["File", "", "nodes.ts"], ["Symbol", "class", "Box"],
+      ["Symbol", "variable", "value"], ["Symbol", "function", "run"]
+    ])
+      world.visualizeOutline(new SViewEntity({...base, CLASS_TYPE: type, kind, displayText: name}, 0, 0));
+    world.visualizeMessageBox(new SViewEntity({type: "Error", title: "Lookup failed", message: "Missing target"}, 0, 0));
+    const unavailable = new VpwUnavailableWindow({
+      content: {reference: {type: "file", uri: "file:///missing.ts", symbol: null}}
+    }, "File missing");
+    world.vp_addWindow(unavailable);
+    graph.addNode(unavailable, true);
+    controls.openNodesDropdown();
+    const names = Array.from(nav.querySelectorAll(".VgfNodeName")).map(el => el.textContent);
+    assert(names.length === 6 && ["nodes.ts", "Box", "value", "run", "Lookup failed",
+      "Source unavailable — missing.ts"].every(name => names.includes(name)), "Files, classes, variables, functions, diagnostics, and unavailable nodes are listed");
+    const before = graph.nodes.size;
+    const target = Array.from(graph.nodes.values()).find(node => node.window.viewEntity?.vp_model?.displayText === "value").window;
+    const width = target.style.width;
+    const item = Array.from(nav.querySelectorAll(".VgfNodeItem")).find(el => el.querySelector(".VgfNodeName").textContent === "value");
+    item.click();
+    assert(target.classList.contains("VgfWindow_focussed") && graph.nodes.size === before
+      && target.style.width === width, "Picker activates existing variable node without creating or refitting it");
+    graph.removeNodes(new Set([target.vp_canvasNodeId]));
+    controls.openNodesDropdown();
+    assert(!Array.from(nav.querySelectorAll(".VgfNodeName")).some(el => el.textContent === "value"), "Closed node leaves picker");
+    nav.vp_delete();
+  });
+
+  test("Restored collapsed frames expand to the saved height", () => {
+    const world = new VpwWorld();
+    const nav = new VgfNavigationArea(world);
+    document.getElementById("diagramWindow").appendChild(nav);
+    const frame = new VgfWindowTitled();
+    world.vp_addWindow(frame);
+    const state = {x: -40, y: 75, width: 340, height: 260, collapsed: true, expandedHeight: 260};
+    frame.vp_restoreFrameState(state);
+    frame.vp_restoreFrameState(state);
+    const toggle = frame._vp_expandable._vp_button_expand;
+    assert(toggle.vp_getState() === 0 && frame._vp_expandable.vp_content.style.display === "none",
+      "Restored frame is collapsed, including repeated restore");
+    toggle.vp_onClick();
+    assert(frame.offsetHeight === 260 && frame.offsetWidth === 340, "Expanding restores saved dimensions");
+    frame.vp_restoreFrameState({...state, collapsed: false, height: 310, expandedHeight: 310});
+    assert(toggle.vp_getState() === 1 && frame.offsetHeight === 310
+      && frame.offsetLeft === -40 && frame.offsetTop === 75, "Expanded restore keeps position and requested dimensions");
+    nav.vp_delete();
+  });
+
+  test("Canvas file controls settle only their own operation and remain separate from navigation", () => {
+    const previousBackend = gBackend;
+    gBackend = {postMessage() {}};
+    const root = document.createElement("div");
+    document.getElementById("diagramWindow").appendChild(root);
+    const controller = new Controller(root);
+    try
+    {
+      controller.requestSaveCanvas();
+      controller.requestLoadCanvas();
+      const buttons = root.querySelectorAll(".VgfControlsButton");
+      assert(buttons[2].disabled && buttons[3].disabled, "Save and Load controls show pending operations");
+      assert(Object.keys(controller._request_awaitingRequests).length === 0, "File operations do not become pending navigation");
+      controller._message_receive({data: {type: "canvas_operation_result", requestedId: "unknown",
+        data: {status: "cancelled", message: ""}}});
+      assert(buttons[2].disabled && buttons[3].disabled, "Stale result cannot release another operation");
+      controller._message_receive({data: {type: "canvas_operation_result",
+        requestedId: controller._canvasOperations.get("save"), data: {status: "cancelled", message: ""}}});
+      assert(!buttons[2].disabled && buttons[3].disabled, "Save cancellation permits retry without settling Load");
+      controller._message_receive({data: {type: "canvas_operation_result",
+        requestedId: controller._canvasOperations.get("load"), data: {status: "error", message: "Cannot read canvas"}}});
+      assert(!buttons[3].disabled && root.querySelector(".VgfControlsStatus").textContent.includes("Cannot read canvas"),
+        "Load failure releases control and reports reason");
+    }
+    finally
+    {
+      gBackend = previousBackend;
+      controller._selection.dispose();
+      root.querySelector(".VgfNavigationArea").vp_delete();
+      root.remove();
+    }
+  });
+
+  test("Saved source tokens restore only to a unique live surface in their owning frame", () => {
+    const source = "call(value)";
+    const model = {CLASS_TYPE: "Text", uri: "file:///anchor.ts", language: "typescript",
+      displayText: source, displayTextRange: [{line: 0, character: 0}, {line: 0, character: 11}],
+      commentRanges: []};
+    const hash = "a".repeat(64);
+    const makeFrame = () => {
+      const frame = new VgfWindowTitled();
+      frame.viewEntity = {vp_model: {sourceReference: {documentHash: hash}}};
+      document.getElementById("diagramWindow").appendChild(frame);
+      const editor = new VpwCodeEditor(model, source, frame);
+      frame.vp_window_clientarea.appendChild(editor);
+      return {frame, editor};
+    };
+    const first = makeFrame();
+    const other = makeFrame();
+    const origin = {kind: "source", uri: model.uri, documentHash: hash,
+      surface: {kind: "body", range: model.displayTextRange},
+      range: [{line: 0, character: 5}, {line: 0, character: 10}], offsets: [5, 10]};
+    const restored = SourceNavigation.restore(first.frame, origin);
+    assert(restored.status === "exact" && restored.anchor.surface === first.editor,
+      "Token binds to its owning frame, not another matching frame");
+    first.editor.style.display = "none";
+    assert(SourceNavigation.restore(first.frame, origin).status === "exact", "Hidden source retains exact token identity");
+    assert(SourceNavigation.restore(first.frame, {...origin, documentHash: "b".repeat(64)}).status === "changed",
+      "Changed document hash preserves changed-location fallback");
+    assert(SourceNavigation.restore(first.frame, {...origin, offsets: [4, 10]}).status === "missing",
+      "Inconsistent token offsets cannot bind");
+    const duplicate = new VpwCodeEditor(model, source, first.frame);
+    first.frame.vp_window_clientarea.appendChild(duplicate);
+    assert(SourceNavigation.restore(first.frame, origin).status === "missing", "Ambiguous live surfaces cannot bind arbitrarily");
+    duplicate.vp_delete();
+    assert(SourceNavigation.restore(first.frame, origin).status === "exact", "Disposed surface is no longer a candidate");
+    first.frame.vp_delete();
+    other.frame.vp_delete();
+  });
+
+  log("\nSummary: " + window.__testResults.passed + " passed, " + window.__testResults.failed + " failed.");
+};
+</script>
+</body>
+</html>
