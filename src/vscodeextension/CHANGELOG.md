@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Keep diagram source bodies read-only and hide whitespace-only source blocks, including file-node gaps when comments are visible.
 - Split Python and TypeScript declarations with bundled syntax parsers without mutating LSP ranges.
 - Preserve complete assigned values, return-type braces, Python indentation, and empty implementations.
 - Hide the body area for declaration-only TypeScript signatures while retaining their signatures and navigation.

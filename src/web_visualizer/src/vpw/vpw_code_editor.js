@@ -9,7 +9,7 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
 
    self._ctor = function()
    {
-      self.contentEditable = "true"
+      self.contentEditable = "false";
       self.classList.add ("VpwCodeEditor");
 
       self.vp_model = tsOutlineSymbolText;
@@ -69,6 +69,8 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
    self.vp_setContent = function(content, syntaxHighlightingLanguage="")
    {
       const source = content.replace(/\r\n/g, "\n");
+      self._vp_whitespaceOnly = source.trim().length === 0;
+      self.style.display = self._vp_whitespaceOnly ? "none" : "";
       const highlighted = document.createElement ("div");
       const hl = SyntaxHighlighter.run (source, syntaxHighlightingLanguage);
       highlighted.innerHTML = hl.html;
@@ -271,11 +273,10 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
             }
          }
          self.style.display = rows.every(row => row.style.display === "none") ? "none" : "";
-         self.contentEditable = "false";
       }
       else
       {
-         self.style.display = "";
+         self.style.display = self._vp_whitespaceOnly ? "none" : "";
          const rows = Array.from(self.children);
          for (const row of rows)
          {
@@ -291,7 +292,6 @@ const VpwCodeEditor = (function(tsOutlineSymbolText, content, groupParent)
                sep.remove();
             }
          }
-         self.contentEditable = "true";
       }
 
       if (typeof SourceNavigation !== "undefined")

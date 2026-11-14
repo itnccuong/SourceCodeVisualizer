@@ -348,7 +348,7 @@ window.onload = function() {
     // Show comments
     editor.vp_setCommentsVisible(true);
     assert(rows[1].style.display === "", "Row 2 is restored to visible");
-    assert(editor.contentEditable === "true", "contentEditable is restored to true");
+    assert(editor.contentEditable === "false", "Showing comments keeps source read-only");
   });
 
   test("Outside pointer input releases body wheel ownership without mousedown", () => {
@@ -674,6 +674,48 @@ window.onload = function() {
       selection.removeAllRanges();
     } finally {
       frame.vp_delete();
+    }
+  });
+
+  test("File source gaps stay hidden and source bodies stay read-only across comment toggles", () => {
+    for (const language of ["yaml", "python"]) {
+      const uri = `file:///demo.${language === "yaml" ? "yaml" : "py"}`;
+      const text = (displayText, line) => ({
+        CLASS_TYPE: "Text", language, uri, displayText,
+        displayTextRange: [{line, character: 0}, {line: line + 2, character: 0}],
+        commentRanges: []
+      });
+      const source = text(language === "yaml" ? "image: nginx\n\n" : "image = 'nginx'\n\n", 0);
+      const gap = text("\n \t\n", 3);
+      const frame = new VpwOutlineWindow({vp_model: {
+        CLASS_TYPE: "File", language, uri, displayText: "demo", parts: [source, gap]
+      }});
+      document.body.appendChild(frame);
+      try {
+        const [body, blank] = frame.querySelectorAll(".VpwCodeEditor");
+        for (const visible of [true, false, true]) {
+          frame.vp_setCommentsVisible(visible);
+          assert(getComputedStyle(blank).display === "none" && blank.getClientRects().length === 0,
+            "Whitespace-only file gaps occupy no visible space");
+          assert(getComputedStyle(body).display !== "none", "Real source stays visible");
+          assert(!body.isContentEditable && !blank.isContentEditable,
+            "File text cannot become an unsaved editor when comments are shown");
+          assert(!SourceNavigation.isDiverged(body) && !SourceNavigation.isDiverged(blank),
+            "Hiding gaps preserves exact source bindings");
+        }
+        const row = body.firstElementChild;
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(row);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const captured = SourceNavigation.capture(body);
+        assert(captured.range[0].line === 0 && captured.range[0].character === 0,
+          "Read-only source remains selectable and maps to its original location");
+        selection.removeAllRanges();
+      } finally {
+        frame.vp_delete();
+      }
     }
   });
 
