@@ -3,11 +3,11 @@
 ## Context
 Implement all of Group C—R01 minimap, R02 current-canvas function list, R12 fit all, R05 group selection/movement, R06 orphan-aware close, and R08 per-node comments—and Group D R09 explicit JSON save/load from `specs/roadmap.md:86–125`. The user chose to hide Python docstrings with comments, load each saved canvas into a separate tab, and have Visualize This offer a new canvas or any existing imported/`New-x` canvas. Completion means a navigable exploration graph whose relationships, layout, view, and comment settings survive explicit save/load using current source, with explicit visualization destinations rather than implicit tab selection.
 
-After approval, copy this complete plan to the new `features/phase-one-groups-c-d/plan.md` before implementation. Keep `specs/` read-only. Follow `specs/context.md` for the completed results record and `docs/architecture-and-development.md` for original/generated boundaries. Do not hand-edit extension `out/`, canvas `release/`, or copied `media/web_visualizer.*`.
+This is the approved original scope. Later delivered refinements retain its graph/persistence contracts while changing the Functions picker to Nodes, using plain empty-canvas drag for pan and Shift+left for marquee, and compacting hidden comment/whitespace blocks.
 
 ## Approach
 
-Implement steps 1–4 first, then integrate 5–9. Steps 5 and 6 can proceed independently after agreeing the model fields below. Step 7 depends on graph/frame/source-reference contracts; steps 8–9 integrate everything. Keep one owner for `controller.js`, outline-model changes, and final host/webview integration. Use the existing jsstitcher `require ("...");` directives for new browser dependencies; add no framework or package.
+Implement graph ownership, lifecycle, selection, and camera geometry before integrating comments, source references, persistence, and tab ownership. Keep the existing jsstitcher `require ("...");` browser dependency pattern; add no framework or package.
 
 ### 1. Give the displayed graph one owner
 
@@ -137,7 +137,7 @@ Carry classification failures as optional `OutlineRange.commentHidingError:strin
 
 For the existing C/C++/Java/PHP/Dart curly-brace adapters, use only explicit-language highlight.js `hljs-comment` spans already produced by that grammar; never hide `hljs-string`. Do not use auto-detected-language output as evidence for hiding. Unknown/missing grammars keep source visible with **Comment hiding unavailable**. This retains their existing lexical-highlighter level of support, not new parser parity.
 
-In `utils/misc_utils.js`, change `SyntaxHighlighter.run(text,language)` to return `{html:string, exactLanguage:boolean}`. Set exactLanguage only when the requested-language highlight call succeeds; auto-detection fallback returns false. Migrate its only source callers in `vpw_code_editor.js` and `vpw_outline_window.js` to use `.html`; the comment projector also reads `.exactLanguage`. This avoids running the highlighter twice or trusting its fallback language. Search `SyntaxHighlighter\.run` in `src/web_visualizer/src` before cutover to catch intervening callers.
+In `utils/misc_utils.js`, change `SyntaxHighlighter.run(text,language)` to return `{html:string, exactLanguage:boolean}`. Set exactLanguage only when the requested-language highlight call succeeds; auto-detection fallback returns false. Migrate callers in `vpw_code_editor.js` and `vpw_outline_window.js` to use `.html`; the comment projector also reads `.exactLanguage`. This avoids running the highlighter twice or trusting its fallback language.
 
 Rendering:
 
@@ -175,9 +175,9 @@ type SourceReference = {
 
 Populate provider name/kind/path/selection while `OutlineUtils.documentSymbol2outlineSymbol` still has `docSymbol` and `symbolParents`; establish full ancestor links for all entry paths (file, selected definition, location definer, and projected children). A synthesized Python assignment not present in the provider tree has `path:null`, never a guessed semantic path. In `_translate_outlineRanges2outlineEntities`, stamp the document hash once per document/version batch when source text is filled. The reference describes the source actually displayed, not whatever happens to be on disk later at Save. Hashing never executes the source.
 
-Extract the existing `_translate_outlineRanges2outlineEntities` implementation into new `visualprogramming/outline_entities.ts` as `translateOutlineRanges(outlines:Outline.OutlineRange[]):Promise<Outline.OutlineRange[]>`. Reuse it for ordinary visualization and staged loading; remove the private duplicate. Migrate all three existing calls in `VisualizingTab.visualizeDocument`, `_getOutlineAndSend`, and `_outline_getLocationDefiner` (the exact search `_translate_outlineRanges2outlineEntities` in `visualizer.ts` also returns the declaration). This extraction is needed so the manager can fill live displayText, stub metadata, and fresh references before creating a loaded panel.
+Extract `_translate_outlineRanges2outlineEntities` into new `visualprogramming/outline_entities.ts` as `translateOutlineRanges(outlines:Outline.OutlineRange[]):Promise<Outline.OutlineRange[]>`. Reuse it for ordinary visualization and staged loading; remove the private duplicate. Migrate `VisualizingTab.visualizeDocument`, `_getOutlineAndSend`, and `_outline_getLocationDefiner`. The manager must fill live displayText, stub metadata, and fresh references before creating a loaded panel.
 
-Add `provideSavedOutline(document:vscode.TextDocument, reference:SourceReference):Promise<Outline.File|Outline.Symbol>` to `VpOutlineProvider`, implement it in `VpOutlineProviderWrapper` through new `OutlineUtils.provideSavedOutline`, and register **vp.executeSavedOutlineProvider** in `outlineproviderAPI/extensionactivator.ts` accepting one SourceReference. Resolve `_getProvider` errors by rejection, not the existing never-settling unsupported-provider branches. All in-repository VpOutlineProvider implementations are the wrapper; inspect references again before editing if a language server becomes available. A runtime third-party provider lacking this capability produces an explicit unavailable node, never a fallback definition lookup.
+Add `provideSavedOutline(document:vscode.TextDocument, reference:SourceReference):Promise<Outline.File|Outline.Symbol>` to `VpOutlineProvider`, implement it in `VpOutlineProviderWrapper` through new `OutlineUtils.provideSavedOutline`, and register **vp.executeSavedOutlineProvider** in `outlineproviderAPI/extensionactivator.ts` accepting one SourceReference. Resolve `_getProvider` errors by rejection, not never-settling unsupported-provider branches. A runtime third-party provider lacking saved-outline capability produces an explicit unavailable node, never a fallback definition lookup.
 
 Restoration algorithm:
 
@@ -252,7 +252,7 @@ In `visualprogramming/extensionactivator.ts`, replace `VpTabManager._visualizing
 5. Choosing an existing item reveals that canvas and adds/reuses the captured source outlines there; it does not create another canvas or clear its graph. If that tab was closed while the picker was open, show **Selected canvas was closed. Run Visualize This again.** and stop rather than choosing another tab.
 6. Cancellation performs no provider lookup, creates no tab, and changes no graph. All captured selections in one invocation target the single chosen canvas. Source lookup/navigation replies remain bound to that panel even if focus changes; disposing it discards those replies without recreating it.
 
-Replace `VisualizingTab.visualizeFromCursorPositions()` and its private selection dispatcher with `visualizeSelections(document:vscode.TextDocument, selections:readonly vscode.Selection[]):Promise<void>`. The manager captures editor state, awaits a new `chooseCanvasForVisualization():Promise<VisualizingTab|undefined>`, and calls that method once. Migrate both `code-visualizerzer-local.visualize` registrations to return the manager's async operation. The inspected callsites are those two registrations, `VpTabManager.visualize`, and `VisualizingTab.visualizeFromCursorPositions`; re-run the exact search `getVisualizer\(|visualizeFromCursorPositions\(|new VisualizingTab\(|\.visualize\s*\(` under `src/vscodeextension/src` before cutover.
+Replace `VisualizingTab.visualizeFromCursorPositions()` and its private selection dispatcher with `visualizeSelections(document:vscode.TextDocument, selections:readonly vscode.Selection[]):Promise<void>`. The manager captures editor state, awaits `chooseCanvasForVisualization():Promise<VisualizingTab|undefined>`, and calls that method once. Both palette and editor-context Visualize This registrations return the manager's async operation; remove the obsolete single-tab dispatcher.
 
 Keep Visualize File's existing implicit targeting, now to the most-recently-active surviving canvas or a fresh `New-x` if none exist; the user requested the picker specifically for Visualize This. Replace the old single-tab `getVisualizer` with a clearly named `getOrCreateMostRecentCanvas()` used only by those file commands. Do not use it from Visualize This or from delayed message delivery.
 
@@ -260,8 +260,8 @@ Capture/create the owning panel at the start of each explicit visualization meth
 
 Register and contribute in `src/vscodeextension/package.json`:
 
-- `code-visualizerzer-local.saveCanvas` — **Visual Programming: Save Canvas (Local)**.
-- `code-visualizerzer-local.loadCanvas` — **Visual Programming: Load Canvas (Local)**.
+- **Visual Programming: Save Canvas**.
+- **Visual Programming: Load from Canvas**.
 
 Toolbar Save always targets its own originating tab; command-palette Save targets the most-recently-active surviving canvas. With none, show **No canvas to save** and do not create one. Load always creates a new tab after validation/resolution; it never replaces or merges into the current canvas. Keep view type `codeVisualizer`; loaded panel title is `Code Diagram — <canvas basename>`, with the tab's session ID available in picker details for duplicates. `WebviewCreator.createWebview` takes an explicit title supplied by the manager for both `New-x` and imported canvases.
 
@@ -316,17 +316,9 @@ These anchors identify non-obvious existing constraints; line numbers are hints,
 
 ## Verification
 
-No builds/UI changes were run during planning. Source inspection, a read-only installed-Lezer AST probe, and a separate check of the proposed close-set algorithm against its seven table cases informed the design. That algorithm check is not a test of production code. Implementation must supply observed runtime evidence, not claim the implementation checks below have already passed.
+The following are implementation acceptance checks, not passing outcomes established during planning. A close-set design check alone is not production-code evidence.
 
-### Build and host regression execution
-
-From repository root after integration:
-
-```sh
-npm run build:ext
-```
-
-Inspect every jsstitcher/CSS/license/media-copy/TypeScript stage because the web build uses semicolons that can mask an earlier failure. Do not edit generated output.
+### Host and browser regressions
 
 Keep permanent behavior regressions in the existing Mocha suite:
 
@@ -335,26 +327,10 @@ Keep permanent behavior regressions in the existing Mocha suite:
 - New `src/vscodeextension/src/test/suite/outlineprovider_test/comment_visibility.test.ts`: exact comment/docstring spans and preserved executable strings/code. Include Python nested scopes, raw/concatenated/parenthesized docstrings, bytes/f-strings, semicolon statement groups, comment-looking assigned strings, inline comments, CRLF, Unicode; JS/TS regex/template/JSX literal text versus real comments and JSDoc.
 - A new `src/web_visualizer/tests/canvas_graph_interaction.html` browser fixture loads the real bundle and uses deterministic assertions for the close-set table, connected components, rectangle enclosure (not intersection), group offsets, free/re-docked edges, comment-coordinate preservation, and serialization/restore identity. Follow existing standalone fixture imports; no new test framework. The graph cases can call the real CanvasGraph API with simple node handles; UI cases use actual windows, not a second implementation of the algorithm.
 
-Run the full existing compiled extension suite in installed VS Code, as the completed Group B record did. The standard `npm run test:ext` launcher targets old VS Code 1.61.1, so use the installed host for the final integration gate:
-
-```sh
-RUN_DIR=$(mktemp -d /tmp/scv-groups-c-d.XXXXXX)
-SCV_ROOT="$PWD" VSCODE_CLI=1 \
-  '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir="$RUN_DIR/test-profile" \
-  --extensions-dir="$HOME/.vscode/extensions" \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-
-Planning confirmed installed Code, Python 2026.10.0, Pylance 2026.4.1, and the external Airflow `.venv/bin/python` paths exist. If the installed host cannot launch, use F5 with the existing Run Extension configuration and run the compiled suite there; do not substitute plain Node execution for vscode-dependent tests or downgrade Python tooling to satisfy the old launcher.
 
 ### Actual browser surface
 
-Run `npm run serve:web` from root after building. Open `http://localhost:8080/tests/canvas_graph_interaction.html` and the existing Python dark/light and TypeScript fixtures in a real browser. Use actual mouse/keyboard/wheel gestures and screenshots; close owned browser tabs afterward.
+Use `tests/canvas_graph_interaction.html` and the existing Python dark/light and TypeScript fixtures in a real browser. Exercise actual mouse/keyboard/wheel gestures; distinguish browser geometry evidence from extension-host/provider evidence.
 
 |Requirement|Concrete scenario → expected observation|
 |---|---|
@@ -370,16 +346,16 @@ Run `npm run serve:web` from root after building. Open `http://localhost:8080/te
 
 ### Actual VS Code/Pylance end-to-end
 
-Launch an isolated development host using the installed binary, `--extensionDevelopmentPath="$PWD/src/vscodeextension"`, a separate `$RUN_DIR/live-profile`, installed extensions directory, and `--remote-debugging-port=9333` if browser tooling needs to inspect the real webview. Use a temporary workspace containing the real Airflow project root and set its existing Python interpreter to `../../MAFC/Workspace/airflow-data/.venv/bin/python` resolved from the repository. Never execute or modify the Airflow file.
+Use the actual VS Code development host with the real Python/Pylance provider and an isolated workspace for the Airflow project. Never execute or modify the analyzed file.
 
-1. In the actual diagram open `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py` → `_build_dag` → nested `ingestion_dag`. Inspect headings, compact decorator/full metadata, body text, and Show in code at all levels. Open `SQL_TASK_TIMEOUT` and `CONFIG_DIR` to verify values are not mistaken for comments/docstrings. Exercise comments, function list, minimap, fit, group movement, and source navigation on these real nodes.
+1. In the actual diagram open `trino_ingestion_dag_factory.py` → `_build_dag` → nested `ingestion_dag`. Inspect headings, compact decorator/full metadata, body text, and Show in code at all levels. Open `SQL_TASK_TIMEOUT` and `CONFIG_DIR` to verify values are not mistaken for comments/docstrings. Exercise comments, function list, minimap, fit, group movement, and source navigation on these real nodes.
 2. Save that populated graph using the real toolbar/native dialog. Inspect JSON: references/relationships/frame/view settings present; no source bodies, parts, HTML, or local displayed-text edits. Load it using the real native dialog: a second Code Diagram tab appears; current workspace source is displayed, original tab's graph/camera and outstanding request ownership are unchanged. Save each tab, close one, and verify Save/Visualize File fallback and disposal.
 3. Use temporary source-only Python fixtures, not the external file, for changed/deleted-source cases: save function `Outer.run`, prepend lines/change its body, load → unique same ancestry shows current body at saved node position, old source-token edge uses explicit changed-location fallback. Remove `Outer.run` and place a different callable at the old line → unavailable source node, never the replacement declaration. Delete one file → visible unavailable card with retained edges. Restore the file and reload a re-saved unresolved canvas → source resolves again.
 4. Cancel save/load, feed invalid JSON/unsupported version/unsafe URI/invalid graph, and cause file-write/provider errors → explicit settled outcomes; malformed input creates no tab, old canvases remain unchanged. Close an initiating panel while an operation or source request is pending → no resurrection and no update to another tab.
 5. Save/load the restored shared/cyclic graph and repeat R06 closure → root flags and surviving-parent protection remain correct. Test an empty saved canvas and a saved missing-source graph as real tabs, not only parser cases.
 6. Exercise both Visualize This command entries with no canvases → picker offers New canvas; cancel → no panel/provider lookup; choose New → `New-1`. Repeat New → `New-2`. Import a saved canvas → picker lists `New-1`, `New-2`, and the imported canvas; selecting each adds/reuses only in that chosen graph, never the most recently focused alternative. Multiple editor selections use one picker and one destination. Duplicate-import details identify each actual tab. Switch tabs while lookup runs → result stays in the chosen one; close the chosen tab during picker/lookup → explicit stale-choice handling or discarded reply, no replacement canvas. Close `New-1`, choose New again → `New-3`, not reused `New-1`.
 
-A passing build or standalone browser fixture alone does not satisfy host/provider integration. Record actual commands, UI observations, and any unavailable environment prerequisite honestly; do not mark the seven items complete without these outcomes.
+A standalone browser fixture alone does not satisfy host/provider integration. Record actual UI observations and unavailable prerequisites honestly; do not mark requirements complete without their corresponding outcomes.
 
 ## Assumptions and contingencies
 

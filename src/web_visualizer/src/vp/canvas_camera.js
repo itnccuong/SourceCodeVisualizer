@@ -78,6 +78,39 @@ class CanvasCamera
     this.notifyChanged();
   }
 
+  fitNode(frame, insets = {top: 48, bottom: 144, left: 24, right: 24})
+  {
+    if (!frame || !frame.isConnected || !this._world.contains(frame))
+      return { status: "empty" };
+
+    const viewport = this._navArea.getBoundingClientRect();
+    const availableWidth = viewport.width - insets.left - insets.right;
+    const availableHeight = viewport.height - insets.top - insets.bottom;
+    if (availableWidth <= 0 || availableHeight <= 0)
+      return { status: "empty" };
+
+    const bounds = this.frameBounds(frame);
+    if (bounds.width <= 0 || bounds.height <= 0)
+      return { status: "empty" };
+
+    // Fit the frame, not its code body; do not enlarge small nodes past native size.
+    const idealScale = Math.min(1, availableWidth / bounds.width, availableHeight / bounds.height);
+    const scale = Math.max(CanvasCamera.MIN_SCALE, idealScale);
+    if (typeof WindowPositioner !== "undefined" && WindowPositioner.cancelReveal)
+      WindowPositioner.cancelReveal(this._world);
+
+    this.setState({
+      // Center within the usable viewport. If minimum zoom prevents fitting
+      // one axis, align that axis's beginning so the heading stays accessible.
+      centerX: bounds.x + Math.min(bounds.width, availableWidth / scale) / 2
+        + (insets.right - insets.left) / (2 * scale),
+      centerY: bounds.y + Math.min(bounds.height, availableHeight / scale) / 2
+        + (insets.bottom - insets.top) / (2 * scale),
+      scale
+    });
+    return { status: "ok", exceedsMinimum: idealScale < CanvasCamera.MIN_SCALE };
+  }
+
   fitAll(insets = {top: 48, bottom: 144, left: 24, right: 24})
   {
     if (!this._graph || this._graph.nodes.size === 0)

@@ -5,9 +5,10 @@ import * as utils from '../utils';
 import { promises } from 'dns';
 import { request } from 'http';
 import { VsCodeWindow } from './adapter/vscodewindow';
-import { DefinitionOutlineResult, DefinitionTarget } from '../outlineproviderAPI/outlineprovider';
+import {DefinitionOutlineResult} from '../outlineproviderAPI/outlineprovider';
 import {translateOutlineRanges} from './outline_entities';
 import {CanvasFileV1, parseCanvasFile} from './canvas_format';
+import {chooseDefinitionTarget} from './definition_picker';
 
 export interface ResolvedCanvas {
   canvas: CanvasFileV1;
@@ -341,7 +342,7 @@ export class VisualizingTab
 
       const definitionResults = await vscode.commands.executeCommand<DefinitionOutlineResult>(
         'vp.executeDefinitionProvider', documentUri, position,
-        (targets: readonly DefinitionTarget[]) => this._chooseDefinitionTarget(targets));
+        chooseDefinitionTarget);
       if (definitionResults === null) {
         response = {type: 'outline_cancelled', requestedId};
       } else if (definitionResults === undefined) {
@@ -472,45 +473,6 @@ export class VisualizingTab
     throw new Error(`Invalid ${name}: expected nonnegative integer line and character values.`);
   }
 
-  private async _chooseDefinitionTarget(targets: readonly DefinitionTarget[])
-    : Promise<DefinitionTarget | undefined>
-  {
-    const items = await Promise.all(targets.map(async target => {
-      const {uri, selectionRange} = target;
-      const filename = utils.path_getFilename(uri.path);
-      let label = filename;
-      let detail = uri.toString();
-      if (/\.pyi$/i.test(uri.path)) {
-        detail += '\nType stub — declaration only';
-      }
-      try {
-        const document = await vscode.workspace.openTextDocument(uri);
-        const isFileRoot = selectionRange.isEmpty
-          && selectionRange.start.line === 0 && selectionRange.start.character === 0;
-        if (!isFileRoot) {
-          const firstLine = document.getText(selectionRange).split(/\r?\n/, 1)[0].trim();
-          if (firstLine) {
-            label = firstLine;
-          }
-        }
-      } catch {
-        detail += '\nSource unavailable';
-      }
-      return {
-        label,
-        description: `${vscode.workspace.asRelativePath(uri)}:${selectionRange.start.line + 1}:${selectionRange.start.character + 1}`,
-        detail,
-        target
-      };
-    }));
-    const selected = await vscode.window.showQuickPick(items, {
-      placeHolder: 'Select a definition to open',
-      matchOnDescription: true,
-      matchOnDetail: true,
-      canPickMany: false
-    });
-    return selected?.target;
-  }
 
   // -------------------------------------------------------------------------
 

@@ -1,5 +1,18 @@
 # Change Log
 
+## [v0.2.5]
+
+- Center and fit the selected node when navigating through Nodes, preserving its layout, collapse/scroll state, and group selection. Reserve toolbar/minimap space and keep oversized node headings accessible at minimum zoom.
+
+## [v0.2.4]
+
+- Make multiple-definition choices distinguishable with declaration source, short file/line locations, member summaries, source origins, and explicit declaration-only labels.
+- Add a source-preview button to the definition picker. Preview keeps the picker open; accepting selects the exact target and Escape cancels without choosing a fallback.
+
+## [v0.2.3]
+
+- Fix TypeScript anonymous callback extraction, including the Promise executors in `VisualizingTab`, so valid `<function>` symbols no longer prevent class/file visualization. Preserve strict checks for truncated callback bodies.
+
 ## [v0.2.2]
 
 - Clarify language support in the GitHub and Marketplace READMEs with grouped supported, experimental, and legacy language tiers, definition lookup requirements, and parser components.

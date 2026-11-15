@@ -7,9 +7,7 @@ Add plain YAML manifest exploration to the existing VS Code canvas. The user sel
 
 ### 1. Add a source-preserving YAML provider
 
-After approval, persist this complete plan to `features/yaml-language-support/plan.md` before implementation. Leave `specs/` unchanged.
-
-Add production dependency `"yaml": "1.10.3"` to `src/vscodeextension/package.json` and update its lockfile with `npm install --save-exact yaml@1.10.3 --ignore-scripts` from that package directory. Retain the existing compiler and VS Code engine range. This parser exposes AST plus CST source locations. Do not depend on the installed dev-transitive `js-yaml` value loader/listener or require a Red Hat YAML extension.
+Add production dependency `"yaml": "1.10.3"` to `src/vscodeextension/package.json` and its lockfile. Retain the existing compiler and VS Code engine range. This parser exposes AST plus CST source locations. Do not depend on the dev-transitive `js-yaml` value loader/listener or require a Red Hat YAML extension.
 
 Create `src/vscodeextension/src/outlineproviders/outlineprovideryaml.ts`, exporting `class VpOutlineProviderYaml implements VpOutlineProvider`. No equivalent source-backed YAML provider exists. Implement the existing interface without changing it:
 
@@ -134,7 +132,7 @@ The provider must reject bad YAML, so its normal command paths need reliable err
 - Add rejection handling to the existing parent-navigation promise, covering provider and translation failures. Post the same error-card shape with the original `requestId`/`requestPanel`. In `_processFoundOutlineEntities`, route its returned-Error branch through that same reply shape instead of a notification that leaves the ticket pending.
 - Copy the error-to-string handling already used by `_getOutlineAndSend`; preserve the existing empty-result `Definition not found` behavior and successful routes. No retries, parser fallback, or broader host refactor.
 
-Steps 1–4 are dependent; step 5 can be implemented independently after its error contract is fixed here. Enable YAML registration only when all five are present. Fixtures/tests can be prepared independently. No changes are expected in `outlineutils.ts`, `outline_entities.ts`, `canvas_format.ts`, or webview sources. Language-server tooling reported no configured server during planning; use scoped source searches unless one becomes available. No existing exported API changes are required.
+Steps 1–4 are dependent; step 5 can be implemented independently after its error contract is fixed here. Enable YAML registration only when all five are present. Fixtures/tests can be prepared independently. No changes are expected in `outlineutils.ts`, `outline_entities.ts`, `canvas_format.ts`, or webview sources. No existing exported API changes are required.
 
 ## Critical files & anchors
 
@@ -191,50 +189,21 @@ service:
 
 Expected navigation: file → `jobs:` → `- name: build` → `env:` → `FLAGS:` opens distinct connected windows. `name: build`, `config: *base`, and `image: *image` remain source in the item. `FLAGS:` shows `[fast, safe]`. Either `*base` opens/reuses `defaults: &base`; `*image` opens the scalar-anchor window showing `alpine:3.20`. File retains `---` before `service:`; `service:` → `metadata:` shows `name: demo`. This fixture is source data, not a deployment to execute.
 
-### Commands and live acceptance
+### Live acceptance
 
-From the repository root, after dependency installation:
+Run the complete extension-host suite with Python/Pylance available. Use a real VS Code development host without third-party YAML extensions for YAML acceptance; browser backend emulation alone is not runtime proof. Inspect rendered windows and actual editor selections.
 
-```sh
-npm run build:ext
-RUN_DIR=$(mktemp -d /tmp/scv-yaml.XXXXXX)
-VSCODE_CLI=1 '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir="$RUN_DIR/test-profile" \
-  --extensions-dir="$HOME/.vscode/extensions" \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-
-The installed VS Code executable was found during planning. The complete suite requires `ms-python.python` and `ms-python.vscode-pylance`, although YAML does not. Use the installed-current-VS-Code route: the historical `npm run test:ext` launcher pins VS Code 1.61.1 and prior results report Python-extension setup failure. Do not claim that legacy launcher passes.
-
-Launch a separate development host without third-party YAML extensions for visual proof:
-
-```sh
-VSCODE_CLI=1 '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir="$RUN_DIR/live-profile" \
-  --extensions-dir="$RUN_DIR/yaml-only-extensions" \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --remote-debugging-port=9345 \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles/yaml"
-```
-
-Inspect actual commands, rendered webview screenshots, and source selections. Browser backend emulation alone is not YAML runtime proof.
-
-1. Open the fixture using **Visual Programming: Visualize File (Local)** and Explorer **Visualize This (Local)**. Follow the chain/aliases above through rows and double-click/F12. Repeated aliases reuse the target; different source tokens retain distinct edges.
-2. Inspect headings, multiline indentation, flow delimiters, comments, line numbers, and metadata. Toggle comments: `# Shared defaults` hides/shows; `echo "# literal"` stays. Resize/scroll/zoom, then follow an alias; its edge remains anchored to the source token.
+1. Open the fixture through **Visualize File** and Explorer **Visualize This**. Follow the container/alias chain through rows and double-click/F12. Repeated aliases reuse the target; different source tokens retain distinct edges.
+2. Inspect headings, multiline indentation, flow delimiters, comments, line numbers, and metadata. Toggle comments: `# Shared defaults` hides/shows while `echo "# literal"` stays. Resize/scroll/zoom, then follow an alias; its edge remains anchored to the source token.
 3. Use **Open parent** from a sequence item, nested mapping, and scalar-anchor target. **Show in code** selects the mapping heading, sequence dash, or anchor start.
-4. Before step 5, reproduce the two host error boundaries with existing commands: visualize an ordinary YAML file while YAML is still unregistered; then visualize a valid temporary TypeScript function, change that temporary document's language mode to YAML, and invoke **Open parent** from its existing node. These exercise concrete provider rejection without changing analyzed code or shipping provisional registration. After YAML and step 5 are enabled, use a temporary `.yml` copy with CRLF/Unicode before an alias and repeat navigation. Open malformed/unsupported-tag sources through file and selected-position commands: one actionable diagnostic, not a fabricated diagram or duplicate generic failure. Then open valid YAML, introduce a syntax error in the temporary source, and invoke **Open parent** from its existing window: one error card settles the ticket. Repair it and repeat successfully. Provider-only assertions do not prove host settlement.
-5. Save a canvas containing file, nested containers, two alias edges, and scalar-anchor node. Change geometry/collapse/comment state first. Load into a separate tab: same state, current YAML source, correct targets, no duplicate nodes. Re-save and compare graph/reference content. Reorder a sequence in a temporary fixture and reload: uncertain targets become unavailable rather than a different item. Use a separate single-document copy to demonstrate comment insertion preserving a mapping-path target.
-6. From `src/vscodeextension`, run `npx --no-install vsce package --no-yarn -o ./release/code-visualizer-local.vsix` and inspect its archive for the runtime `yaml` package. This checks production dependency packaging without overwriting the user's installed extension.
-7. Because step 5 changes shared host error routing, run the required Python regression in another isolated development host with installed Python/Pylance. Reuse the live-host launch with `--user-data-dir="$RUN_DIR/python-profile"`, `--extensions-dir="$HOME/.vscode/extensions"`, and an unused debugging port. Open `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py` read-only: file → `_build_dag` → nested `ingestion_dag`. Inspect rendered headings, decorator metadata, body text, and navigation; open `CONFIG_DIR` and `SQL_TASK_TIMEOUT` too. Do not execute or modify the Airflow file.
+4. Exercise both shared host error boundaries: file visualization with no provider and parent navigation from a node whose document language changed to an unregistered language. After YAML registration, repeat alias navigation with CRLF/Unicode before the alias. Malformed/unsupported-tag sources must produce one actionable diagnostic through file and selected-position commands, not a fabricated diagram or duplicate generic failure. Introduce invalid syntax after opening valid YAML, then invoke **Open parent**: one error card must settle the ticket; repair and repeat successfully. Provider-only assertions do not prove host settlement.
+5. Save a canvas with file, nested containers, two alias edges, and a scalar-anchor node after changing geometry/collapse/comment state. Load into a separate tab: preserve state, current source, correct targets, and no duplicate nodes. Re-save and compare graph/reference content. Sequence reordering must make uncertain targets unavailable, not substitute another item; prepended comments in a single-document source must preserve a unique mapping-path target.
+6. Confirm the production runtime includes the `yaml` package.
+7. Because shared host error routing changes, run the required Python/Pylance regression on the actual Airflow source file `trino_ingestion_dag_factory.py`, read-only: file → `_build_dag` → nested `ingestion_dag`, plus `CONFIG_DIR` and `SQL_TASK_TIMEOUT`. Inspect headings, decorator metadata, bodies, and navigation. Do not execute or modify the file.
 
 ### Planning evidence, not implementation results
 
-Read-only in-memory probes of `yaml@1.10.3` confirmed original CRLF ranges, block/flow/multi-document parsing, preceding-anchor rebinding, cyclic and empty anchors, empty/explicit multiline keys, and duplicate-key/forward-alias errors. Its four declaration files passed installed TypeScript 3.9.10 with strict checking, CommonJS, ES2015, and noEmit: zero diagnostics. No repository implementation/build or application runtime verification has happened yet.
+At planning time, read-only in-memory probes of `yaml@1.10.3` confirmed original CRLF ranges, block/flow/multi-document parsing, preceding-anchor rebinding, cyclic and empty anchors, empty/explicit multiline keys, and duplicate-key/forward-alias errors. Its declarations were compatible with TypeScript 3.9.10 under strict CommonJS/ES2015 checking. These probes were not implementation or application-runtime verification.
 
 Parser references: [v1 API/CST documentation](https://eemeli.org/yaml/v1/), [1.10.3 metadata](https://registry.npmjs.org/yaml/1.10.3), [CST types](https://unpkg.com/yaml@1.10.3/parse-cst.d.ts), [AST types](https://unpkg.com/yaml@1.10.3/types.d.ts).
 
@@ -243,7 +212,5 @@ Parser references: [v1 API/CST documentation](https://eemeli.org/yaml/v1/), [1.1
 - User-selected scope is plain YAML structure plus same-document aliases, not field-specific file links, Kubernetes/CI inference, or template execution.
 - Common scalar-key manifests are supported, not every YAML extension. Unsupported tags/complex keys fail visibly. Existing comment-hidden blank-row compaction remains unchanged.
 - Restoration prioritizes correct identity over speculative recovery: sequence/document-indexed and on-demand anchor nodes restore exactly only when the source hash is unchanged; reopen them after edits.
-- If dependency installation hits the previously documented iCloud filesystem conflict, do not delete/rename user directories. Build and validate an isolated temporary copy with the updated manifest/lockfile; record the limitation and do not claim original-checkout validation.
-- If full-suite Python prerequisites are unavailable, run the new compiled YAML test file using a temporary VS Code test entry that activates the local extension, registers the memory provider, and loads that file with Mocha. Still complete YAML-only live acceptance; report the full-suite prerequisite failure. Do not alter the permanent launcher to bypass unrelated requirements.
-- If port 9345 is occupied, use an unused local debugging port; do not stop the user's editor/services.
-- YAML extraction remains isolated from Python/TypeScript. Shared host error-path changes require the explicit Airflow regression in verification step 7; unavailable Python tooling is a reported validation blocker, not permission to claim that check passed.
+- If full-suite Python prerequisites are unavailable, run the focused YAML provider suite and complete YAML-only live acceptance. Report the missing full-suite prerequisites; do not alter the permanent launcher to bypass them or claim the full suite passed.
+- YAML extraction remains isolated from Python/TypeScript. Shared host error-path changes require the explicit Airflow regression in live acceptance step 7; unavailable Python tooling is a reported validation blocker, not permission to claim that check passed.

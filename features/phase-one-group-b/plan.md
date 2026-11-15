@@ -4,11 +4,6 @@
 Implement R03, R14, R17, and R16 from the approved roadmap. Existing clicks on parameter names in function headings must remain working; R03 separately covers clicking parameter type annotations. Preserve compact decorator presentation and offscreen connection clipping; neither alone completes decorator navigation or clicked-expression anchoring. Python is the primary integration target; do not execute or modify analyzed source.
 
 ## Grounded findings
-- `specs/roadmap.md:60-84` defines all four items, including explicit candidate selection and honest unresolved outcomes.
-- `docs/roadmap-status.md:40-45` records all four as incomplete. Basic parameter clicking, compact metadata, and clipping are existing work to preserve.
-- The host resolves definitions through VS Code providers and adapts document symbols; the webview exchanges `outline_requestByFilePosition` / `visualizeOutline` with request IDs (`docs/architecture-and-development.md:55-120`).
-- Original source lives in `src/vscodeextension/src/` and `src/web_visualizer/src/`; generated `out/`, `release/`, and copied visualizer assets must be rebuilt, not hand-edited.
-- No language server is configured for this assistant session (`xd://lsp` status). Read-only code inspection must establish callsites; implementation must retry references if a server becomes available.
 
 - `VpwOutlineWindow._vp_createClientTitle` currently emits highlighted signature HTML and concatenates attributes into one metadata string. Declaration-row single-click opens its declaration through `BtnOpenDefinition`; leave that gesture intact.
 - `VpwCodeEditor.vp_request_outline_for_selection` uses rendered selection text and a surrounding highlight DOM node. This is insufficient for collapsed multiline headings and two identifiers sharing one text/highlight node.
@@ -26,10 +21,9 @@ Implement R03, R14, R17, and R16 from the approved roadmap. Existing clicks on p
 
 Implement the following steps in order. Steps 2 and 3 share the host contract; step 4 consumes their metadata and settles requests. Step 5 adds range-based geometry to the working navigation path. Keep existing declaration-row single-click behavior; new type navigation is in an opened node's heading, not a second gesture competing with that row's click.
 
-### 1. Establish the approved execution contract and baseline
-- After approval, persist this complete plan to `features/phase-one-group-b/plan.md` before implementation, per `specs/context.md`. Use the existing `ft/phase-1/group-b` branch; do not discard or reset user work. `specs/` remains read-only.
-- In the installed development host, observe the current parameter-name/declaration opening behavior and record its exact gesture/target. The user reports it works; do not treat static absence of a title handler as evidence against that observation or redesign it.
-- Accept the reported R14 defect as established; collect the actual file-root provider response to diagnose it, not another failed visualization merely to reconfirm it. Capture compact-decorator activation and two same-line body lookups as the remaining before-change evidence. Inspect provider results without executing analyzed Python. Do not run the external Airflow file.
+### 1. Preserve the interaction baseline
+- Preserve the user-confirmed working parameter-name/declaration action; do not infer a regression from static absence of a title handler or redesign that gesture.
+- Diagnose the reported R14 defect from the actual file-root provider response, not by repeating a failed visualization merely to reconfirm it. Inspect compact-decorator activation and two same-line body lookups without executing analyzed Python.
 
 ### 2. Resolve and select provider targets before extracting them — R03/R14/R17
 
@@ -66,15 +60,9 @@ Change `provideDefinitionOutline(document, position, chooseTarget?)` on `VpOutli
 - Existing supported source text and `.pyi` declarations may open. `.pyi` is not an implementation: add `Type stub — declaration only` to its node hover metadata and candidate detail. Do not replace `.pyi` with guessed `.py`, execute library code, or probe the filesystem for alternate module names. Non-text/native or unsupported targets stay explicit failures.
 - For nonroot targets, retain smallest selection / end-exclusive document-symbol lookup. An exact selection hit or a provider range matching a declaration range can open that symbol. Before accepting a merely enclosing Python method/class, use step 3's syntax-backed target hook. It may return a proven assignment or the owning function for a proven parameter declaration; otherwise report `No source declaration could be mapped at the resolved location.` Do not open an unrelated same-name symbol, enclosing method, or file as a substitute for an unmapped attribute.
 
-**Affected callers.** Read/recheck before editing. No LSP server was configured during planning; use references if one becomes available, otherwise this exact search gives the migration set:
+**Affected callers.** The contract spans `outlineprovider.ts`, `utils/outlineproviderwrapper.ts`, `utils/outlineutils.ts`, `outlineproviderAPI/extensionactivator.ts`, and `visualprogramming/visualizer.ts`. Migrate active callers of `provideDefinitionOutline`, `vscode_executeDefinitionProvider`, `executeDefinitionProviderForPosition`, and `convert_LocationLinkArray_to_LocationArray`.
 
-```text
-grep pattern:
-provideDefinitionOutline|vscode_executeDefinitionProvider|executeDefinitionProviderForPosition|convert_LocationLinkArray
-path: src/vscodeextension/src
-```
-
-The live contract spans `outlineprovider.ts`, `utils/outlineproviderwrapper.ts`, `utils/outlineutils.ts`, `outlineproviderAPI/extensionactivator.ts`, and `visualprogramming/visualizer.ts`. Active tests affected are `outline_partition.test.ts` and `javascript_function_expression_boundaries.test.ts` under `test/suite/outlineprovider_test/`. `outline_test_python.test.ts` and `outline_test_typescript.test.ts` contain commented callers; `generic_handling_tests.test.ts` has an unused import/name string rather than a definition-query call. Do not resurrect commented test paths. Narrow returned `Symbol | File` values explicitly in active symbol-specific tests.
+Active tests include `outline_partition.test.ts` and `javascript_function_expression_boundaries.test.ts` under `test/suite/outlineprovider_test/`. Narrow returned `Symbol | File` values explicitly in symbol-specific tests; do not resurrect commented callers in older suites.
 
 ### 3. Preserve original decorator positions and open attribute assignments — R17
 
@@ -137,7 +125,7 @@ Build the text index once per render, cache DOM ranges per anchor, and invalidat
 
 ## Verification
 
-Planning inspected source and ran only a read-only Lezer parse of synthetic text. It did not build, run the extension suite, or claim live provider/UI behavior. The following are execution gates after approval.
+The following are implementation acceptance checks, not claims of passing behavior established during planning.
 
 ### 1. Deterministic host regressions
 
@@ -153,35 +141,13 @@ Cases:
 - Extend `python_declaration_boundaries.test.ts` with stacked and qualified multiline decorators. Assert the callable name read from `definitionRange` is the correct terminal identifier and its coordinates remain in the original document. Preserve `async` as nonnavigable and existing full decorator/source boundaries.
 - Migrate the existing JavaScript function-expression navigation assertions to the nullable Symbol/File result. Keep the actual receiver-versus-callable regression coverage.
 
-### 2. Build and run in the installed VS Code host
+### 2. Extension-host regressions
 
-From repository root after implementation:
-
-```sh
-npm run build:ext
-```
-
-Inspect the stitcher, CSS, copy, and TypeScript stages; the script uses semicolon-separated subprocesses and its final exit alone is insufficient. This builds generated assets—never edit them directly.
-
-Use a fresh temporary `RUN_DIR` (for example `mktemp -d /tmp/scv-group-b.XXXXXX`) and retain its actual path for all commands. Run the full suite once after integration; it includes the new focused cases:
-
-```sh
-SCV_ROOT="$PWD" VSCODE_CLI=1 \
-  '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir="$RUN_DIR/test-profile" \
-  --extensions-dir="$HOME/.vscode/extensions" \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-
-The executable and installed Python 2026.10.0/Pylance 2026.4.1 directories were found during planning. This command reuses the installed host; do not use plain Node/Mocha for suites importing `vscode`, and do not invoke the legacy test launcher's VS Code 1.61.1 download/install path. Success requires test output and exit status, not the historical 140-pass record.
+Run the full compiled suite inside the installed VS Code extension host, not plain Node/Mocha. Include the new focused cases and report the actual result rather than inheriting a historical pass count. Provider-backed verification requires Python/Pylance to be available in that host.
 
 ### 3. Real webview interaction and anchor geometry
 
-Start `npm run serve:web` as a named service and open the existing `tests/python_basic_show_class_dark_theme.html` and light-theme counterpart through `browser.open`. Use a throwaway injected source-backed fixture with the real visualizer and a recording backend; no permanent UI framework is added. Use native double-click, keyboard, drag, wheel, and resize input. Inspect actual screenshots plus DOM ranges/endpoints.
+Use the existing `tests/python_basic_show_class_dark_theme.html` and light-theme counterpart with the real visualizer and a recording backend. Native double-click, keyboard, drag, wheel, and resize input plus DOM ranges/endpoints establish geometry behavior; no permanent UI framework is added.
 
 | Input/action | Required visible/state result |
 |---|---|
@@ -198,11 +164,11 @@ Start `npm run serve:web` as a named service and open the existing `tests/python
 | Reopen the same imported file and use **Show in code** | One file node, no `totalRange` exception, correct file at its start. |
 | Source text selection versus non-code header padding, declaration rows, close/collapse/resize | New source interaction works without losing the existing gestures. |
 
-Browser fixture success is geometry evidence only; it is not Python/provider integration. Close automation-owned tabs after inspection.
+Browser fixture success is geometry evidence only, not Python/provider integration.
 
 ### 4. Live Python/provider and Quick Pick proof
 
-Create source-only temporary fixtures under `$RUN_DIR/navigation`, never inside the external Airflow project. Use empty `__init__.py` files for `ingestion/` and `ingestion/yearly_append/`, and:
+Use source-only navigation fixtures isolated from the external Airflow project. Include empty `__init__.py` files for `ingestion/` and `ingestion/yearly_append/`, and:
 
 `ingestion/yearly_append/operators.py`:
 
@@ -235,7 +201,7 @@ class LocalJob:
     shared = "local"
     def __init__(self):
         self.config = {
-            "directory": "/tmp/data",
+            "directory": "input-data",
         }
     @property
     def label(self):
@@ -263,34 +229,11 @@ def unresolved(value: MissingType):
     return value
 ```
 
-Do not execute/import these fixtures; the property exists to check static definition navigation. Create two isolated temporary workspace files: `$RUN_DIR/group-b-fixtures.code-workspace` containing only the fixture folder, and `$RUN_DIR/group-b-airflow.code-workspace` containing only the actual external `airflow-data/dags` folder. In each, set `python.defaultInterpreterPath` to the discovered external `.venv/bin/python` and `python.analysis.extraPaths` to that workspace's single source root. Do not combine the two `ingestion` packages in one analysis path: the temporary regression package must not shadow the real Airflow package.
-
-Planning confirmed these existing paths:
-- `../../MAFC/Workspace/airflow-data/.venv/bin/python`
-- `../../MAFC/Workspace/airflow-data/.venv/lib/python3.12/site-packages/airflow/sdk/definitions/dag.py` (`DAG` near line 305, `dag` near line 1586)
-- `../../MAFC/Workspace/airflow-data/dags/ingestion/common/operators.py`
-
-Launch a separate live host:
-
-```sh
-SCV_ROOT="$PWD" VSCODE_CLI=1 \
-  '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir="$RUN_DIR/live-profile" \
-  --extensions-dir="$HOME/.vscode/extensions" \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --remote-debugging-port=9333 \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$RUN_DIR/group-b-fixtures.code-workspace"
-```
-
-Attach browser inspection to the actual workbench target at `http://127.0.0.1:9333`: list targets first, then `browser.open` with that CDP endpoint and target. Inspect the webview iframe and use the existing **Visual Programming: Visualize File (Local)** / **Visual Programming: Visualize This (Local)** commands. Wait for actual Pylance symbols before opening the diagram; do not add production retries for test-harness readiness.
-
-Run acceptance checks 1–4 in the fixture workspace. For checks 5–8, close only this automation-owned host and relaunch the command with `--user-data-dir="$RUN_DIR/airflow-profile"` and `$RUN_DIR/group-b-airflow.code-workspace`. Reattach to the newly enumerated workbench/webview targets; never reuse stale frame handles.
+Do not execute/import these fixtures; the property checks static definition navigation. Keep fixture and actual Airflow workspaces isolated so their `ingestion` packages cannot shadow one another. Use the real installed Python/Pylance provider and inspect actual provider symbols before opening diagrams; harness readiness must not become production retries.
 
 Acceptance:
 1. **R03:** Open fixture `run`; double-click `Config` in its wrapped/multiline heading → the local `Config` class and a type-token edge. F12 repeats the same target. Preserve the baseline parameter-name/declaration behavior. An unresolved annotation produces an honest unresolved card, not another same-name declaration.
-2. **R14:** In the original-form import, double-click `operators` → the temporary module file; double-click `OracleMonthlyAppendOperator` → its class. Alias `ops` also reaches the provider-resolved file. Reopen the file without duplication and use **Show in code**. The historical external `ingestion/yearly_append` path no longer exists in the inspected workspace; this fixture preserves that exact regression form without modifying external source.
+2. **R14:** In the original-form import, double-click `operators` → the fixture module file; double-click `OracleMonthlyAppendOperator` → its class. Alias `ops` reaches the same provider-resolved file. Reopening must reuse it safely; **Show in code** opens file start. The isolated fixture preserves this import regression without modifying external source.
 3. **R17:** Double-click compact `decorators.dag` metadata → the `dag` function in `decorators.py`. In `LocalJob.inspect`, navigate `config` to its actual multiline assignment and `label` to the property declaration without evaluating its getter. `LocalJob.shared` must not select `RemoteJob.shared`.
 4. **Ambiguity:** Inspect real provider output for `job.config`. If it supplies both classes, use the actual Quick Pick: label/path/line distinguish them; choose `RemoteJob.config` and inspect its bucket assignment. Repeat and press Escape: node count, edges, viewport, and pending-request state remain unchanged. If this installed provider returns only one target, record that limitation and exercise the picker in the same real UI using a temporary extension-host smoke runner with an isolated custom-scheme/plaintext definition+symbol provider and the Python adapter registered for that isolated language in that host. The fixture provider returns two real in-memory assignment locations; the production `VisualizingTab` and picker must still run. Clearly label this deterministic picker proof separately from Pylance evidence; do not claim the provider returned two when it did not.
 5. **Required actual Airflow scenario:** Open `trino_ingestion_dag_factory.py` → `_build_dag` → `ingestion_dag`. Inspect headings, full body text through `execution_timeout=SQL_TASK_TIMEOUT`, compact `@dag` and full hover, then activate its metadata and inspect the provider-selected `dag` definition. Use **Show in code** at each level. Do not execute/import/modify any Airflow file.
@@ -314,8 +257,7 @@ Completion requires observed evidence for all four numbered items and preserved 
 
 - Double-click/F12 and VS Code Quick Pick are user-confirmed choices. Single-target navigation stays direct; no automatic opening of all candidates.
 - Python is the acceptance language. Preserve existing targeted TypeScript/JavaScript behavior and Group A declaration safeguards; do not claim general cross-language parity.
-- An unavailable real Python provider is a verification blocker, not permission to substitute a mock completion claim. First use the confirmed installed extensions directory and existing Airflow virtual environment in the isolated host. Do not install/upgrade project dependencies or alter external workspace configuration merely to make a smoke pass.
-- If 8080 or 9333 is occupied, choose a free port and substitute it consistently in service and browser commands; never stop another process. If the discovered interpreter/source paths have moved, locate their replacements read-only and use only the isolated workspace configuration.
+- An unavailable real Python provider is a verification blocker, not permission to substitute mock completion. Do not install/upgrade dependencies or alter external workspace configuration merely to make a smoke pass.
 - If Pylance omits field document symbols, step 3's syntax-backed target hook is the decided implementation, not a reason to open an enclosing method. If it returns no target at all, retain unresolved status; no workspace-wide name search or runtime inference.
 - For temporarily edited display text, source mapping fails explicitly until the node is reopened. Group B does not add live source synchronization.
 

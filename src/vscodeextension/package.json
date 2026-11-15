@@ -1,7 +1,7 @@
 {
   "publisher": "itnccuong",
   "name": "source-code-visualizer",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "displayName": "Source Code Visualizer (Fork)",
   "description": "Explore code and YAML as connected diagrams, with syntax-aware parsing, comment controls, and saved canvases.",
   "private": true,

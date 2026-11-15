@@ -223,11 +223,9 @@ class CanvasControls
       const activate = () => {
         this.closeNodesDropdown();
         item.window.vp_focus();
-        if (typeof WindowPositioner !== "undefined")
-        {
-          const pos = new WindowPositioner(this._world, null);
-          pos.revealWindow(item.window);
-        }
+        const result = this._camera.fitNode(item.window);
+        if (result.exceedsMinimum)
+          this.setStatus("Node exceeds minimum zoom; showing the start of the node.");
       };
 
       row.addEventListener("click", activate);

@@ -2,143 +2,78 @@
 
 ## Goal and completion
 
-Implemented R03, R14, R17, and R16 from the [approved plan](plan.md). Python is the integration target. Existing declaration-row single-click navigation and non-code header dragging remain available. New source navigation uses double-click or F12; ambiguous definitions use VS Code Quick Pick.
+Implemented **R03, R14, R17, R16** from the [approved plan](plan.md). Python is the integration target. Existing declaration-row single-click navigation and non-code header dragging remain available. New source navigation uses double-click or F12; ambiguous definitions use VS Code Quick Pick. Analyzed source is never executed or modified.
 
-`specs/` was not changed. Analyzed Python files were neither executed nor modified. Work used the existing `ft/phase-1/group-b` branch.
+## Delivered contracts
 
-## Plan as executed
+### Provider targets and request lifecycle
 
-1. Persisted the approved plan before implementation. Launched the installed VS Code development host in isolated profiles. Captured actual Pylance targets and existing declaration/decorator/body behavior.
-2. Cut over definition results to nullable Symbol/File arrays. Normalize and deduplicate provider entries independently; select before extraction; preserve file roots and explicit errors.
-3. Added original decorator callable ranges and the Python syntax-backed assignment/parameter hook. Reused the declaration parser and assignment-boundary recovery.
-4. Bound headings, metadata, and editable body rows through one source-coordinate utility. Completed success/error/cancel settlement and requesting-panel protection.
-5. Added immutable range-based edges, source-aware deduplication, hidden/compact/clipped fallback, and safe file reuse.
-6. Built generated assets, ran extension-host regressions, exercised actual browser geometry, and completed live fixture and actual Airflow navigation.
+- Normalize `Location`/`LocationLink` entries independently, preserving target URI, declaration range, selection range, and optional origin range. Deduplicate identical URI/selection locations, not same-named declarations.
+- One target opens directly. Multiple targets require one explicit selection before extraction. `DefinitionOutlineResult` is `Array<Outline.Symbol | Outline.File> | null`: `null` is cancellation, `[]` is unresolved, and rejection is a concrete lookup/open/extraction failure.
+- Empty `(0,0)` selections open file roots, even when a declaration starts there. A whole-document range matching a declaration remains that declaration. Unmatched nonroot targets do not silently become whole files or enclosing methods.
+- Use the existing adapter only for the supported target language. Preserve actual `.pyi` URIs with **Type stub — declaration only**; never guess an implementation file.
+- `VisualizingTab` translates only the chosen target. Success, error, and cancellation settle exactly one navigation ticket. Disposed requesting panels receive no delayed reply or replacement canvas. **Show in code** is fire-and-forget and leaves no outline ticket.
 
-Integration smoke exposed additional in-scope fixes:
+Host files under `src/vscodeextension/src/`: `outlineproviderAPI/outlineprovider.ts`, `utils/outlineproviderwrapper.ts`, `utils/outlineutils.ts`, `outlineproviderAPI/extensionactivator.ts`, and `visualprogramming/visualizer.ts`.
 
-- Corrected line-local geometry for docker padding/content flow and exact subpixel canvas endpoints.
-- Reconstruct cached DOM ranges when browser reparenting changes their boundary containers.
-- Make **Show in code** fire-and-forget; it has no outline reply and must not leave a ticket.
-- Keep connector target identity synchronized with native redocking/undocking. Source deletion remains effective after dock-parent listeners are cleared.
+### Python declaration identity
 
-## Changes
+`Outline.Attribute.definitionRange` identifies the terminal callable in the original decorator syntax, including qualified/multiline decorators. Full decorator text/range remains intact; descriptive metadata such as `async` stays inert.
 
-| Area | Main source files | Delivered behavior |
-| --- | --- | --- |
-| Provider contract and resolution | `outlineproviderAPI/outlineprovider.ts`, `utils/outlineproviderwrapper.ts`, `utils/outlineutils.ts`, `extensionactivator.ts` | Location/LocationLink normalization, exact target selection, URI preservation, nullable cancellation, file-root navigation, language guard, concrete failures |
-| Python source targets | `outlineproviderAPI/SymbolDefinition.ts`, `lspextenderprovider.ts`, `outlineproviders/lspextenderpython.ts` | Terminal decorator identifier ranges; proven assignment targets; direct parameter ownership; reject RHS/type/index/reference substitution |
-| Host UI and lifecycle | `visualprogramming/visualizer.ts` | Real Quick Pick, selected-only translation, array-shaped errors, cancellation reply, disposed-panel guard, stub explanation |
-| Source surfaces | `web_visualizer/src/utils/source_navigation.js`, `vpw/vpw_code_editor.js`, `vpw/vpw_outline_window.js` and CSS | Immutable UTF-16 indexing, native heading/decorator gestures, highlighted DOM line splitting, mapping-error card, observer cleanup |
-| Requests and edges | `vp/controller.js`, `request_message.js`, `outline_object_functions.js`, `vpw/vpw_world.js`, `vpw_entity_connection.js`, `vgf/vgf_line.js` | Webview-only anchors, settled tickets, distinct-token edges, exact geometry, clipping/fallback tooltips, file identity, redocking identity |
-| Regressions | `definition_navigation.test.ts`, Python declaration boundaries, active JavaScript function-expression tests, outline partition tests | Output-level host coverage; old copy-only normalization test removed; nullable union narrowed explicitly |
+`VpLspExtenderPython.getDefinitionSymbol` reuses syntax-backed declaration/assignment recovery for exact provider-confirmed targets omitted by the document-symbol tree. It accepts proven assignment LHS targets and direct parameter declaration ownership; it does not substitute RHS/type/index references, unrelated same-name fields, or an enclosing method. Property navigation opens source without evaluating getters.
 
-Generated visualizer bundles, CSS, copied extension media, and extension output were rebuilt, not hand-edited.
+Key files: `outlineproviderAPI/{SymbolDefinition,lspextenderprovider}.ts` and `outlineproviders/lspextenderpython.ts`.
 
-## Build and extension-host verification
+### Immutable source mapping and edge anchors
 
-Runtime directory: `/tmp/scv-group-b.475Qqy`. This contained isolated profiles, source-only temporary fixtures, host probes, and evidence. Temporary source/probe scaffolds were removed after inspection.
+- `src/web_visualizer/src/utils/source_navigation.js` binds headings, individual decorator badges, and editable body rows to immutable source text/ranges. Offsets are UTF-16, preserving tabs, CRLF line mapping, surrogate pairs, and original source columns; gutters and synthetic ellipses are excluded.
+- Highlighted DOM is split by original source lines. Re-highlighting/reparenting reconstructs cached DOM ranges without recapturing a later user selection. Local displayed-text edits that diverge from the model report **Source mapping unavailable** and send no stale coordinates.
+- Double-click/F12 emits one request from the intended surface. Native source selection is preserved; declaration rows keep single-click opening and non-source header chrome remains draggable. Owning-window deletion cleans observers/bindings.
+- Range anchors retain their original surface, URI, range, and offsets. Same source range + target reuses an edge; different token ranges keep distinct edges even when they share a target.
+- Visible anchors use the trailing edge of the final token glyph. Nested scrollports/frame bounds clip the point; fully offscreen sources pin to the visible boundary, hidden/collapsed sources use a visible heading/frame, and compact decorators use their own badge edge. Tooltips retain original location and explain fallback.
+- Native redocking/undocking synchronizes target identity. Source deletion removes docked and free edges. File reuse compares `CLASS_TYPE` + URI without symbol-only `totalRange`; **Show in code** uses file start.
 
-### Build
+Webview files under `src/web_visualizer/src/`: `vpw/vpw_code_editor.js`, `vpw/vpw_outline_window.js` and CSS, `vp/{controller,request_message,outline_object_functions}.js`, `vpw/{vpw_world,vpw_entity_connection}.js`, and `vgf/vgf_line.js`.
 
-Ran from the repository root:
+## Behavioral validation
 
-```sh
-npm run build:ext
-```
+### Extension-host regressions
 
-Observed the JS stitcher, CSS concatenation, license/version stages, media copy, and TypeScript compilation. Final integrated build completed with exit 0.
+The full installed VS Code compiled suite reported **163 passing**, runner/process exit 0. It covered normalized/file-root targets, exact candidate selection, nullable cancellation, assignment/parameter/decorator ranges, source reconstruction, and concrete failures. The passing run preceded the final browser-only Show-in-code/redocking corrections; those were subsequently exercised through their actual UI paths, with no later host-contract change.
 
-The first build found a missing non-null assertion in the new decorator-range test; corrected it. Later builds completed all stages successfully.
+Permanent coverage includes `definition_navigation.test.ts`, Python declaration-boundary tests, active JavaScript function-expression tests, and outline-partition tests. An incidental old EOF-whitespace assertion was removed while retaining full source-partition and file-gap invariants.
 
-### Full installed VS Code suite
-
-Ran the installed host, not Node/Mocha and not the legacy download launcher:
-
-```sh
-SCV_ROOT="$PWD" VSCODE_CLI=1 \
-  '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window \
-  --user-data-dir=/tmp/scv-group-b.475Qqy/test-profile-final \
-  --extensions-dir="$HOME/.vscode/extensions" \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-
-**163 passing; extension-host test runner exit 0; process exit 0.**
-
-The preceding full run had 162 passing and one failure: an old JavaScript assertion expected EOF whitespace to be discarded. Removed that incidental assertion rather than re-pinning it; the existing full-partition invariant and new file-gap regression remain. The passing full run preceded the final browser-only Show-in-code/redocking fixes; those were rebuilt and exercised through their actual UI paths afterward. No additional host-contract change followed that passing run.
-
-Focused source-transpiled tests were also run inside the installed extension host during the step-3 gate, with zero failures after initializing the throwaway runner's in-memory provider. This was not a substitute for the full compiled suite.
-
-## Browser interaction and geometry
-
-Served the existing dark/light Python fixtures with `npm run serve:web`. Injected temporary source-backed models exported by the real host and used the real controller/windows/connection implementation with a recording backend. No permanent UI framework was added.
+### Native browser interaction, dark/light themes
 
 | Scenario | Observed result |
-| --- | --- |
-| Multiline `config: Config` heading, native double-click and caret F12 | One request per action, original line 28 / UTF-16 columns 12–18 in the temporary fixture; no source-window drag |
-| `left.config + right.config` in one text run | Distinct source ranges and endpoints; delayed replies retained the original token despite changed selection |
-| Repeat token to same target | One target node and one edge for that range; two different ranges retained two edges |
-| Resize/reflow and source/target header dragging | Endpoint followed the final visible token fragment; non-code chrome still dragged |
-| Native pan and zoom at 0.2, 1, 3 | Visible endpoint error below 0.001 screen px; ordinary cases measured zero error |
-| Nested horizontal scroll | Exact visible token endpoint; offscreen token pinned to the ancestor viewport boundary with location/fallback tooltip |
-| 100-row vertical scroll | Before scroll: clipped fallback. After native scroll to row 100: exact token endpoint, zero error |
-| Tabs, CRLF, non-BMP text, three-digit gutter | Correct UTF-16 line/column and original offsets; gutter excluded |
-| Collapse/expand | Hidden source used heading right-edge fallback, then returned to the token without changing offsets |
-| Hide/restore preceding comment row or token span | Original offsets and target identity unchanged; hidden token used the declared fallback |
-| Identical re-highlighting | Cached token geometry reconstructed; original range and target preserved |
-| Stacked decorators | Each navigable badge dispatched its own original callable range; full hover source retained; `async` double-click emitted no request |
-| Compact/ellipsized decorator | Anchored to its own visible badge edge with `Compact decorator source`, not another decorator or argument |
-| Local displayed-text edit | Visible `Source mapping unavailable`; no request with stale coordinates |
-| Cancel/error/delete before reply | Tickets settled; cancellation created no node/edge; deleted source received no edge; errors used existing visible cards |
-| Reopen file / Show in code | One file node and reused edge; zero-length start range; no `totalRange` exception |
-| Connector drag to another node or empty canvas, then reopen | Stored target matched actual docking; reopen restored a correct edge; source deletion removed docked and undocked edges |
+|---|---|
+| Multiline `config: Config`, double-click and caret F12 | Exactly one request at the original type token; no window drag. |
+| `left.config + right.config`; selection changes before reply | Distinct original ranges/endpoints; delayed edges retained the requested token. |
+| Repeat same token/target | One node/edge for that range; different ranges retained separate edges. |
+| Resize/reflow, header drag, pan/zoom at 0.2/1/3 | Endpoint followed the final visible fragment with error below 0.001 screen px. |
+| Horizontal/vertical nested scrolling, 100-row body | Offscreen fallback pinned to the viewport boundary; visible tokens regained exact endpoints. |
+| Tabs, CRLF, non-BMP text, three-digit gutter | Original UTF-16 line/column and offsets retained; gutter excluded. |
+| Collapse, hidden comment row/token, identical re-highlighting | Original identity unchanged; declared hidden fallback returned to the token when visible. |
+| Stacked/compact decorators | Each badge dispatched its own callable range; full hover retained; `async` emitted no request; compact fallback stayed on its own badge. |
+| Local display edit | Visible mapping error, no stale host request. |
+| Cancel/error/delete before reply | Tickets settled; cancellation created no node/edge; deleted source got no edge; errors used visible cards. |
+| Reopen file, Show in code, redock/free connector | File/edge reuse stayed safe; stored target matched docking; source deletion removed free and docked edges. |
 
-A first geometry probe found an approximately 4.6px source offset; fixed the line origin and canvas coordinate calculation, then measured zero error. A later smoke-harness reset accidentally deleted a reused target; corrected the throwaway fixture isolation before taking vertical-scroll results.
+### Live Python/Pylance and real webview
 
-## Live Pylance and production host/webview
+- Parameter-name declaration-row click preserved its existing behavior. Heading `Config` double-click/F12 opened the local class; unresolved `MissingType` produced a settled **Definition not found** card.
+- Original-form imported `operators` returned an empty `(0,0)` target and opened the module file; imported class opened separately, alias reused the module, and **Show in code** opened file start.
+- Compact `decorators.dag` opened its actual function. `LocalJob.inspect` `config` opened the complete multiline assignment; `label` opened the unexecuted property source; `LocalJob.shared` did not select the remote same-name field.
+- Pylance returned two `job.config` locations. The production picker distinguished paths/positions; choosing the second opened the remote assignment. Escape left node/edge counts and viewport unchanged and returned pending count to zero.
+- In real `trino_ingestion_dag_factory.py` → `_build_dag` → `ingestion_dag`, headings, complete nested body, compact/full decorator metadata, and **Show in code** remained correct. The actual decorator picker offered three `dag` candidates and opened the selected implementation.
+- Real imported `operators.py`, `OracleToIcebergIngestionOperator`, and `_pod_override` opened as file/class/function targets. Same-line `sql` and `_quoted_relation` retained distinct source anchors and target kinds.
+- `self.oracle_columns_sql` in `_prepare` opened its exact `__init__` assignment, not the constructor. `SQL_TASK_TIMEOUT` and `CONFIG_DIR` retained complete values.
+- Actual `Path` opened its provider-selected standard-library source; `bool` opened its real `builtins.pyi` declaration with the stub explanation. `str` extraction failed on `capitalize` and produced a settled **Source navigation failed** card rather than a fabricated implementation.
+- A separately identified deterministic provider failure traversed the production request boundary and displayed its concrete settled error; this is error-boundary evidence, not Pylance evidence.
 
-Used the installed Python 2026.10.0 and Pylance 2026.4.1 extensions, the existing external Airflow Python interpreter, and separate temporary workspace files for the fixture package and actual Airflow DAG root. Their `ingestion` packages were not combined on the analysis path. Actual provider symbols were checked before opening diagrams. No production readiness retries were added.
+## Decisions and limits
 
-### Temporary source-only fixture
-
-- Clicking a parameter name in the file's `run(...)` declaration row opened `run` by the existing single-click action.
-- Double-clicking heading `Config`, then caret F12, opened/reused the local `Config` class with a type-token edge.
-- `MissingType` produced a settled **Definition not found** card.
-- Original-form imported `operators` returned an empty `(0,0)` target and opened the actual module file. The imported class opened separately; alias `ops` reused the module node.
-- **Show in code** opened the module in the real editor at line 0, character 0.
-- Compact `decorators.dag` opened `dag(**options)` in `decorators.py`.
-- `LocalJob.inspect` field `config` opened its complete multiline assignment. `label` opened its property source containing the deliberately unexecuted getter.
-- `LocalJob.shared` opened the local value, not the remote same-name field.
-- Actual Pylance returned two `job.config` locations. The production Quick Pick displayed their paths and line/column values; choosing the second opened the remote bucket assignment. Escape preserved 11 nodes, 11 edges, viewport style, and returned pending count to zero.
-
-### Required actual Airflow file
-
-Opened `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py` → `_build_dag` → nested `ingestion_dag` in the real diagram.
-
-- Inspected original headings and complete nested body through `execution_timeout=SQL_TASK_TIMEOUT` and the closing call.
-- Compact `@dag` retained its full original hover text and callable range at zero-based line 102, columns 5–8.
-- Metadata activation presented three actual Airflow `dag` candidates. Chose the implementation at zero-based line 1585 in the existing `.venv/.../airflow/sdk/definitions/dag.py`; inspected its real function source.
-- **Show in code** opened the source file at `(0,0)`, `_build_dag` at `(95,4)`, and `ingestion_dag` at `(195,8)` in the real editor.
-- Imported `ingestion.common.operators` opened as the actual `operators.py` file. Nested `OracleToIcebergIngestionOperator` opened its class; `_pod_override` opened its function.
-- `_build_dag` `sql` and `_quoted_relation` used different original ranges on the same line and opened the file and function respectively.
-- Opened `operators.py` → `OracleToIcebergIngestionOperator` → `_prepare`. `self.oracle_columns_sql` resolved to the exact `__init__` assignment at zero-based line 34, heading `self.oracle_columns_sql =`, body `oracle_columns_sql`; not the whole constructor.
-- Inspected `SQL_TASK_TIMEOUT = timedelta(minutes=18)` and `CONFIG_DIR = Path(__file__).with_name("config_oracle2iceberg")` as complete assignment nodes.
-- Actual `Path` resolved to `/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py`, not a stub. Separately, actual `bool` from the configuration function's annotation opened the real installed `typeshed-fallback/stdlib/builtins.pyi` URI with **Type stub — declaration only** in metadata/hover.
-- Actual `str` stub extraction failed on `capitalize`. It produced a settled **Source navigation failed** card rather than fabricating an implementation. This remains a supported-failure boundary, not a claim of general stub extraction.
-
-A separate isolated temporary provider deliberately threw `Deterministic provider failure — smoke only`; a real diagram double-click traversed the production host boundary and displayed the concrete settled error. This is deterministic error-boundary evidence, not Pylance evidence.
-
-## Review and limits
-
-- Read-only host review found no actionable introduced issue.
-- Browser review found stale target identity after connector redocking; fixed and verified the original native reproduction plus undocked source deletion. No outstanding review findings were reported.
-- Navigation is static/provider-backed. No runtime receiver inference, property execution, guessed `.py` replacement, cross-language adapter routing, R08 comment toggle, or live source synchronization was added.
-- The existing parser/extraction boundary can reject real library declarations, as observed for `str`. Such failures stay concrete and settled.
-- One optional `Context` investigation remained pending in an automation-owned earlier host and was discarded when that host was closed. It is not counted as passing evidence. Final live host error/stub/Show-in-code checks ended with no pending requests.
-- The assistant LSP tool reported no configured language server; callsite migration used repository inspection. Browser CDP target enumeration required the endpoint's `/json/list` because `browser.targets` rejected direct-CDP enumeration.
-- Closing/restarting owned hosts and activating the Code Diagram tab were necessary when editor navigation or workbench visibility made the webview inactive. No unrelated user process was stopped.
+- Navigation is static/provider-backed: no runtime receiver inference, property execution, guessed `.py` replacement, cross-language adapter routing, live source synchronization, or Group-B comment toggle.
+- Existing extraction can reject real library declarations, as observed for `str`; these supported failures remain explicit and settled, not general stub-extraction success.
+- Fixture and actual Airflow workspaces were isolated to avoid package shadowing. No production provider-readiness retries were added.
+- Browser evidence proves geometry separately from live-provider extraction. Incomplete optional probes were not counted as passing evidence; final live error/stub/Show-in-code checks had no pending requests.

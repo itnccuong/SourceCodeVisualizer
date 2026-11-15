@@ -71,9 +71,11 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - **`vp.executeDefinitionProvider`** is this repository's command: build diagram-ready information.
 - **`vscode.executeDefinitionProvider`** is VS Code's command: find the identifier's definition. Different IDs mean no recursive command loop.
 - A definition target retains URI, full range, selection range, and optional origin range. `DefinitionOutlineResult` is `Array<Symbol | File> | null`: `null` means cancelled, `[]` means unresolved, and a rejection is a concrete lookup/open/extraction failure. Multiple distinct targets require a chooser; non-UI callers without one reject rather than choosing silently.
+- Multiple-definition UI lives in `visualprogramming/definition_picker.ts`. Rows show the declaration's source line rather than only the selected identifier, workspace-relative or common-parent-relative file locations, declaration-only metadata, source origin, and available document-symbol member summaries. Each file's document/symbol request is reused within one picker. Missing optional symbol context does not invent a signature; unavailable files remain explicitly labeled choices. Provider order and target identity are preserved.
+- The picker appears while metadata loads. Its title-bar file button previews the highlighted target's exact source selection in an editor without accepting or closing the picker. Enter accepts the selected target; Escape cancels, including while loading. Disposal detaches handlers and ignores late metadata results. Preview does not execute source or change parser/language support.
 - `VpLspExtenderPython` is **not a language server**. It supplements symbols obtained through installed Python tooling, typically Python/Pylance, with Python-specific header/body ranges.
 - For `class Dog:` containing `def bark(self):`, the current adapter extracts headers `Dog` and `bark(self)`. Shared code creates nested `Symbol` and `Text` parts.
-- `VisualizingTab._translate_outlineRanges2outlineEntities()` fills `displayText` using `document.getText(range)` before sending the tree to the webview.
+- `translateOutlineRanges()` in `visualprogramming/outline_entities.ts` fills `displayText` from validated source ranges before `VisualizingTab` sends the tree to the webview.
 
 ### Declaration Boundaries
 
@@ -81,6 +83,7 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - Python loads `@lezer/python` on first extraction. JavaScript/TypeScript/TSX reuse TypeScript 3.9.10 in JS/TS/TSX mode. Parsing remains declaration-local or uses supplied ancestor context, not a background whole-file index.
 - Each adapter retains one parsed fragment per document in a `WeakMap`. Version, language, and containment govern reuse. Temporary parser wrappers never enter output ranges.
 - An ambiguous TypeScript property or incomplete JavaScript assignment can use supplied ancestor syntax. Missing context, ambiguous matches, and malformed selected syntax produce extraction errors.
+- Anonymous function and arrow expressions are declaration candidates in JavaScript, TypeScript, and TSX, independent of provider display names such as `<function>`. Whole-expression function selections bypass synthetic variable wrappers; anonymous function expressions use a temporary parenthesis wrapper when needed. Cached ancestor syntax can resolve callbacks directly. Wrapper characters never enter source ranges, and incomplete bodies still fail containment/diagnostic checks.
 - The named result contains `rangeHead`, nullable `rangeBody`, `attributes`, `declarationOnly`, optional `rangeDeclaration`, optional display-child projection, and optional `definitionPosition`. A null body means no source body; a zero-width body means an empty implementation.
 - TypeScript bodyless signatures set `declarationOnly`; the webview hides their body area while retaining the signature and navigation. No status text or badge is added. Python `pass`, `...`, and docstrings remain source.
 - Shared traversal sorts a copy of children, keeps source gaps, and rejects crossing/overlapping displayed children. Definition lookup uses end-exclusive containment and target-file ranges.
@@ -109,6 +112,7 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - Empty-canvas left/right/middle drag pans; Shift+left drag starts rectangle selection, with Space+left retaining its pan override. Plain left click without a drag clears group selection; panning preserves it. Background context menus are suppressed so right-drag stays on the canvas; node, popup, and toolbar interactions are excluded.
 - `WindowPositioner.placeWindow()` measures new attached frames, keeps 24 world px clearance, and advances only the new candidate downward. LEFT slots subtract the new width. Missing/deleted anchors use a viewport-relative slot and cannot receive connections.
 - After a batch, `revealWindow()` eases the minimum camera translation over 450ms with smooth acceleration/deceleration, showing the last new frame with a 20px viewport inset; oversized frames align their beginning. The clock starts on the first rendered frame so response layout cannot consume the transition before it is visible. A new response supersedes the old reveal. Native wheel, pointer/keyboard input, drag, deletion, or external camera changes cancel it without swallowing input or snapping later. Active user gestures take priority over auto-reveal.
+- Nodes-list activation uses `CanvasCamera.fitNode()` rather than minimum-distance reveal: center the selected outer frame within toolbar/minimap insets, fit between 0.2 and 1 scale, and cancel any pending reveal. If minimum zoom prevents full fitting, show the frame's beginning with a limit message. Node position/size, collapsed state, body scroll, graph identity, and group selection remain unchanged.
 - New windows fade in while their inner presentation translates 20px over 300ms. The outer measured frame stays at its final geometry; per-frame movement notifications keep source connections attached. Interaction ends the entrance immediately. Reduced-motion preferences disable both animations. Reused windows keep their size/position and do not reanimate.
 - Each navigation request carries a webview-only `sourceAnchor` in its local ticket; only `{uri, cursorStart, cursorEnd}` crosses to the host. The host validates positions and resolves `cursorStart`. Repeating the same range to the same target reuses its edge; different ranges on one surface keep distinct edges even when their target node is shared.
 - `VpwCodeEditor` reserves a shared line-number gutter from the rendered row count (minimum two digits). Right-aligned CSS counters sit outside code flow, with a 12px gap before the source column. They are non-selectable and ignore pointer events; no number text is added to source rows or selection offsets.
@@ -136,249 +140,50 @@ Requests use `requestId`; outline replies use `requestedId`. The controller reme
 - A message send is not a normal function call: Step Into does not cross into the other runtime. Set a breakpoint on each receiving side.
 - Boxes are added to the DOM during `_visualizeOutline()`. Connection docking starts a timer-based animation; movement events later update line endpoints. Creating a connection and visibly drawing its line are separate steps.
 
-## II. How the package.json Build Scripts Work
+## II. Development Boundaries
 
-### npm Script Rules
+Requirements: Node.js 24 LTS (or Node.js 22.13+), npm 10+, Python 3, and `tar`. These are development-tool requirements, not a promise of compatibility with every VS Code engine version.
 
-`npm run NAME` executes `scripts.NAME` from the selected package. npm automatically checks for matching hooks:
+### Commands
 
-```text
-preNAME → NAME → postNAME
-```
+Run from the repository root:
 
-For example, `npm run compile` runs `precompile`, then `compile`, then `postcompile`, wherever those scripts exist. Running `tsc` directly does not run npm hooks.
-
-- `A && B`: run B only if A succeeds.
-- `A; B`: attempt B even if A fails.
-- `>` overwrites an output file; `>>` appends.
-- A `cd` inside a child npm script does not permanently change the calling script's directory.
-
-### A. Every Command Available from the Repository Root
-
-The root `package.json` exposes five scripts. **W** below means the complete canvas pipeline in subsection C; **E** means the complete extension pipeline in subsection B. These are diagram labels, not additional npm commands.
-
-Arrows show execution order, not concurrent work. A referenced pipeline finishes before execution continues to the next node.
-
-```mermaid
-flowchart TD
-    BW["npm run build:web"]
-    BE["npm run build:ext"]
-    B["npm run build"]
-    S["npm run serve:web"]
-    T["npm run test:ext"]
-
-    BW --> WC["cd src/web_visualizer"]
-    WC --> W["W: npm run compile<br/>Expanded in subsection C"]
-
-    BE --> EC["cd src/vscodeextension"]
-    EC --> E["E: npm run compile<br/>Expanded in subsection B"]
-
-    B --> B1["1. npm run build:web → W"]
-    B1 -->|"After success"| B2["2. npm run build:ext → E<br/>E runs W again"]
-
-    S --> SC["cd src/web_visualizer"]
-    SC --> SS["npm run serve"]
-    SS --> SL["python3 -m http.server 8080"]
-
-    T --> TC["cd src/vscodeextension"]
-    TC --> TT["npm run test"]
-    TT --> TP["Automatic pretest hook"]
-    TP --> T1["1. npm run compile → E"]
-    T1 -->|"After success"| T2["2. npm run lint"]
-    T2 --> TL["eslint src --ext ts"]
-    TL -->|"After pretest succeeds"| TR["test script:<br/>node ./out/test/main.js"]
-```
-
-- Root `build` runs `npm run build:web && npm run build:ext`. It currently builds the canvas **twice**: once explicitly, then again inside E.
-- `serve:web` starts a long-running static server. It does **not** build first or rebuild when source changes.
-- After building and serving, open `http://localhost:8080/tests/index.html` for browser fixtures. These use emulated backend data, not live Python analysis.
-- `test:ext` builds and lints before starting the integration-test program. Its behavior after the Node command is expanded in subsection D.
-- Running a root build command alone does not launch or reload VS Code.
-
-### B. E — Complete Extension Compile Pipeline
-
-**Package and working directory: `src/vscodeextension/`.**
-
-The scripts that connect the calls are:
-
-```json
-"build_dependencies": "cd ../web_visualizer && npm run compile",
-"get_dependencies": "cp -f ../web_visualizer/release/* ./media/",
-"precompile": "npm run build_dependencies && npm run get_dependencies",
-"compile": "tsc -p ./"
-```
-
-```mermaid
-flowchart TD
-    E["npm run compile"]
-    PRE["1. Automatic precompile hook"]
-    DEP["npm run build_dependencies"]
-    CD["cd ../web_visualizer"]
-    W["npm run compile → complete W pipeline<br/>Expanded in subsection C"]
-    GET["npm run get_dependencies<br/>Working directory is src/vscodeextension again"]
-    COPY["cp -f ../web_visualizer/release/* ./media/"]
-    COMPILE["2. compile script"]
-    TSC["tsc -p ./"]
-    DONE["Finished<br/>No extension postcompile hook is defined"]
-
-    E --> PRE --> DEP --> CD --> W
-    W -->|"After success"| GET --> COPY
-    COPY -->|"After precompile succeeds"| COMPILE --> TSC --> DONE
-```
-
-The child `build_dependencies` script changes its own shell's directory to build the canvas. That does not change the parent npm process's directory: `get_dependencies` still starts in `src/vscodeextension/`.
-
-The leaf command `tsc -p ./` uses `src/vscodeextension/tsconfig.json`. It translates extension `.ts` files into separate `.js` files under `out/`, with `.js.map` source maps. It does not combine them into the canvas bundle.
-
-For example:
-
-```text
-src/vscodeextension/src/outlineproviders/lspextenderpython.ts
-    → src/vscodeextension/out/outlineproviders/lspextenderpython.js
-    → src/vscodeextension/out/outlineproviders/lspextenderpython.js.map
-```
-
-### C. W — Complete Canvas Compile Pipeline
-
-**Package and working directory: `src/web_visualizer/`.**
-
-```mermaid
-flowchart TD
-    W["npm run compile"]
-    PRE["1. Automatic precompile hook"]
-    MK["mkdir -p ./release"]
-    COMPILE["2. compile script: npm run build_system"]
-    JS["npm run build_js"]
-    JSL["python3 ../jsstitcher ./src/main.js<br/>&gt; ./release/web_visualizer.js"]
-    CSS["npm run build_css"]
-    CSSL["CSS leaf command<br/>Exact shell expression below"]
-    LIC["npm run build_license"]
-    LICL["License leaf commands<br/>Exact shell expressions below"]
-    POST["3. Automatic postcompile hook"]
-    VERSION["npm run release_version"]
-    VER["echo ${npm_package_version}<br/>&gt; ./release/web_visualizer_version"]
-
-    W --> PRE --> MK --> COMPILE --> JS --> JSL
-    JSL --> CSS --> CSSL --> LIC --> LICL
-    LICL -->|"If compile returns success"| POST --> VERSION --> VER
-```
-
-The exact CSS leaf command is:
-
-```bash
-cat `find ./src -type f -name "*.css"` > ./release/web_visualizer.css
-```
-
-`find` supplies the CSS filenames; `cat` concatenates their contents into the output file.
-
-The exact license leaf commands are:
-
-```bash
-echo 'This file is generated by package.json' > ./release/LICENSE;
-cat `find . -type f -name "LICENSE" -not -path "./release/*"` >> ./release/LICENSE
-```
-
-The first command writes a header; the second finds license files outside `release/` and appends their contents.
-
-`npm_package_version` is provided by npm from this package's version. The version file therefore describes the canvas package, not the root package.
-
-**Failure-handling detail:** `build_system` is defined as:
-
-```json
-"build_system": "npm run build_js; npm run build_css; npm run build_license;"
-```
-
-These semicolons mean it attempts the next command even if the preceding one fails. A later successful command can mask an earlier failure, so inspect the build log rather than relying only on the final exit status. Other steps connected with `&&` stop when the preceding command reports failure.
-
-### D. What the Test Leaf Command Does Next
-
-`node ./out/test/main.js` is the end of the package-script expansion, but it launches more work through JavaScript:
-
-```mermaid
-flowchart TD
-    A["node ./out/test/main.js"]
-    B["Use VSCODE_EXECUTABLE_PATH or download current stable VS Code"]
-    C["resolveCliArgsFromVSCodeExecutablePath(...)<br/>Isolated test profile and extension directory"]
-    D["spawnSync(cliPath, arguments)<br/>Install Python + Pylance; require successful exit"]
-    E["runTests(...)<br/>Launch the selected VS Code with this local extension"]
-    F["Load out/test/suite/index<br/>Execute integration tests"]
-
-    A --> B --> C --> D --> E --> F
-```
-
-The launcher is `src/vscodeextension/src/test/main.ts`. It uses the maintained `@vscode/test-electron` package for downloading, CLI setup, and running the extension tests. It opens `src/test/testfiles`, checks language-extension installation failures, and runs Mocha 12 in a current VS Code extension host. The default test target is current stable; set `VSCODE_EXECUTABLE_PATH` to test a local executable without downloading VS Code. This workflow does not validate the minimum advertised VS Code version.
-
-
-### What Performs Each Build Operation?
-
-| Tool/configuration | Actual responsibility |
+| Command | Effect |
 | --- | --- |
-| `src/jsstitcher/__main__.py` | Python bundler entry point |
-| `jslinker/parse_file_content.py` | Extract custom `require ("file.js");` declarations and remove them from emitted content |
-| `jslinker/file.py` | Resolve dependencies relative to the declaring file |
-| `jslinker/js_stitcher.py` | Discover/order dependencies, then concatenate their contents |
-| Extension `tsconfig.json` | TypeScript source root `src`, output `out`, CommonJS modules, ES6 target, strict checking, and source maps |
-| Development-only TypeScript 5.9, `tsc -p ./` | Type-check and compile extension/test TypeScript; not shipped in the VSIX and does not bundle the canvas |
+| `npm run build:web` | Regenerate the canvas JS/CSS bundle |
+| `npm run build:ext` | Rebuild the canvas, copy assets to `media/`, and compile extension TypeScript into `out/` |
+| `npm run serve:web` | Serve existing browser fixtures; does not build or use live language providers |
+| `npm run test:ext` | Compile, lint, and launch extension-host integration tests |
+| `npm --prefix src/vscodeextension run package` | Build the VSIX, notices, and corresponding source archive; does not install or publish |
 
-The custom bundler starts at `web_visualizer/src/main.js` and follows reachable dependency declarations; it does not include every JS file automatically. Preserve the existing `require ("...");` format: it is a text-based build directive, not a standard browser import. The bundle remains JavaScript, closer to preprocessed/combined source than a C `.o` file.
+The custom canvas bundler follows `require ("file.js");` declarations reachable from `src/web_visualizer/src/main.js`. These are build directives, not browser imports. `jsstitcher` discovers/orders dependencies and concatenates them; CSS is concatenated separately. Extension TypeScript compiles to CommonJS with source maps and is not part of that canvas bundle.
 
-### Development Versus Release
+The canvas `build_system` script uses semicolon-separated commands, so a later success can mask an earlier failure. Inspect failures rather than relying only on the final exit status.
 
-- F5 uses root `.vscode/launch.json` → task `build:ext` → the pipeline above, then launches the development host.
-- Saving does not trigger hot reload. Reliable loop: **save → stop debugging → F5 → Visualize This again**.
-- `watch` in the extension package runs only the TypeScript watcher; it does not rebuild the canvas or reload the running extension.
-- `src/package.json` is a separate packaging/release orchestrator. None of the five root scripts invokes it. Its `compile` path packages the extension and copies release artifacts, unlike the daily development build.
-- The extension's `package` script runs `vsce package`; it does not upload anything. Its `vscode:prepublish` hook compiles the extension/webview, then generates release notices and a corresponding first-party source archive.
+### Running Local Code
 
-#### Dependency Security and Development Requirements
+- F5 uses `.vscode/launch.json` and `build:ext` to run repository code in an Extension Development Host. Saving alone does not hot-reload it: save, stop debugging, then F5.
+- The installed fork ID is `itnccuong.source-code-visualizer`; public commands use `source-code-visualizer.*` and the menu label is **Visualize This**.
+- A local VSIX with that same ID replaces the installed Marketplace copy. Building/packaging alone changes neither installation nor a running host. F5 overrides the installed same-ID extension only in its development window.
+- To install a packaged build: `code --install-extension src/vscodeextension/release/source-code-visualizer.vsix --force`, then **Developer: Reload Window**. Do not enable inherited legacy builds alongside the fork: their shared internal `vp.*` registrations can collide.
+- Keep `features/` focused on feature contracts, implementation logic, meaningful behavioral verification, and limitations. Routine build/install outcomes do not need separate feature records.
 
-- Use Node.js 24 LTS (or Node.js 22.13+), npm 10+, Python 3, and `tar` for development. The maintained packaging/test tools require modern Node.js. These are build requirements, not a new promise of compatibility with every VS Code extension-host version.
-- ESLint 10 reads `src/vscodeextension/eslint.config.cjs` and uses `@typescript-eslint/parser` 8. The prior config had no lint rules; this migration preserves that parser-only policy rather than silently enabling new style rules.
-- Mocha 12 supplies a CommonJS entry point for the integration harness. Test discovery uses the promise API of `glob` 14.
-- `@vscode/vsce` replaces legacy `vsce`; `@vscode/test-electron` replaces the duplicate `vscode-test` package. No compatibility imports or unused ESLint plugin/glob typings remain.
-- The shipped TypeScript parser is still **3.9.10**, now installed as `typescript-parser` via npm alias. Runtime imports use that alias; the development compiler is separate. Release notice generation follows aliases to their original package metadata and preserves their notices.
-- `package.json` overrides `minimatch` to patched 11.x and uses the direct patched `glob` version for transitive consumers. Current tool releases otherwise constrain these packages to vulnerable major versions. Validate lint, test discovery/execution, and VSIX file selection when changing these overrides; do not remove them based only on parent-package age.
-- After dependency changes, run `npm ci --ignore-scripts`, `npm audit`, `npm audit --omit=dev`, `npm test`, and `npm run package` in `src/vscodeextension`. Both audits must be reviewed; dev-only vulnerabilities still affect release tooling. A clean advisory scan is not an application-security certification. Vendored highlight.js is outside npm audit.
+### Test and Dependency Boundaries
 
+- `src/vscodeextension/src/test/main.ts` uses `@vscode/test-electron` with current stable VS Code, or `VSCODE_EXECUTABLE_PATH`. It installs Python/Pylance into `.vscode-test/extensions`, propagates installation failures, and uses a short temporary user-data directory. This does not certify the minimum advertised VS Code version.
+- A development extension path supersedes an installed same-ID package. To verify an installed package, use a separate driver, an explicit installed-extensions directory, and check Production mode; do not confuse that with source-host verification.
+- Runtime syntax parsing uses the pinned `typescript-parser` npm alias. The separate development `typescript` compiler, ESLint, Mocha, VSCE, and test-electron are not runtime dependencies.
+- ESLint's flat configuration preserves the parser-only lint policy; TypeScript performs type checking. Test discovery uses glob's promise API and Mocha's CommonJS entry point.
+- Patched glob/minimatch overrides prevent vulnerable transitive constraints from reintroducing older versions. Review consumers before removing them. Dependency changes require clean installation, full/development and production advisory review, integration verification, and package inspection.
+- Vendored highlight.js is outside npm audit. A clean advisory scan is not an application-security certification.
 
-### Extension Packaging and Installation
+### Distribution Boundaries
 
-To run this repository in standard VS Code (outside of an Extension Development Host), package the extension as a local `.vsix` and install it.
-
-#### Fork Extension Identity
-- **Identifier**: `itnccuong.source-code-visualizer` (configured in `src/vscodeextension/package.json`). The publisher is a proposed identity until its owner registers it in the Marketplace.
-- **Display Name**: `Source Code Visualizer (Fork)` (visible in the Extensions view).
-- **Commands**: `Visual Programming: Visualize This` and `Visualize This`, without `(Local)`. Command IDs use `source-code-visualizer.*`.
-- Disable or uninstall `visualprogrammingx.sourcecodevisualizer-local` before using this release. The identity change does not automatically replace that older installation.
-
-#### Packaging and Installing
-From the repository root:
-
-```bash
-# 1. Build dependencies, compile TypeScript, and package VSIX
-npm --prefix src/vscodeextension run package
-
-# 2. Install or overwrite the extension in VS Code
-code --install-extension ./src/vscodeextension/release/source-code-visualizer.vsix --force
-```
-
-#### Iteration Loop After Code Changes
-Source file modifications do not update the installed extension automatically. When code changes:
-1. Run the build/package script (`npm --prefix src/vscodeextension run package`).
-2. Re-install using `--force` (`code --install-extension ./src/vscodeextension/release/source-code-visualizer.vsix --force`). After the initial identity migration, `--force` replaces the installed fork in place.
-3. Reload the VS Code window (`Cmd+Shift+P` / `Ctrl+Shift+P` → `Developer: Reload Window`).
-
-#### Release Contents and Marketplace Upload
-
-- Edit original license inputs, not generated `LICENSE` copies. `scripts/prepare-release.js` preserves the upstream author, LGPLv3, full GPLv3, and highlight.js BSD notices. It inventories all production dependencies and their package-local license/notice files.
-- The VSIX retains runtime dependency notices and includes `source/source-code-visualizer-<version>.tar.gz`. That archive contains the corresponding first-party source, build scripts, lockfile, license inputs, and build instructions. See `src/vscodeextension/SOURCE.md`.
-- README image paths are relative for local preview. The package command supplies explicit monorepo content/image base URLs; the packaged README uses HTTPS URLs. Original GIFs remain outside the VSIX and are not re-encoded.
-- Push the README, GIFs, and source changes to the public fork's `main` branch before uploading. Remote GIFs cannot work until those exact paths exist publicly.
-- Register and own the `itnccuong` publisher at https://marketplace.visualstudio.com/manage, or change `publisher` and the documented extension ID before packaging. Create a new extension and upload `src/vscodeextension/release/source-code-visualizer.vsix`. Packaging does not require a publisher token; uploading does require publisher access.
-- Publish a matching version tag/source release. Keep upstream attribution, the license texts, dependency notices, and dated modification notices. Do not imply upstream endorsement.
-- Inherited attribution review: Microsoft's MIT notice and pinned Dark / Dark+ source references are retained in `src/web_visualizer/src/highlightjs/styles/LICENSE` and the generated package licenses. The original copied theme revision is unknown. The CC BY-SA-attributed `TextUtils.count` helper was removed; its only caller counts newlines directly. See `src/vscodeextension/SOURCE.md` for details. This is not legal advice.
-- Marketplace icon: original `src/vscodeextension/icon.svg` artwork renders to the submitted `icon.png` (256 × 256). Rebuild it with `rsvg-convert --width 256 --height 256 --output src/vscodeextension/icon.png src/vscodeextension/icon.svg`. The editable SVG is excluded from direct VSIX files but retained in the corresponding source archive. No upstream icon pixels are reused.
-
+- `scripts/prepare-release.js` follows the production dependency closure, resolves npm aliases, preserves package-local notices, and generates aggregate license files from original inputs. Do not edit generated licenses.
+- Every VSIX contains `source/source-code-visualizer-<version>.tar.gz`: corresponding first-party source, lockfile, build scripts, and original notices, excluding installed dependencies and generated output. See [source and redistribution requirements](../src/vscodeextension/SOURCE.md) for LGPLv3/GPLv3, third-party licensing, and inherited attribution decisions.
+- README images use relative local links and explicit HTTPS bases when packaged. Original GIFs remain outside the VSIX; preserve their original quality rather than silently re-encoding them. Public README assets must exist at the configured fork URLs.
+- Original icon artwork is `src/vscodeextension/icon.svg`; `icon.png` is the rendered Marketplace asset. The SVG remains in the corresponding source archive.
+- Packaging, installation, and Marketplace publication are distinct operations. Publication requires publisher access and matching public source; local build success is not publication evidence.
 
 ## III. Component and Generated-File Map
 
@@ -402,6 +207,7 @@ Paths in this table are under `src/vscodeextension/src/`.
 | `extension_main.ts` | Activation entry point; initialize API, language adapters, and user commands |
 | `visualprogramming/extensionactivator.ts` | Register Visualize commands; `VpTabManager` obtains the diagram tab |
 | `visualprogramming/visualizer.ts` | `VisualizingTab`: capture selections, request outlines, fill source text, send messages, handle browser requests, navigate editor |
+| `visualprogramming/definition_picker.ts` | Describe definition candidates, preview source, preserve exact selection, and handle cancellation |
 | `visualprogramming/webviewcreator.ts` | Create the Code Diagram webview and its HTML; load assets from `media/` |
 | `outlineproviders/providerregistrer.ts` | Register default language adapters, including Python |
 | `outlineproviders/lspextenderpython.ts` | `VpLspExtenderPython`: derive Python header/body ranges from a document symbol |

@@ -1,6 +1,6 @@
 {
   "name": "source-code-visualizer",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "private": true,
   "description": "Source Code Visualizer development workspace",
   "scripts": {

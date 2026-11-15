@@ -3,10 +3,8 @@
 ## Goal
 Fix our Python and TypeScript code when the LSP gives correct ranges. **LSP chooses the whole declaration. We only split its contents for display.** Python first; both languages must work.
 
-## What is already proved
-Correct fake LSP ranges still caused **7 failures; 3 simple cases passed** in the existing code. Python chose colons inside strings/values; TypeScript chose the wrong braces or invented a semicolon body.
-
-These were Node probes with VS Code stand-ins, not a live LSP test. A small replacement prototype passed 6 Python and 9 TypeScript checks. Production code is unchanged. Full evidence: `local://trusted-lsp-range-evidence.json`.
+## Planning evidence
+Before implementation, fake-provider probes reproduced wrong Python colons and TypeScript braces despite correct declaration ranges. These were stand-in probes, not live LSP validation; prototype checks did not establish production behavior.
 
 ## Main rule
 ```text
@@ -20,24 +18,11 @@ if parts leave whole, or start > end:
 display(whole, parts)
 ```
 
-**No worker. No whole-file parsing. No replacement LSP endpoints.**
-Use bundled syntax libraries, loaded on first use. They still cost CPU/RAM; they only split the LSP-selected text. A supplied parent declaration may provide context for an ambiguous property.
+**No worker, whole-file parsing, project-wide index, or replacement LSP endpoints.**
+Use bundled syntax libraries, loaded on first use, to split the supplied declaration. A parent declaration may provide context for an ambiguous property. The approved Python name-only assignment exception is specified in the follow-up below.
 
 ## Exact edits
 Paths: `EXT/` = `src/vscodeextension/src/`; `WEB/` = `src/web_visualizer/`.
-
-### 0. Save the approved plan and writing rule
-Before implementation, save this file to `features/declaration-boundaries/plan.md`. Follow `specs/context.md` and `docs/architecture-and-development.md`; keep `specs/` read-only. Write `results.md` only after finished validation.
-
-Append this requested rule to root `AGENTS.md`, keeping its existing instructions:
-```markdown
-## Shared Plan Readability
-- Use simple terms and short sentences.
-- Show decisions with code-like steps, small tables, and input → output examples.
-- State what changes and why once; do not repeat the same explanation.
-- Keep exact files, APIs, edge cases, and checks so another agent can implement the plan.
-- Clearly separate proposed work from tested results.
-```
 
 ### 1. Give “no body” a real value
 In `EXT/outlineproviderAPI/lspextenderprovider.ts`, replace the `any[]` result:
@@ -174,30 +159,13 @@ _provideOutlineForRange:
 - `convert_LocationLinkArray_to_LocationArray`: use `targetSelectionRange ?? targetRange`, never `originSelectionRange` in the target file. Keep no-definition behavior.
 - Strict new extraction checks apply to Python/TS, not a redesign of other language adapters.
 
-### 6. Show status text, not fake code
-In `WEB/src/vpw/vpw_outline_window.js`:
-```text
-DECLARATION_ONLY_STATUS = "Declaration only — no body"
+### 6. Hide declaration-only bodies
+As amended by the approved follow-up, keep the `declarationOnly` flag and signature/title navigation, but hide the window's client area. Do not show a status message, row badge, fake source, or editable placeholder. Implemented methods and genuinely empty implementations retain their existing behavior. The existing visualizer sends the flag unchanged; no message format change is needed.
 
-_vp_fillClientarea:
-    if CLASS_TYPE == "Symbol" and declarationOnly == true:
-        show a plain status div; return
-    otherwise use existing rendering
-
-_vp_addDeclaration:
-    keep signature and row navigation
-    if declarationOnly: append a status span beside the signature
-```
-
-Remove the unused `require("process")` import: it survives the browser bundler. Do not create a code editor, fake source range, or editable element for status. The existing visualizer sends the new flag unchanged; no message format change.
-
-In the matching CSS:
-- Div: `.Window_Clientarea_DeclarationOnlyStatus`, padding `12px 14px`.
-- Span: `.Window_DeclarationOnlyBadge`, font size `85%`, left margin `8px`.
-- Both: existing `var(--primary-1-foreground)`, Arial/Helvetica/sans-serif, italic, normal wrapping; no hardcoded theme colors.
+Remove the unused `require("process")` import from `WEB/src/vpw/vpw_outline_window.js`, along with superseded status/badge rendering and styles.
 
 ### 7. Test setup and order
-1. Fix `EXT/test/suite/index.ts` extension ID to `visualprogrammingx.SourceCodeVisualizer`; guard `EXT/test/main.ts` with `if (require.main === module) { main(); }`.
+1. Ensure `EXT/test/suite/index.ts` activates the development extension; guard `EXT/test/main.ts` with `if (require.main === module) { main(); }`.
 2. Migrate the shared result and its existing tests together.
 3. Implement Python, then TS, then shared range handling. Rendering depends only on the new flag.
 4. Add `python_declaration_boundaries.test.ts`, `typescript_declaration_boundaries.test.ts`, and `outline_partition.test.ts` under `EXT/test/suite/outlineprovider_test/`.
@@ -252,7 +220,7 @@ Test construction:
 Use test-only URI schemes for fake providers; dispose them in `finally`. Do not test invented bad-LSP endpoint recovery.
 
 ### Browser and real-extension proof
-In `WEB/tests/shared_files/exampleoutlineData.js`, add source/line-buffer/outline entries for `file:///usr/declaration_boundaries.ts`:
+In `WEB/tests/shared_files/exampleoutlineData.js`, add source/line-buffer/outline entries for the `declaration_boundaries.ts` fixture:
 ```ts
 abstract class DeclarationExamples {
   abstract read(): void;
@@ -268,37 +236,15 @@ Add manual files under `EXT/test/testfiles/`:
 - `python/declaration_boundaries.py`: the Python cases above; decorated async `async_build`; class `Worker` with two methods; ABC/`abstractmethod` containing `pass`; `placeholder` with `...`; `doc_only` with a docstring. Define an identity decorator/import ABC helpers. Add unrelated sentinel statements between declarations; analyze, do not execute.
 - `typescript/declaration_boundaries.ts`: `limit`, `config`, `Reader.read`, abstract `Base.run`, implemented `Worker.read`, `Worker.empty`, and `later`. `Worker implements Reader`. Add unrelated sentinel calls.
 
-Run after implementation:
-|Where|Command/check|
-|---|---|
-|`src/vscodeextension`|`npm install --package-lock-only --ignore-scripts` then `npm ci --ignore-scripts`; retain pinned parser versions|
-|Repository root|`npm run test:ext`; inspect build output as well as exit status|
-|`src/vscodeextension`|`./node_modules/.bin/vsce ls`; confirm TypeScript runtime and all four Lezer package runtimes are included|
-|Repository root|`npm run serve:web`; open both fixture pages at `http://localhost:8080/tests/`; click read/run/empty; verify status/code/empty in both themes, capture screenshots, close tabs|
-|VS Code Run Extension (F5)|Python fixture first, then TS. Use **Visual Programming: Visualize This** (`code-visualizerzer.visualize`), **Visualize File**, and **Show in code**|
+Run the full extension suite with Python/Pylance available. Verify that the packaged runtime contains TypeScript and all four Lezer packages.
 
-Live checks: no sentinel leakage; correct text/status; parent-to-method navigation works; `totalRange` equals raw LSP range. Capture raw/extracted ranges at `OutlineUtils.documentSymbol2outlineSymbol` and record provider versions. Recheck `python/xx_manual_tests.py`: `aaa`, `Test`, `ChildA.foo2`, `breaking_parameters`. Relaunch after source changes.
+In both TypeScript class browser fixture themes, click `read`, `run`, and `empty`: declaration-only bodies stay hidden, implemented source remains visible, and genuine empty implementations keep their existing client area. Parent rows and title **Show in code** navigation must remain usable.
 
-For automated UI access, installed VS Code is `/Applications/Visual Studio Code.app/Contents/MacOS/Code`; use the extension/workspace paths below, an isolated temporary profile, and `--remote-debugging-port=9333`. Attach browser tooling there; if unavailable, use F5/manual observation.
-
-If the old VS Code 1.61.1 runner cannot start, use installed current VS Code from the repository root:
-```sh
-code --new-window \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-Require Python/Pylance. If neither host works, finish reachable checks and report the exact blocker; do not claim live validation.
+In a real VS Code development host, exercise Python first, then TypeScript through **Visualize This**, **Visualize File**, and **Show in code**. Check no sentinel leakage; correct source; parent-to-method navigation; and equality between raw LSP ranges and displayed `totalRange` for full declarations. Capture raw/extracted ranges rather than treating browser backend emulation as provider proof. Recheck `python/xx_manual_tests.py`: `aaa`, `Test`, `ChildA.foo2`, `breaking_parameters`.
 
 ## Approved follow-up — Hide declaration-only bodies
 
-The user requested hiding the body instead of showing the declaration-only message. This supersedes section 6's status div/badge and the corresponding status-text checks above.
-
-- Keep `declarationOnly` in the model and preserve signature/title navigation.
-- Hide the declaration-only window's client area. Remove the status message, row badge, and their unused styles.
-- Leave implemented and genuinely empty method bodies unchanged.
-- Rebuild the browser bundle and extension assets. Click read/run/empty in both themes; verify hidden declaration-only bodies, retained source bodies, and signature navigation. Capture new screenshots.
-- After validation, update the changelog, architecture guide, and this feature's results while preserving earlier evidence.
+The approved UI amendment is incorporated in section 6. It replaces the original declaration-only status text/badge with a hidden body, without changing the model or navigation contract. Verify read/run/empty and collapse/re-expansion in both themes.
 
 
 ## Approved follow-up — Complete Python assignments and compact decorators
@@ -310,7 +256,6 @@ The user approved using the bundled Python parser beyond name-only variable rang
 - Add optional `rangeDeclaration` to the extraction result for this resolved source range. Shared outline construction uses it as the displayed symbol's `totalRange`; raw provider ranges remain unchanged.
 - Keep a single most-recent parsed fragment per document, invalidated on version/language changes. Grow incomplete local fragments geometrically rather than reparsing every physical line.
 - Render multiline attributes as compact first-line labels with ellipsis; expose full original attributes on hover. Constrain metadata to one line within the window so decorators cannot overlap its heading/body.
-- Add regressions for name-only scalar/multiline/annotation/semicolon/chained/reference/malformed/cache cases. Rebuild the extension and run the suite.
-- Required live verification: open `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`, all eight affected constants, and file → `_build_dag` → `ingestion_dag`. Inspect actual headings, values, decorator layout, source navigation, and absence of adjacent-statement leakage. Do not modify or execute the Airflow file.
-- Update architecture/changelog and completed results only after verification. Preserve prior validation as historical evidence.
+- Add regressions for name-only scalar/multiline/annotation/semicolon/chained/reference/malformed/cache cases and run the full extension suite.
+- Required live verification: open the actual Airflow source file `trino_ingestion_dag_factory.py`, all eight affected constants, and file → `_build_dag` → `ingestion_dag`. Inspect headings, complete values, decorator layout, source navigation, and absence of adjacent-statement leakage. Do not modify or execute the file.
 

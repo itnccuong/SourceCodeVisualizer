@@ -10,11 +10,9 @@ Restore opening nodes from heading parameters and the existing slow camera revea
 - Added browser regressions for real connection registration/redocking and heading pointer input not being consumed by group dragging.
 
 ## Validation
-- `npm run build:web`: passed.
 - Chromium `tests/canvas_graph_interaction.html`: 16 passed, 0 failed.
-- Temporary standalone fixture used the real bundle, native double-click on `param1` in a rendered heading, and a simulated host reply with an existing fixture outline. The request retained URI `file:///usr/myfile.py` and range `(10,53)`–`(10,59)`. Two real node frames and one registered edge rendered without browser errors.
-- With reduced motion disabled through Chromium media emulation, sampled 29 camera-change frames over 452 ms. Camera left progressed from -119.5 px through -516.536 px to -885 px. With reduced motion enabled, the target was revealed immediately. The target screenshot was inspected. Temporary fixture removed afterward.
-- `npx --no-install vsce package --no-yarn -o ./release/code-visualizer-local.vsix` from `src/vscodeextension`: browser build, media copy, TypeScript compile, and VSIX packaging passed.
+- Native double-click on `param1` in a source-backed rendered heading retained the original URI and range `(10,53)`–`(10,59)`. A simulated host reply created two real node frames and one registered edge without browser errors.
+- With reduced motion disabled, camera sampling observed intermediate positions over approximately 450 ms. With reduced motion enabled, reveal was immediate.
 
 ## Verification boundary
 The interaction smoke exercised real browser event handling, graph creation, and camera animation with a simulated host response. It did not exercise Pylance or a live VS Code definition provider. No Python extraction code changed.

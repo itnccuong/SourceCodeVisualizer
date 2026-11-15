@@ -77,7 +77,11 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
     const classProperty = parent && (parent.kind === vscode.SymbolKind.Class || parent.kind === vscode.SymbolKind.Interface);
     let prefix = '';
     let suffix = '';
-    if (!rawJavaScript && !topLevel) {
+    const expression = symbol.kind === vscode.SymbolKind.Function
+      && symbol.range.isEqual(symbol.selectionRange);
+    // Whole-expression selections must be parsed as source, not as a synthetic
+    // variable declaration. Named/exported functions remain declarations.
+    if (!expression && !rawJavaScript && !topLevel) {
       if (symbol.kind === vscode.SymbolKind.EnumMember) {
         prefix = 'enum __RangeScope {\n'; suffix = '\n}';
       } else if (symbol.kind === vscode.SymbolKind.Method || symbol.kind === vscode.SymbolKind.Constructor
@@ -96,7 +100,7 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
     const scriptKind = javascript ? ts.ScriptKind.JS : jsx ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
     let input = prefix + text + suffix;
     let tree = ts.createSourceFile(fileName, input, ts.ScriptTarget.Latest, true, scriptKind);
-    if (rawJavaScript && tree.statements.some(statement =>
+    if ((rawJavaScript || expression) && tree.statements.some(statement =>
       ts.isFunctionDeclaration(statement) && (!statement.name || !statement.name.text))) {
       // An anonymous function is an expression, not an invalid named declaration.
       prefix = '('; suffix = ')';
@@ -203,7 +207,7 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
           while (ts.isParenthesizedExpression(expression.parent)) { expression = expression.parent; }
           assignment = ts.isExpressionStatement(expression.parent) && !!this.callable(ts, node, true);
         }
-        const anonymous = javascript && (ts.isFunctionExpression(node) || ts.isArrowFunction(node))
+        const anonymous = (ts.isFunctionExpression(node) || ts.isArrowFunction(node))
           && !ownsCallable(node);
         if (ordinary || assignment || anonymous) {
           const declaration = node as Declaration;

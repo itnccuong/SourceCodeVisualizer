@@ -13,27 +13,17 @@ Clicking a source box body gives its visible scroll viewport a gold outline and 
 
 ## Verification
 
-Built with `npm run build:ext`; observed successful stitcher, CSS, media-copy, and TypeScript stages.
+Native mouse/wheel scenarios in the existing dark/light Python browser fixtures used long and short source-backed nodes:
 
-Served the existing dark/light Python browser fixtures and injected throwaway long/short source-backed nodes. Used native mouse and wheel input; inspected actual screenshots and scroll/canvas state.
-
-- Both themes: a body click applied one gold outline (`rgb(217, 154, 22)`). Long body had 180 rows and 2056px vertical scroll range.
+- Both themes: a body click applied one persistent gold viewport outline.
 - Native vertical scroll moved inside the body while canvas top/left remained unchanged. Overscrolling at top and bottom did not pan the canvas.
 - Moving the pointer onto empty canvas without clicking still scrolled the locked body and did not pan.
 - Horizontal and Shift-wheel scrolling stayed inside the body; horizontal limits did not transfer to canvas.
-- Empty-canvas click cleared the gold lock; subsequent wheel changed canvas top from `0px` to `-96px`.
+- Empty-canvas click cleared the lock; subsequent wheel input panned the canvas.
 - Clicking a second short body transferred the lock. Wheel on that non-scrolling body did not move the canvas. Clicking its header released the lock and restored canvas scrolling.
-- Clicking a body during a canvas wheel gesture transferred ownership immediately: following wheel increased body scrollTop from 0 to 160 while canvas top stayed `-40px`.
-- Ctrl-wheel while locked changed canvas scale from 1 to 1.16 and preserved the body lock. This is the retained explicit zoom shortcut, not ordinary scrolling.
+- Clicking a body during a canvas wheel gesture transferred ownership immediately: subsequent input scrolled the body without moving the canvas.
+- Ctrl-wheel while locked changed canvas scale and preserved the body lock. This is the retained explicit zoom shortcut, not ordinary scrolling.
 - Deleting the locked owner cleared the lock; subsequent wheel panned normally.
-- Actual screenshots confirmed a persistent gold border around the visible viewport in both themes, including a body scrolled into its middle.
 
 No permanent browser test framework or fixture file was added. No extension-host suite was rerun for this browser-only interaction change. No analyzed Python file was executed or modified.
 
-## Local package and installation
-
-- `npm --prefix src/vscodeextension run publish`: successful rebuild and VSIX packaging, 236 files, 9.41 MB, version `0.1.9`.
-- Reinstalled `src/vscodeextension/release/code-visualizer-local.vsix` into regular VS Code with `--force`; CLI reported success.
-- Installed visualizer JavaScript and CSS matched the rebuilt assets byte-for-byte using `cmp`.
-- VSIX SHA-256: `9ba7e08cd69902fc396b7a0b55586e0279caa475f81f0116b454a05971ed164e`.
-- Existing VS Code windows were not forcibly reloaded. Use **Developer: Reload Window** and reopen the diagram to load this replacement.

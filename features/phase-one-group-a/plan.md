@@ -4,23 +4,24 @@
 
 Finish Group A, including the new JavaScript constructor bug **R19**. Keep the working declaration fixes; make boxes readable, resizable, and easy to find.
 
+This approved plan preserves the original uncapped-width requirement. The later 1200px creation/auto-fit cap is a subsequent user-requested refinement documented in `features/canvas-interaction-followup/results.md`; it does not limit manual resizing.
+
 <details>
 <summary>Evidence behind these approaches</summary>
 
-- JavaScript currently uses `VpLspExtenderCurlyBraces`, not the parser-backed TypeScript adapter. The brace adapter searches for the next `{`/`;` and derives the body end from the provider range. The TypeScript adapter already has local parsing, source-coordinate mapping, and a per-document fragment cache to reuse.
+- Before this feature, JavaScript used `VpLspExtenderCurlyBraces`, whose body boundaries came from punctuation/provider ranges. The existing TypeScript adapter supplied the parser, source-coordinate mapping, and per-document fragment cache selected for reuse.
 - `OutlineUtils._provideOutlineForRange()` rejects displayed children crossing the body boundary or overlapping an earlier child. Keep that safety rule. The reported R19 error is confirmed by the user; its precise provider-range cause is not yet observed in a live host.
 - Read-only execution of bundled TypeScript 3.9.10's `getNavigationTree()` on the actual file found `VgfWindowTitled` `(8,6)→(150,2)` containing `<function>` `(8,25)→(150,1)`, which contains `constructor` `(22,21)→(52,3)`; coordinates are zero-based. The constructor's `nameSpan` points to the assignment target before its function-expression span. This is observed compiler navigation data, not a claim that the installed VS Code provider returns identical `DocumentSymbol` ranges.
 - `VpwOutlineWindow` caps initial client width at 356px. `VgfWindowTitled` puts native resizing on the client area, which declaration-only rendering hides.
 - Dockers are children placed outside their target frame. Outer native `resize`/`overflow:auto` would clip them; use an outer grip and inner scroll viewport. Existing outer ResizeObserver notifications already update docking/connections.
 - `VgfExpandableWithTitle` is constructed only by titled windows. The navigation area's wheel listeners currently pan the world and prevent native scrolling, so the new inner scroll viewport needs event isolation.
 - Error cards use `vp_widget_add()` rather than the outlines' focused `vp_addWindow()` path. Fixed-step placement does not inspect node dimensions or collisions.
-- Source changes belong in `src/web_visualizer/src/` and `src/vscodeextension/src/`; regenerate outputs through the build. Keep `specs/` read-only. No language servers are configured; use scoped caller searches unless a server becomes available.
 </details>
 
 
 ## Approach
 
-Before editing source, copy this approved plan to `features/phase-one-group-a/plan.md`. Complete the R19 source-boundary fix before changing the same JavaScript window-constructor file for sizing. Zoom work is independent; placement depends on completed sizing.
+Complete the R19 source-boundary fix before changing the same JavaScript window-constructor file for sizing. Zoom work is independent; placement depends on completed sizing.
 
 ### 0. Correct JavaScript function-expression boundaries — R19
 
@@ -287,21 +288,16 @@ Preserve Python name-only assignment expansion, compact decorator metadata, and 
 ## Verification
 
 <details>
-<summary>Behavior checks, exact commands, and implementation anchors</summary>
+<summary>Behavior checks and implementation anchors</summary>
 
 
-### Prerequisites and build
+### Validation setup
 
-All commands start at the repository root unless stated otherwise. Planning confirmed the installed VS Code executable and local `tsc`/`eslint` executables exist; it did not run builds or UI scenarios. Python/Pylance availability must be checked in the development host.
+Treat user-reported failures as established. Diagnose R19 from actual document-symbol ranges, selection ranges, child trees, and extraction boundaries, not by rerunning the reported failed visualization.
 
-1. Treat user-reported failures as established. Before changing `vgf_window_tiled.js`, capture its actual document-symbol ranges, selection ranges, child tree, and extraction boundaries to diagnose R19; do not rerun the failed visualization merely to confirm the report. Inspect the existing browser layout for baseline measurements.
-2. After implementation, run `npm run build:ext` once; inspect the JS/CSS build stages as well as TypeScript output because the existing web build uses semicolon-separated commands. This regenerates web release and extension media assets.
-3. Run `npm run serve:web` as a named service. Use real Chromium at:
-   - `http://localhost:8080/tests/typescript_basic_show_class_dark_theme.html`
-   - `http://localhost:8080/tests/typescript_basic_show_class_light_theme.html`
-   - `http://localhost:8080/tests/basic_case_show_messageboxes_dark_theme.html`
-   - `http://localhost:8080/tests/basic_case_show_messageboxes_light_theme.html`
-4. Use existing `window_postRequest(type, rqId, data)`, `gTestdata_outlineData`, and controller requests for throwaway browser scenarios. No new UI testing dependency or source-text assertions. Extend no permanent suite solely to assert DOM wiring.
+Use the real bundled visualizer in the existing TypeScript class and message-window dark/light fixtures. Existing `window_postRequest(type, rqId, data)`, `gTestdata_outlineData`, and controller requests can supply source-backed scenarios; no new UI testing dependency or DOM-wiring-only permanent suite is needed.
+
+Keep browser geometry evidence separate from live VS Code/provider evidence. Planning did not establish passing implementation checks.
 
 ### R19 regression checks
 
@@ -352,38 +348,15 @@ For the source-backed long fixture, build `content`, `contentLineBuffer`, and `d
 
 ### Real VS Code integration and R04/R10 regression proof
 
-Use the installed current VS Code host, not the known-failing legacy 1.61.1 downloader. From the root:
+Use the installed VS Code extension host and the full existing suite; plain Node execution does not cover VS Code APIs. Exercise Visualize File and Visualize This against the actual workbench/webview.
 
-```sh
-env VSCODE_CLI=1 '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir=/tmp/scv-group-a-tests \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --extensionTestsPath="$PWD/src/vscodeextension/out/test/suite/index" \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/src/vscodeextension/src/test/testfiles"
-```
-
-The current suite activates `visualprogrammingx.SourceCodeVisualizer-Local`, Python, and Pylance. Run the existing full suite; record the actual result, not the historical 104-pass count. Launch a separate UI host for real-file verification:
-
-```sh
-env VSCODE_CLI=1 '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
-  --new-window --user-data-dir=/tmp/scv-group-a-live \
-  --disable-extension=vscodevim.vim \
-  --extensionDevelopmentPath="$PWD/src/vscodeextension" \
-  --remote-debugging-port=9333 \
-  --skip-welcome --skip-release-notes --disable-workspace-trust \
-  "$PWD/../../MAFC/Workspace/airflow-data/dags"
-```
-
-- Use the `(Local)` commands `code-visualizerzer-local.visualizeFile` and `code-visualizerzer-local.visualize`, not the old upstream command IDs. Attach browser tools to the actual workbench/webview via CDP for DOM inspection and screenshots; use the real UI for commands and pointer actions.
-- Open `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py` as source only. Never execute, import, save, or modify it.
+Open the external `trino_ingestion_dag_factory.py` as source only. Never execute, import, save, or modify it.
 - Visualize file → `_build_dag` → nested `ingestion_dag`. Inspect all three rendered headings, compact decorator metadata/full hover text, and body text. Verify the complete `operators.OracleToIcebergIngestionOperator(...)` argument lines at initial fit and after narrowing/scrolling. Exercise zoom bounds, new-node placement, and resizing here, not only in mocks.
 - Open `CONFIG_DIR`, `TRINO_CONN_ID`, `DAG_TIMEZONE`, `IDENTIFIER_KEYS`, `REQUIRED_KEYS`, `OPTIONAL_KEYS`, `ALLOWED_KEYS`, and `SQL_TASK_TIMEOUT`. Each value remains complete without neighboring declaration leakage. **Show in code** on `ingestion_dag` and `REQUIRED_KEYS` must select the actual source declaration; current fixture coordinates are zero-based `(195,8)` and `(27,0)`, respectively.
 - Open existing `src/vscodeextension/src/test/testfiles/python/declaration_boundaries.py`: `limit`, multiline `config`, `build`, and `later` exclude adjacent `AFTER` statements. Python `pass`, ellipsis, and docstring bodies remain source.
 - Open existing `src/vscodeextension/src/test/testfiles/typescript/declaration_boundaries.ts`: `Reader.read` and `Base.run` stay signature-only and resizable; `Worker.read` displays its implementation; `Worker.empty` stays empty and resizable. Check `limit`/`config` exclude adjacent `AFTER` statements. Exercise **Show in code** after resizing.
 - R19: in the live host, open the repository's actual `src/web_visualizer/src/vgf/vgf_window_tiled.js` → `VgfWindowTitled` → nested `self.constructor`. Inspect headings, full bodies, nested declaration rows, intervening source, and connections. **Show in code** at both function levels must target the corresponding declaration in that file; determine positions from the current source, since the sizing changes edit this file. No duplicated text, skipped valid children, neighboring declaration leakage, or suppressed safety error.
-- Completion requires browser and live-host evidence for all seven Group A IDs: R04, R19, R10, R11, R13, R15, R18. Record observed commands, geometry, navigation results, screenshots, and limitations in `features/phase-one-group-a/results.md` only after implementation and validation finish.
+- Completion requires browser and live-host evidence for all seven Group A IDs: R04, R19, R10, R11, R13, R15, R18. Record observed geometry, navigation results, and limitations only after implementation and validation finish.
 
 ## Critical files and anchors
 
@@ -396,8 +369,7 @@ env VSCODE_CLI=1 '/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
 
 - Full-line width without a cap and later manual resizing are user requirements. The chosen ordinary initial height is a maximum 400px body viewport; this is not a full-source-height fit.
 - Zoom bounds of 20–300%, 24px collision clearance, and minimal viewport reveal are implementation defaults. There are no new settings or controls beyond the required resize grip and its auto-fit gesture.
-- If Python/Pylance are unavailable in the isolated host, check the installed extensions and use the existing installed extension directory with `--extensions-dir`; do not substitute mock output for live verification. If unavailable there too, report that exact prerequisite and do not mark Group A complete.
-- If port 8080 or 9333 is occupied, select a free local port and use it consistently in the service/browser connection; do not stop an unrelated process.
+- If Python/Pylance are unavailable in the isolated host, report that prerequisite; do not substitute mock output for live verification or mark Group A complete.
 - If intrinsic layout measurement undercounts because a descendant still constrains width, remove that constraint within the titled window/code viewport and remeasure actual DOM; do not switch to character-count estimates or add a clipping cap.
 
 </details>
