@@ -767,7 +767,8 @@ export class VpOutlineProviderYaml implements VpOutlineProvider {
       valCst = valItem.node;
     }
     if (valCst?.range) {
-      pairEnd = getCstEnd(valCst.range);
+      // Collection ranges may include indentation belonging to the next sibling.
+      pairEnd = getCstEnd(valCst.valueRange ?? valCst.range);
     }
 
     const isContainer = (pair.value instanceof YAMLMap || pair.value instanceof YAMLSeq);
@@ -908,7 +909,7 @@ export class VpOutlineProviderYaml implements VpOutlineProvider {
       valCst = valItem;
     }
     if (valCst?.range) {
-      pairEnd = getCstEnd(valCst.range);
+      pairEnd = getCstEnd(valCst.valueRange ?? valCst.range);
     }
 
     const isContainer = (pair.value instanceof YAMLMap || pair.value instanceof YAMLSeq);
@@ -1047,7 +1048,7 @@ export class VpOutlineProviderYaml implements VpOutlineProvider {
         }
 
         const itemStart = getCstStart(seqItem.range);
-        const itemEnd = getCstEnd(seqItem.range);
+        const itemEnd = getCstEnd(seqItem.valueRange ?? seqItem.range);
         const totalRange = new vscode.Range(document.positionAt(itemStart), document.positionAt(itemEnd));
         const defPos = document.positionAt(itemStart);
 
@@ -1143,7 +1144,7 @@ export class VpOutlineProviderYaml implements VpOutlineProvider {
         }
 
         const itemStart = getCstStart(itemNode.range);
-        const itemEnd = getCstEnd(itemNode.range);
+        const itemEnd = getCstEnd(itemNode.valueRange ?? itemNode.range);
         const totalRange = new vscode.Range(document.positionAt(itemStart), document.positionAt(itemEnd));
         const defPos = document.positionAt(itemStart);
 

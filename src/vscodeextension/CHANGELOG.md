@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Update development tools to maintained ESLint, Mocha, VS Code test runner, and extension packager versions; pin patched glob dependencies and remove legacy duplicate tools. Separate the unchanged TypeScript 3.9 runtime parser from the TypeScript 5.9 build compiler.
+- Preserve Microsoft's MIT notice for inherited Dark / Dark+ theme styling in release licenses; remove the copied CC BY-SA occurrence-counting helper and count selection newlines directly.
+- Accept complete Python methods whose cached class syntax includes trailing comments beyond Pylance's declaration range, without accepting truncated executable code or changing provider ranges.
+- Use YAML value endpoints for container ranges so dedented sequence siblings in Kubernetes manifests remain inside their parent source intervals.
+- Restore plain left/right-button canvas drag panning; use Shift+left-drag for rectangle selection while retaining middle-button and Space+left panning.
 - Keep diagram source bodies read-only and hide whitespace-only source blocks, including file-node gaps when comments are visible.
 - Split Python and TypeScript declarations with bundled syntax parsers without mutating LSP ranges.
 - Preserve complete assigned values, return-type braces, Python indentation, and empty implementations.

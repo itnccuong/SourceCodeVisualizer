@@ -21,14 +21,14 @@ export function activate(context: vscode.ExtensionContext)
   const register = utils.registerCommand;
   const c = context;
 
-  register (c, "code-visualizerzer-local.visualize",                     () => tab.visualize ());
-  register (c, "code-visualizerzer-local.visualize.fromContextMenu",     () => tab.visualize ());
-  register (c, "code-visualizerzer-local.visualize.fromExplorer", (uri: vscode.Uri) => tab.visualizeFileWithDestination(uri));
+  register (c, "source-code-visualizer.visualize",                     () => tab.visualize ());
+  register (c, "source-code-visualizer.visualize.fromContextMenu",     () => tab.visualize ());
+  register (c, "source-code-visualizer.visualize.fromExplorer", (uri: vscode.Uri) => tab.visualizeFileWithDestination(uri));
 
-  register (c, "code-visualizerzer-local.visualizeFile",                 () => tab.visualizeCurrentFile ());
+  register (c, "source-code-visualizer.visualizeFile",                 () => tab.visualizeCurrentFile ());
 
-  register (c, "code-visualizerzer-local.saveCanvas",                     () => tab.saveCanvas ());
-  register (c, "code-visualizerzer-local.loadCanvas",                     () => tab.loadCanvas ());
+  register (c, "source-code-visualizer.saveCanvas",                     () => tab.saveCanvas ());
+  register (c, "source-code-visualizer.loadCanvas",                     () => tab.loadCanvas ());
 
   return context;
 }

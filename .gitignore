@@ -11,3 +11,6 @@ __pycache__
 /src/vscodeextension/media/web_visualizer.js
 /src/vscodeextension/media/web_visualizer.css
 /src/vscodeextension/media/web_visualizer_version
+
+# Corresponding source archive generated when packaging
+/src/vscodeextension/source/

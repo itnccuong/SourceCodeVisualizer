@@ -1,71 +1,130 @@
+# Source Code Visualizer
 
-This is a VSCode extension to create dynamically growing diagrams. See the video below or [watch the Youtube video (2:20m)](https://youtu.be/CesCUSQTRLg) to get a grasp of what it does.
+Explore code and YAML as connected, on-demand diagrams inside VS Code.
 
-![Quick example video](./media_marketplace/quick_example.gif)
+**This project is an independently maintained fork of [DarkTrick/SourceCodeVisualizer](https://github.com/DarkTrick/SourceCodeVisualizer).** The original project provides the foundation. This fork builds on it with replacement declaration parsers, YAML visualization, more precise source navigation, comment controls, and reusable canvas workspaces.
 
+The recordings below show this fork—not the original Marketplace release.
 
+## Replaced declaration parsing
 
+This fork replaces legacy declaration-boundary heuristics with syntax-aware parsing for Python and JavaScript/TypeScript/TSX.
 
-# How to use?
+| Language | Parsing in this fork | Editor requirements |
+| --- | --- | --- |
+| Python | Bundled `@lezer/python` parser for declaration boundaries, assignments, nested definitions, decorators, comments, and docstrings. | Python and Pylance extensions; select your project's interpreter. |
+| JavaScript, TypeScript, TSX | Bundled TypeScript compiler parser for declaration boundaries, callable assignments, and declarations without implementation bodies. | A working VS Code language provider. |
+| YAML | Dedicated `yaml` AST/CST provider for mappings, sequences, source ranges, anchors, and aliases. | No separate YAML language-server extension is required for visualization. |
 
-## Activate
+For code, VS Code's language providers still find symbols and definitions. The bundled parsers interpret their source boundaries; they **do not replace Pylance or the language server**.
 
-- Method 1:
-  - Put the caret (cursor) on a function/class/namespace/whatever name
-  - Right-click
-  - Select `Visualize This`
+Python is the primary validation target. JavaScript/TypeScript/TSX have targeted coverage, not guaranteed parity. Inherited C/C++, PHP, Java, and Dart adapters remain available but have not received the same parser rewrite or validation.
 
-- Method 2:
-   - Put the caret (cursor) on a function/class/namespace/whatever name
-   - Open VSCode commands (press `Ctrl`+`Shift`+`P`)
-   - Search and select `Visualize This`
+## See it in action
 
+### 1. Explore code without losing the trail
 
+Start with a function or a whole file, then follow the definitions you want to understand.
 
-## Navigation
+- Follow calls across files and reuse an already-open definition.
+- Navigate from type names in headings and from supported decorator metadata.
+- Explore classes, nested functions, variables, constants, and imported modules.
+- Use **Show in code** to return to the original source.
 
-- View: zoom-in / zoom-out: `Alt`+`Scrolling`
-- View: move around:
-   - Drag&Drop the background
-   - `Scroll` over background (vertical scroll)
-   - `Shift`+`Scroll` over background (horizontal scroll)
-- Open a definition: `doubleclick` an identifier
+![Following function calls and reusing existing definition nodes](../../media_marketplace/explore-code.gif)
 
+![Exploring headings, whole files, and variables](../../media_marketplace/explore-details.gif)
 
+### 2. Show the explanation—or just the code
 
-## Remarks
+The **Comments** button toggles comments and Python docstrings for each node. Comment-only blocks and blank gaps compact when hidden, while source navigation retains its original coordinates.
 
-Don't change code while working within the diagram (this problem will be fixed in future versions)
+Diagram source is read-only. Make code changes in the source editor.
 
+![Showing and hiding class comments and method docstrings](../../media_marketplace/comments.gif)
 
-# Supported Languages
+### 3. Build, organize, and revisit a canvas
 
-Currently the following languages are supported:
-- Python
-- C/C++ (beware, due to VSCode's bad support for C/C++ you might experience difficulties)
-- Php (experimental)
-- Javascript (experimental)
-- Typescript (experimental)
-- Java (experimental)
-- Dart (experimental)
-- Typescript+React (experimental)
+Choose **New canvas** or an existing canvas when visualizing from the editor or Explorer.
 
-# Planned Features
+- Select and move nodes together; use **Nodes** to jump to an existing window.
+- Pan, zoom, resize, collapse, and use **Fit all** to frame your exploration.
+- Close a branch without removing descendants still shared by another branch.
+- **Save canvas** to JSON, then **Load canvas** into a separate tab with its layout and relationships restored.
 
-- Allow editing while viewing the diagram
-- Enable multiple diagrams
-- Save diagrams
+![Choosing a canvas, managing nodes, deleting branches, and saving and loading an exploration](../../media_marketplace/canvas-workspace.gif)
 
+### 4. Explore YAML configuration
 
-# Acknowledgements
+Open a Kubernetes manifest or Helm values file and expand its structure instead of reading one long document.
 
-- Ivan Sagalaev for [`highlightjs`](https://highlightjs.org/)
-- Creators and maintainers of VSCode
-- Creators and maintainers of nodejs
+- Navigate mappings, sequences, collection items, and multiple YAML documents.
+- Retain scalar settings and multiline values alongside child containers.
+- Follow YAML aliases to their anchors, including scalar anchors.
+- Return to the original YAML with **Show in code**.
 
+This is source-structure navigation—not Kubernetes dependency discovery or Helm template execution. Raw Go-template expressions are not YAML.
 
+![Exploring a Kubernetes manifest through nested configuration nodes](../../media_marketplace/yaml.gif)
 
+## Install and get started
 
+This fork is named **Source Code Visualizer (Fork)**, with extension ID `itnccuong.source-code-visualizer`. The [original Code Visualizer Marketplace listing](https://marketplace.visualstudio.com/items?itemName=visualprogrammingx.SourceCodeVisualizer) installs upstream, not this fork's additions.
 
+Install this fork's built `.vsix` through **Extensions → … → Install from VSIX…**. To build it yourself, see [Development](#development).
 
+Disable or uninstall the previous **Source Code Visualizer (Local)** build before installing this release.
 
+1. Open your project in VS Code and enable its language tooling.
+2. Put the cursor on a declaration or identifier, then right-click → **Visualize This**.
+3. Choose a new or existing canvas.
+4. Double-click source identifiers, or use **F12**, to continue exploring.
+
+To start from a whole file, right-click it in Explorer → **Visualize This**. The Command Palette also provides **Visual Programming: Visualize File** and **Visual Programming: Load from Canvas**.
+
+## Canvas controls
+
+| Action | Control |
+| --- | --- |
+| Pan | Left-, right-, or middle-drag on empty canvas; Space + left-drag also works. |
+| Zoom at the cursor | Ctrl or Alt + mouse wheel. |
+| Rectangle-select nodes | Shift + left-drag on empty canvas. |
+| Select a connected component | Double-click non-code header space. |
+| Move selected nodes | Drag a selected node's non-code header space. |
+| Resize / fit a node | Drag its corner grip / double-click the grip. |
+| Scroll source | Click a code body, then scroll; click outside to release scroll ownership. |
+| Find a node / frame the graph | **Nodes** / **Fit all** in the toolbar. |
+| Open enclosing source / return to editor | Header context menu → **Open parent** / **Show in code**. |
+
+The minimap shows node positions and the current viewport; it is not interactive.
+
+## What to expect
+
+- Diagrams grow through your navigation. They are not a complete automatically generated call graph or a record of runtime execution.
+- Open nodes show captured source. After editing a file, reopen affected nodes; live source synchronization is not provided.
+- Saved canvases contain source references and view state, **not source-code snapshots**. Missing or unresolvable declarations appear as unavailable sources.
+- Definition navigation depends on the installed language provider. Unsupported or ambiguous syntax can still produce explicit extraction errors.
+- Visualization does not execute your Python code or deploy your YAML.
+
+## Development
+
+Build prerequisites: Node.js 24 LTS (or Node.js 22.13+), npm 10+, Python 3, and `tar`. The package command builds the extension and its webview assets.
+
+```bash
+# From the repository root:
+npm ci --prefix src/vscodeextension
+cd src/vscodeextension
+npm run package
+code --install-extension ./release/source-code-visualizer.vsix --force
+```
+
+See [Architecture and Development](../../docs/architecture-and-development.md) for runtime boundaries, build scripts, testing, and publication prerequisites.
+
+## Upstream, credits, and license
+
+- Original project: [DarkTrick/SourceCodeVisualizer](https://github.com/DarkTrick/SourceCodeVisualizer).
+- This fork: [itnccuong/SourceCodeVisualizer](https://github.com/itnccuong/SourceCodeVisualizer). Please report fork-specific issues here rather than upstream.
+- Syntax highlighting: [highlight.js](https://highlightjs.org/).
+- Parsing: [Lezer Python](https://github.com/lezer-parser/python), [TypeScript](https://www.typescriptlang.org/), and [yaml](https://eemeli.org/yaml/).
+
+The upstream extension and visualizer are licensed under LGPLv3; third-party components retain their own licenses. See [LICENSE](./LICENSE) and [source and redistribution instructions](./SOURCE.md). Packages include the corresponding first-party source archive, upstream attribution, and complete GPLv3/LGPLv3 texts.

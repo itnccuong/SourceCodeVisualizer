@@ -84,6 +84,7 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - The named result contains `rangeHead`, nullable `rangeBody`, `attributes`, `declarationOnly`, optional `rangeDeclaration`, optional display-child projection, and optional `definitionPosition`. A null body means no source body; a zero-width body means an empty implementation.
 - TypeScript bodyless signatures set `declarationOnly`; the webview hides their body area while retaining the signature and navigation. No status text or badge is added. Python `pass`, `...`, and docstrings remain source.
 - Shared traversal sorts a copy of children, keeps source gaps, and rejects crossing/overlapping displayed children. Definition lookup uses end-exclusive containment and target-file ranges.
+- Cached Python ancestors may include trailing comment tokens beyond a child method's Pylance range. Boundary matching ignores only that comment-only syntax suffix when checking completeness; rendered ranges remain provider-bounded and errors or truncated executable tokens still fail. Excluded inline comments remain in the enclosing class's source gaps.
 - Pylance 2026.4.1 supplies name-only ranges for Python variables/constants. For an exact name-only variable/constant/field/property range, reuse suitable cached/ancestor syntax or parse from the name's physical line. Extend the local fragment geometrically only while the selected statement has missing tokens at its end; use the parsed statement boundary, never the next colon or next symbol. Malformed syntax and reference selections still fail explicitly. Other incomplete ranges are not repaired.
 - Multiline decorator attributes retain their full original source in the model/hover text. The window displays only a compact first-line metadata label, constrained to one line with ellipsis, so it cannot overlap the signature/body.
 - Python-related changes require live verification of `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`: file → `_build_dag` → `ingestion_dag`, plus affected variables. Do not execute or modify that Airflow file.
@@ -92,6 +93,7 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - Empty `(0,0)` definition targets open files before declaration lookup. Full-document targets open files only when no declaration has exactly that range. File identity is URI-based, its display range is `(0,0)`, and its parts retain whitespace gaps and EOF. **Show in code** opens its beginning without inventing a symbol `totalRange`.
 - Python decorator attributes retain a `definitionRange` for the terminal callable identifier, including qualified and multiline decorators. Descriptive attributes such as `async` have no navigation range. The Python `getDefinitionSymbol` hook proves omitted assignment targets or direct parameter declarations from syntax; it never substitutes an enclosing method for an unmapped reference.
 - The selected target must have the origin document's language ID. Actual `.pyi` source is retained and labeled **Type stub — declaration only**; no implementation filename is guessed and no analyzed code is executed. Unsupported syntax remains an explicit extraction failure. For example, live `builtins.pyi` `bool` opened, while `str` failed on `capitalize`; this is not general stub-extraction parity.
+- YAML container endpoints use CST `valueRange` (with original CRLF offsets), not trailing parser trivia in `range`. Sequence and mapping descriptors use the same value boundary so indentation of a following dedented sibling cannot extend a child past its parent. Source gaps and document separators remain in the enclosing outline; strict containment and overlap validation stay enabled.
 
 ### Canvas Window Geometry
 
@@ -104,6 +106,7 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - Source bindings cache text indexes and DOM ranges, invalidate on real text/child changes, and reuse owner movement/scroll/lifecycle events. Identical re-highlighting reconstructs ranges. Local edits that diverge from the immutable source produce **Source mapping unavailable** without sending stale coordinates; reopening restores mapping. Bindings and edges are cleaned through the owning window's deletion event.
 - Focusing a source window keeps its outgoing connections behind its reading surface. Leaving it emits `vp_windowUnfocused`; each connection raises its current dock-owning target (or the undocked connector) above the previous source, then the newly selected window is raised last. Primary-clicking empty canvas clears visual focus and restores those edges too. This changes stacking only, not node positions, source ranges, or edge identity.
 - Without a clicked body lock, a canvas-started wheel gesture stays on the canvas when crossing a box. After 180ms idle, the next gesture can begin as content scrolling. Clicking a source body explicitly takes wheel ownership even during touchpad momentum. Pan uses subpixel CSS positions rather than rounded `offsetTop`/`offsetLeft`, preserving small touchpad and momentum deltas.
+- Empty-canvas left/right/middle drag pans; Shift+left drag starts rectangle selection, with Space+left retaining its pan override. Plain left click without a drag clears group selection; panning preserves it. Background context menus are suppressed so right-drag stays on the canvas; node, popup, and toolbar interactions are excluded.
 - `WindowPositioner.placeWindow()` measures new attached frames, keeps 24 world px clearance, and advances only the new candidate downward. LEFT slots subtract the new width. Missing/deleted anchors use a viewport-relative slot and cannot receive connections.
 - After a batch, `revealWindow()` eases the minimum camera translation over 450ms with smooth acceleration/deceleration, showing the last new frame with a 20px viewport inset; oversized frames align their beginning. The clock starts on the first rendered frame so response layout cannot consume the transition before it is visible. A new response supersedes the old reveal. Native wheel, pointer/keyboard input, drag, deletion, or external camera changes cancel it without swallowing input or snapping later. Active user gestures take priority over auto-reveal.
 - New windows fade in while their inner presentation translates 20px over 300ms. The outer measured frame stays at its final geometry; per-frame movement notifications keep source connections attached. Interaction ends the entrance immediately. Reduced-motion preferences disable both animations. Reused windows keep their size/position and do not reanimate.
@@ -294,16 +297,16 @@ These semicolons mean it attempts the next command even if the preceding one fai
 ```mermaid
 flowchart TD
     A["node ./out/test/main.js"]
-    B["downloadAndUnzipVSCode('1.61.1')<br/>Download or reuse that VS Code version"]
-    C["resolveCliPathFromVSCodeExecutablePath(...)"]
-    D["spawnSync(cliPath, arguments)<br/>--install-extension<br/>ms-python.python<br/>ms-python.vscode-pylance"]
+    B["Use VSCODE_EXECUTABLE_PATH or download current stable VS Code"]
+    C["resolveCliArgsFromVSCodeExecutablePath(...)<br/>Isolated test profile and extension directory"]
+    D["spawnSync(cliPath, arguments)<br/>Install Python + Pylance; require successful exit"]
     E["runTests(...)<br/>Launch the selected VS Code with this local extension"]
     F["Load out/test/suite/index<br/>Execute integration tests"]
 
     A --> B --> C --> D --> E --> F
 ```
 
-The source for that launcher is `src/vscodeextension/src/test/main.ts`. It is a VS Code integration-test environment, not merely a collection of functions executed in plain Node. The CLI installation is an attempted setup step; the current code does not inspect `spawnSync`'s returned exit status before calling `runTests()`.
+The launcher is `src/vscodeextension/src/test/main.ts`. It uses the maintained `@vscode/test-electron` package for downloading, CLI setup, and running the extension tests. It opens `src/test/testfiles`, checks language-extension installation failures, and runs Mocha 12 in a current VS Code extension host. The default test target is current stable; set `VSCODE_EXECUTABLE_PATH` to test a local executable without downloading VS Code. This workflow does not validate the minimum advertised VS Code version.
 
 
 ### What Performs Each Build Operation?
@@ -314,8 +317,8 @@ The source for that launcher is `src/vscodeextension/src/test/main.ts`. It is a 
 | `jslinker/parse_file_content.py` | Extract custom `require ("file.js");` declarations and remove them from emitted content |
 | `jslinker/file.py` | Resolve dependencies relative to the declaring file |
 | `jslinker/js_stitcher.py` | Discover/order dependencies, then concatenate their contents |
-| Extension `tsconfig.json` | Set TypeScript source root `src`, output `out`, CommonJS modules, ES6 target, strict checking, and source maps |
-| `tsc -p ./` | Type-check and translate extension TypeScript into separate JavaScript files; does not bundle the canvas |
+| Extension `tsconfig.json` | TypeScript source root `src`, output `out`, CommonJS modules, ES6 target, strict checking, and source maps |
+| Development-only TypeScript 5.9, `tsc -p ./` | Type-check and compile extension/test TypeScript; not shipped in the VSIX and does not bundle the canvas |
 
 The custom bundler starts at `web_visualizer/src/main.js` and follows reachable dependency declarations; it does not include every JS file automatically. Preserve the existing `require ("...");` format: it is a text-based build directive, not a standard browser import. The bundle remains JavaScript, closer to preprocessed/combined source than a C `.o` file.
 
@@ -325,33 +328,56 @@ The custom bundler starts at `web_visualizer/src/main.js` and follows reachable 
 - Saving does not trigger hot reload. Reliable loop: **save → stop debugging → F5 → Visualize This again**.
 - `watch` in the extension package runs only the TypeScript watcher; it does not rebuild the canvas or reload the running extension.
 - `src/package.json` is a separate packaging/release orchestrator. None of the five root scripts invokes it. Its `compile` path packages the extension and copies release artifacts, unlike the daily development build.
-- The extension's `publish` script runs `vsce package` to create a `.vsix`; the name does not mean that command uploads to the Marketplace. Its pre/post hooks perform release work.
+- The extension's `package` script runs `vsce package`; it does not upload anything. Its `vscode:prepublish` hook compiles the extension/webview, then generates release notices and a corresponding first-party source archive.
 
-### Local Extension Packaging and Installation
+#### Dependency Security and Development Requirements
+
+- Use Node.js 24 LTS (or Node.js 22.13+), npm 10+, Python 3, and `tar` for development. The maintained packaging/test tools require modern Node.js. These are build requirements, not a new promise of compatibility with every VS Code extension-host version.
+- ESLint 10 reads `src/vscodeextension/eslint.config.cjs` and uses `@typescript-eslint/parser` 8. The prior config had no lint rules; this migration preserves that parser-only policy rather than silently enabling new style rules.
+- Mocha 12 supplies a CommonJS entry point for the integration harness. Test discovery uses the promise API of `glob` 14.
+- `@vscode/vsce` replaces legacy `vsce`; `@vscode/test-electron` replaces the duplicate `vscode-test` package. No compatibility imports or unused ESLint plugin/glob typings remain.
+- The shipped TypeScript parser is still **3.9.10**, now installed as `typescript-parser` via npm alias. Runtime imports use that alias; the development compiler is separate. Release notice generation follows aliases to their original package metadata and preserves their notices.
+- `package.json` overrides `minimatch` to patched 11.x and uses the direct patched `glob` version for transitive consumers. Current tool releases otherwise constrain these packages to vulnerable major versions. Validate lint, test discovery/execution, and VSIX file selection when changing these overrides; do not remove them based only on parent-package age.
+- After dependency changes, run `npm ci --ignore-scripts`, `npm audit`, `npm audit --omit=dev`, `npm test`, and `npm run package` in `src/vscodeextension`. Both audits must be reviewed; dev-only vulnerabilities still affect release tooling. A clean advisory scan is not an application-security certification. Vendored highlight.js is outside npm audit.
+
+
+### Extension Packaging and Installation
 
 To run this repository in standard VS Code (outside of an Extension Development Host), package the extension as a local `.vsix` and install it.
 
-#### Local Extension Identity
-- **Identifier**: `visualprogrammingx.sourcecodevisualizer-local` (configured in `src/vscodeextension/package.json`).
-- **Display Name**: `Source Code Visualizer (Local)` (visible in the Extensions view).
-- **Commands**: Contributes `Visual Programming: Visualize This (Local)` and `Visualize This (Local)`. Command IDs use `code-visualizerzer-local.*` to prevent command collisions if the upstream Marketplace extension is installed side-by-side.
+#### Fork Extension Identity
+- **Identifier**: `itnccuong.source-code-visualizer` (configured in `src/vscodeextension/package.json`). The publisher is a proposed identity until its owner registers it in the Marketplace.
+- **Display Name**: `Source Code Visualizer (Fork)` (visible in the Extensions view).
+- **Commands**: `Visual Programming: Visualize This` and `Visualize This`, without `(Local)`. Command IDs use `source-code-visualizer.*`.
+- Disable or uninstall `visualprogrammingx.sourcecodevisualizer-local` before using this release. The identity change does not automatically replace that older installation.
 
 #### Packaging and Installing
 From the repository root:
 
 ```bash
 # 1. Build dependencies, compile TypeScript, and package VSIX
-npm --prefix src/vscodeextension run publish
+npm --prefix src/vscodeextension run package
 
 # 2. Install or overwrite the extension in VS Code
-code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force
+code --install-extension ./src/vscodeextension/release/source-code-visualizer.vsix --force
 ```
 
 #### Iteration Loop After Code Changes
 Source file modifications do not update the installed extension automatically. When code changes:
-1. Run the build/package script (`npm --prefix src/vscodeextension run publish`).
-2. Re-install using `--force` (`code --install-extension ./src/vscodeextension/release/code-visualizer-local.vsix --force`). There is no need to uninstall first; `--force` replaces the installed copy in place.
+1. Run the build/package script (`npm --prefix src/vscodeextension run package`).
+2. Re-install using `--force` (`code --install-extension ./src/vscodeextension/release/source-code-visualizer.vsix --force`). After the initial identity migration, `--force` replaces the installed fork in place.
 3. Reload the VS Code window (`Cmd+Shift+P` / `Ctrl+Shift+P` → `Developer: Reload Window`).
+
+#### Release Contents and Marketplace Upload
+
+- Edit original license inputs, not generated `LICENSE` copies. `scripts/prepare-release.js` preserves the upstream author, LGPLv3, full GPLv3, and highlight.js BSD notices. It inventories all production dependencies and their package-local license/notice files.
+- The VSIX retains runtime dependency notices and includes `source/source-code-visualizer-<version>.tar.gz`. That archive contains the corresponding first-party source, build scripts, lockfile, license inputs, and build instructions. See `src/vscodeextension/SOURCE.md`.
+- README image paths are relative for local preview. The package command supplies explicit monorepo content/image base URLs; the packaged README uses HTTPS URLs. Original GIFs remain outside the VSIX and are not re-encoded.
+- Push the README, GIFs, and source changes to the public fork's `main` branch before uploading. Remote GIFs cannot work until those exact paths exist publicly.
+- Register and own the `itnccuong` publisher at https://marketplace.visualstudio.com/manage, or change `publisher` and the documented extension ID before packaging. Create a new extension and upload `src/vscodeextension/release/source-code-visualizer.vsix`. Packaging does not require a publisher token; uploading does require publisher access.
+- Publish a matching version tag/source release. Keep upstream attribution, the license texts, dependency notices, and dated modification notices. Do not imply upstream endorsement.
+- Inherited attribution review: Microsoft's MIT notice and pinned Dark / Dark+ source references are retained in `src/web_visualizer/src/highlightjs/styles/LICENSE` and the generated package licenses. The original copied theme revision is unknown. The CC BY-SA-attributed `TextUtils.count` helper was removed; its only caller counts newlines directly. See `src/vscodeextension/SOURCE.md` for details. This is not legal advice.
+
 
 ## III. Component and Generated-File Map
 

@@ -222,6 +222,59 @@ suite('Python declaration boundaries', () => {
     assert.strictEqual(document.getText(result.rangeBody!).trim(), 'return 1');
   });
 
+  for (const newline of ['\n', '\r\n']) {
+    test(`cached methods accept trailing comments outside Pylance ranges (${JSON.stringify(newline)})`, async () => {
+      const declaration = [
+        'class OrderReview:',
+        '    """Review orders."""',
+        '    # Collection methods',
+        '    def add(self, order: Order) -> None:',
+        '        """Add one order."""',
+        '        self._orders.append(order)  # Retain input order for review.',
+        '',
+        '    # Reporting methods',
+        '    def label(self) -> str:',
+        '        return "Order review #1"  # Keep #1 in the string.',
+        '',
+        '    def next_method(self):',
+        '        return 2'
+      ].join(newline);
+      const {document, symbol: parent} = await fixture(declaration, 'OrderReview', vscode.SymbolKind.Class);
+      const adapter = new VpLspExtenderPython();
+      adapter.getLanguageSpecificSymbolInformation(document, parent);
+      const methods: vscode.DocumentSymbol[] = [];
+      for (const [name, finalCode, expectedBody] of [
+        ['add', 'self._orders.append(order)', '"""Add one order."""' + newline + '        self._orders.append(order)'],
+        ['label', 'return "Order review #1"', 'return "Order review #1"']
+      ]) {
+        const start = declaration.indexOf('def ' + name);
+        const nameStart = start + 4;
+        const end = declaration.indexOf(finalCode, start) + finalCode.length;
+        const method = new vscode.DocumentSymbol(name, '', vscode.SymbolKind.Method,
+          new vscode.Range(document.positionAt(start), document.positionAt(end)),
+          new vscode.Range(document.positionAt(nameStart), document.positionAt(nameStart + name.length)));
+        methods.push(method);
+        const original = method.range;
+        const cached = adapter.getLanguageSpecificSymbolInformation(document, method);
+        const direct = new VpLspExtenderPython().getLanguageSpecificSymbolInformation(document, method);
+        assert.strictEqual(document.getText(cached.rangeBody!).trim(), expectedBody);
+        AssertX.range_equals(cached.rangeHead, direct.rangeHead);
+        AssertX.range_equals(cached.rangeBody, direct.rangeBody);
+        AssertX.range_equals(method.range, original);
+        const truncated = new vscode.DocumentSymbol(name, '', vscode.SymbolKind.Method,
+          new vscode.Range(method.range.start, document.positionAt(end - 1)), method.selectionRange);
+        assert.throws(() => adapter.getLanguageSpecificSymbolInformation(document, truncated),
+          /Cannot determine declaration boundaries/, 'Cannot truncate real syntax while accepting comments');
+      }
+      parent.children = methods;
+      const outline = OutlineUtils.documentSymbol2outlineSymbol(document,
+        new DocumentSymbolX(parent, document.uri), adapter);
+      assert.ok(outline.parts.some(p => p.displayTextRange
+        && document.getText(p.displayTextRange).includes('# Reporting methods')),
+        'Class source gaps retain comments between methods for the visibility toggle');
+    });
+  }
+
   test('invalidates the cache after an editable document changes', async () => {
     const document = await vscode.workspace.openTextDocument({language: 'python', content: 'value = 1'});
     const adapter = new VpLspExtenderPython();

@@ -1,0 +1,39 @@
+Microsoft Visual Studio Code built-in Dark / Dark+ theme portions
+================================================================
+
+The dark section of default.min.css is a modified partial adaptation of
+Microsoft Visual Studio Code's built-in Dark / Dark+ themes. Adaptation and
+local styling by DarkTrick. The highlight.js Default theme has its own BSD
+notice in ../LICENSE; this notice applies to Microsoft-derived portions only.
+
+The exact upstream revision originally copied is unknown. Verified historical
+reference (not a claim identifying the originally copied release):
+  microsoft/vscode 1.60.0
+  commit e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff
+  extensions/theme-defaults/themes/dark_vs.json
+  extensions/theme-defaults/themes/dark_plus.json
+  extensions/theme-defaults/package.json (declares MIT)
+  https://github.com/microsoft/vscode/tree/e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff/extensions/theme-defaults
+  https://github.com/microsoft/vscode/blob/e7d7e9a9348e6a8cc8c03f877d39cb72e5dfb1ff/LICENSE.txt
+
+MIT License
+
+Copyright (c) 2015 - present Microsoft Corporation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

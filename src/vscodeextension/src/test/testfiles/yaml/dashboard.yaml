@@ -1,0 +1,69 @@
+# Static Kubernetes demo; nothing is deployed by the Python program.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-dashboard
+  labels:
+    app: order-dashboard
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+      <head><title>Order dashboard</title></head>
+      <body><h1>Orders are ready</h1></body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-dashboard
+  labels:
+    app: order-dashboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-dashboard
+  template:
+    metadata:
+      labels:
+        app: order-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: nginx:1.27-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          volumeMounts:
+            - name: page
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: page
+          configMap:
+            name: order-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-dashboard
+spec:
+  selector:
+    app: order-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP

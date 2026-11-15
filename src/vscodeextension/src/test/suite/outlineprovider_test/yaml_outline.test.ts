@@ -550,4 +550,58 @@ suite('YAML Outline Provider — Behavior Test Suite', () => {
     assert.ok(pgParent && pgParent.length > 0);
     assert.strictEqual(doc.getText(pgParent[0].displayTextRange!), 'containers:');
   });
+
+  for (const newline of ['\n', '\r\n']) {
+    test(`Kubernetes manifest keeps dedented sequence siblings inside their parents (${JSON.stringify(newline)})`, async () => {
+      const fs = require('fs');
+      const path = require('path');
+      const original = fs.readFileSync(
+        path.resolve(__dirname, '../../../../src/test/testfiles/yaml/dashboard.yaml'), 'utf8'
+      );
+      const src = original.replace(/\r?\n/g, newline);
+      const doc = await fixture.open('dashboard.yaml', src);
+      const outline = await fixture.provider.provideDocumentOutline(doc);
+      await translateOutlineRanges([outline]);
+      const heading = (symbol: Outline.Symbol) => doc.getText(symbol.displayTextRange!);
+      const child = (parent: Outline.Symbol, name: string) => {
+        const found = parent.parts.find(p => p instanceof Outline.Symbol && heading(p) === name) as Outline.Symbol | undefined;
+        assert.ok(found, `Missing child ${name} in ${heading(parent)}`);
+        return found!;
+      };
+      const roots = outline.parts.filter(p => p instanceof Outline.Symbol) as Outline.Symbol[];
+      assert.deepStrictEqual(roots.map(heading),
+        ['metadata:', 'data:', 'metadata:', 'spec:', 'metadata:', 'spec:']);
+      const reconstructed = outline.parts.map(p => doc.getText(
+        p instanceof Outline.Symbol ? p.totalRange! : p.displayTextRange!
+      )).join('');
+      assert.strictEqual(reconstructed, src, 'All documents, separators, and source gaps are retained');
+
+      const pod = child(child(roots[3], 'template:'), 'spec:');
+      const dashboard = child(child(pod, 'containers:'), '- name: dashboard');
+      const resources = child(dashboard, 'resources:');
+      const requests = child(resources, 'requests:');
+      assert.ok(requests.parts.some(p => doc.getText(p.displayTextRange!).includes('cpu: 100m')));
+      const mounts = child(dashboard, 'volumeMounts:');
+      assert.ok(doc.getText(mounts.totalRange!).includes('readOnly: true'));
+      assert.ok(!doc.getText(mounts.totalRange!).includes('volumes:'));
+      const volumes = child(pod, 'volumes:');
+      assert.ok(doc.getText(volumes.totalRange!).includes('name: order-dashboard'));
+      assert.ok(doc.getText(child(roots[5], 'ports:').totalRange!).includes('targetPort: http'));
+      const html = roots[1].parts.map(p => doc.getText(p.displayTextRange!)).join('');
+      assert.ok(html.includes('<h1>Orders are ready</h1>'));
+
+      const opened = await fixture.provider.provideDefinitionOutline(doc, resources.displayTextRange!.start);
+      assert.strictEqual(doc.getText(opened![0].displayTextRange!), 'resources:');
+      const parent = await fixture.provider.provideLocationDefiner(doc, mounts.displayTextRange!.start);
+      assert.strictEqual(doc.getText(parent[0].displayTextRange!), '- name: dashboard');
+      const checkContainment = (node: Outline.Symbol) => {
+        for (const part of node.parts) {
+          const range = part instanceof Outline.Symbol ? part.totalRange! : part.displayTextRange!;
+          assert.ok(node.totalRange!.contains(range), `Source escaped ${heading(node)}`);
+          if (part instanceof Outline.Symbol) checkContainment(part);
+        }
+      };
+      roots.forEach(checkContainment);
+    });
+  }
 });

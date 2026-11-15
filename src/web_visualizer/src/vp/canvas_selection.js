@@ -91,26 +91,20 @@ class CanvasSelection
   {
     if (event.isPrimary === false) return;
 
-    // Check if clicking empty canvas (not inside a window, connection, line, or control)
-    const target = event.target;
-    if (target.closest(".Window, .VgfPopupWindow, .VgfLine, .VpwButtonMovableDockable, .VpwButtonMovable, .VgfControlsToolbar, .VgfMinimap, .VgfNodesDropdown, .VgfSelectionMarquee"))
+    if (event.target.closest(".Window, .VgfPopupWindow, .VgfLine, .VpwButtonMovableDockable, .VpwButtonMovable, .VgfControlsToolbar, .VgfMinimap, .VgfNodesDropdown, .VgfSelectionMarquee"))
       return;
 
-    const isPan = (event.button === 1) || (event.button === 0 && this._spacePressed);
-    const isPrimary = (event.button === 0 && !this._spacePressed);
+    const isMarquee = event.button === 0 && event.shiftKey && !this._spacePressed;
+    const isPan = event.button === 0 || event.button === 1 || event.button === 2;
 
-    if (!isPan && !isPrimary) return;
+    if (!isPan) return;
 
     event.preventDefault();
 
-    if (isPan)
-    {
-      this._startPanGesture(event, this._navArea);
-    }
-    else
-    {
+    if (isMarquee)
       this._startMarqueeGesture(event);
-    }
+    else
+      this._startPanGesture(event, this._navArea);
   }
 
   onHeaderPointerDown(frame, event)
@@ -157,11 +151,14 @@ class CanvasSelection
     const initialLeft = parseFloat(this._world.style.left) || 0;
     const initialTop = parseFloat(this._world.style.top) || 0;
     const pointerId = event.pointerId;
+    const clearSelectionOnClick = event.button === 0 && !this._spacePressed;
+    let moved = false;
 
     const onPointerMove = (e) => {
       if (e.pointerId !== pointerId) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
+      if (Math.hypot(dx, dy) >= 3) moved = true;
       this._world.style.left = (initialLeft + dx) + "px";
       this._world.style.top = (initialTop + dy) + "px";
       this._world.dispatchEvent(new Event("vp_cameraChanged"));
@@ -178,6 +175,8 @@ class CanvasSelection
         try { captureElement.releasePointerCapture(pointerId); } catch (_) {}
       }
       this._world._vp_gestureActive = false;
+      if (e?.type === "pointerup" && clearSelectionOnClick && !moved)
+        this._graph.clearSelection();
       this._gesture = null;
     };
 

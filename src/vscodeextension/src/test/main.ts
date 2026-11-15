@@ -1,12 +1,14 @@
 import * as child_process from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 import {
   downloadAndUnzipVSCode,
-  resolveCliPathFromVSCodeExecutablePath,
+  resolveCliArgsFromVSCodeExecutablePath,
+  runTests,
 } from '@vscode/test-electron';
 
 
-import { runTests } from 'vscode-test';
 
 export function getTestDirPath()
 {
@@ -16,6 +18,8 @@ export function getTestDirPath()
 
 async function main()
 {
+    // macOS Unix sockets cannot use this repository's long iCloud path.
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scv-test-'));
     try {
       // The folder containing the Extension Manifest package.json
       // Passed to `--extensionDevelopmentPath`
@@ -24,28 +28,48 @@ async function main()
       // The path to test runner
       // Passed to --extensionTestsPath
       const extensionTestsPath = path.resolve(__dirname, './suite/index');
-      const vscodeExecutablePath = await downloadAndUnzipVSCode('1.61.1');
-      const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
+      // Modern test tools require a current VS Code extension-host runtime.
+      const vscodeExecutablePath = process.env.VSCODE_EXECUTABLE_PATH
+        || await downloadAndUnzipVSCode('stable');
+      const [cliPath, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(
+        vscodeExecutablePath, {reuseMachineInstall: true});
+      const profileArgs = [
+        '--user-data-dir', userDataDir,
+        '--extensions-dir', path.join(extensionDevelopmentPath, '.vscode-test', 'extensions')
+      ];
 
-      // Use cp.spawn / cp.exec for custom setup
-      child_process.spawnSync(cliPath,
-        ['--install-extension', 'ms-python.python', 'ms-python.vscode-pylance'],
+      const installation = child_process.spawnSync(cliPath,
+        [...cliArgs, ...profileArgs, '--install-extension', 'ms-python.python', '--install-extension', 'ms-python.vscode-pylance'],
         {
-        encoding: 'utf-8',
-        stdio: 'inherit'
-      });
+          encoding: 'utf-8',
+          stdio: 'inherit',
+          shell: process.platform === 'win32'
+        });
+      if (installation.error) { throw installation.error; }
+      if (installation.status !== 0) {
+        throw new Error('Test language-extension installation failed: ' + installation.status);
+      }
 
-      // Download VS Code, unzip it and run the integration test
-      //await runTests({ extensionDevelopmentPath, extensionTestsPath });
       await runTests({
         // Use the specified `code` executable
         vscodeExecutablePath,
         extensionDevelopmentPath,
-        extensionTestsPath
+        extensionTestsPath,
+        launchArgs: [
+          path.resolve(getTestDirPath(), 'testfiles'),
+          ...profileArgs,
+          '--skip-welcome',
+          '--skip-release-notes',
+          '--disable-workspace-trust',
+          '--disable-extension=visualprogrammingx.sourcecodevisualizer-local'
+        ]
       });
     } catch (err) {
-      console.error('Failed to run tests');
-      process.exit(1);
+      console.error('Failed to run tests', err);
+      process.exitCode = 1;
+    }
+    finally {
+      fs.rmSync(userDataDir, {recursive: true, force: true});
     }
 
 }

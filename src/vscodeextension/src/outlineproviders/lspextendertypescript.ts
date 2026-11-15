@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type * as TypeScript from 'typescript';
+import type * as TypeScript from 'typescript-parser';
 import type {LanguageSpecificSymbolInformation, SymbolExtractionContext} from '../outlineproviderAPI/lspextenderprovider';
 import * as Outline from '../outlineproviderAPI/SymbolDefinition';
 import {VpLspExtenderCurlyBraces} from './lspextender_curlyBraces';
@@ -137,7 +137,7 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
     if (!validRange(docSymbol.range) || docSymbol.range.isEmpty || !validRange(docSymbol.selectionRange)
         || !javascript && !docSymbol.range.contains(docSymbol.selectionRange)) { return fail(); }
     // Type-only imports keep the compiler off the extension activation path.
-    const ts: typeof TypeScript = require('typescript');
+    const ts: typeof TypeScript = require('typescript-parser');
     const start = document.offsetAt(docSymbol.range.start);
     const end = document.offsetAt(docSymbol.range.end);
     const selectionStart = document.offsetAt(docSymbol.selectionRange.start);
@@ -318,7 +318,7 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
     };
     const selected = this.selectDeclaration(document, docSymbol, context);
     if (!selected) { return fail(); }
-    const ts: typeof TypeScript = require('typescript');
+    const ts: typeof TypeScript = require('typescript-parser');
     const {fragment, declaration, rangeDeclaration} = selected;
     const tree = fragment.tree;
     const start = document.offsetAt((rangeDeclaration || docSymbol.range).start);
@@ -454,7 +454,7 @@ export class VpLspExtenderTypeScript extends VpLspExtenderCurlyBraces {
       return cached.ranges;
     }
 
-    const ts: typeof TypeScript = require('typescript');
+    const ts: typeof TypeScript = require('typescript-parser');
     const isTsx = this.getLanguageStr() === 'typescriptreact' || document.fileName.endsWith('.tsx');
     const isJsx = document.fileName.endsWith('.jsx');
     const isJs = this.getLanguageStr() === 'javascript' || isJsx;

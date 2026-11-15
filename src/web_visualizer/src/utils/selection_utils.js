@@ -1,6 +1,3 @@
-require ("./text_utils.js");
-
-
 /**
  * Constraint:
  *  - These function don't work for `textarea` or `input`
@@ -181,7 +178,10 @@ class SelectionUtils
   {
     let content = this._getStringUntilCurrent (baseNode, start);
 
-    let lineNr = TextUtils.count (content, "\n", false);
+    let lineNr = 0;
+    for (let offset = 0; offset < content.length; ++offset) {
+      if (content.charCodeAt(offset) === 10) ++lineNr;
+    }
     let lastLineStart = content.lastIndexOf ("\n") + 1;
     let characterNr = content.length - lastLineStart;
 

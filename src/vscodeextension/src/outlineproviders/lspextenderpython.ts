@@ -365,6 +365,12 @@ implements VpLspExtenderProvider
       - fragment.start + fragment.prefixLength;
     const contains = (node: SyntaxNode) => node.from <= selection && selection < node.to;
     const matches: SyntaxNode[] = [];
+    // Pylance excludes trailing comments that a cached ancestor's syntax node owns.
+    const syntaxEnd = (node: SyntaxNode): number => {
+      let last = node.lastChild;
+      while (last?.name === "Comment") { last = last.prevSibling; }
+      return last ? syntaxEnd(last) : node.to;
+    };
     const visit = (node: SyntaxNode) => {
       const decorated = node.parent?.name === "DecoratedStatement" ? node.parent : node;
       if (decorated.from > selection || node.to < selection) { return; }
@@ -379,7 +385,8 @@ implements VpLspExtenderProvider
           matchesSelection = matchesSelection || this.assignmentDefinitionAt(node, selection) !== null;
         }
         if (matchesSelection && toDocument(node.from) >= start
-            && toDocument(trimEnd(node.from, node.to)) <= end) {
+            && (toDocument(trimEnd(node.from, node.to)) <= end
+              || toDocument(syntaxEnd(node)) <= end)) {
           matches.push(node);
         }
       }

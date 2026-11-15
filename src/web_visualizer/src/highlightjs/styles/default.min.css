@@ -31,8 +31,11 @@ code.hljs{padding:3px 5px}
 
 /*!
   Theme: dark
-  Description: Dark Theme partly copied from VSCode dark theme
-  Author: DarkTrick(created content here)
+  Description: Modified partial adaptation of VS Code's built-in Dark / Dark+ themes
+  Author: DarkTrick (adaptation and local styling)
+  Microsoft-derived portions: Copyright (c) 2015 - present Microsoft Corporation
+  License: MIT for Microsoft-derived portions; full notice and source references in ./LICENSE
+  Exact copied revision unknown; verified reference: microsoft/vscode 1.60.0
 */
 .theme-dark .hljs {
   background: #2b2b2b;

@@ -15,7 +15,7 @@
       "email" : ""
   },
   "name" : "58e52edc68b4d48fe9fc77d536b9c3a7a80b1bf5",
-  "license": "UNLICENSED",
+  "license": "LGPL-3.0-only",
   "private": true,
 
   "scripts": {

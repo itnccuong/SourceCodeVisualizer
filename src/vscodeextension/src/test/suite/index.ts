@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as assert from 'assert';
 
 import * as path from 'path';
-import * as Mocha from 'mocha';
-import * as glob from 'glob';
+import Mocha = require('mocha');
+import { glob } from 'glob';
 import * as testutils from './utils'
 import { MemoryFile, register_memoryFileProvider } from './memoryfile';
 
@@ -32,7 +32,7 @@ export class Extensions
   static async activate_visualProgramming()
   {
     return await Extensions.activate_extension (
-                "visualprogrammingx.SourceCodeVisualizer-Local");
+                "itnccuong.source-code-visualizer");
   }
 }
 
@@ -66,14 +66,10 @@ export async function run(): Promise<void>
 
   const testsRoot = path.resolve(__dirname, '..');
 
-  return new Promise((c, e) => {
-    glob('**/**.test.js', { cwd: testsRoot }, (err, files) => {
-      if (err) {
-        return e(err);
-      }
+  const files = await glob('**/*.test.js', { cwd: testsRoot });
+  files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
 
-      // Add files to the test suite
-      files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
+  return new Promise((c, e) => {
 
       try {
         // Run the mocha test
@@ -89,6 +85,5 @@ export async function run(): Promise<void>
         console.error(err);
         e(err);
       }
-    });
   });
 }
