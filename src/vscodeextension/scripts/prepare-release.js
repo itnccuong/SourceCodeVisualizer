@@ -66,6 +66,12 @@ const releaseDir = path.join(extensionDir, 'release');
 const sourceDir = path.join(extensionDir, 'source');
 fs.mkdirSync(releaseDir, { recursive: true });
 fs.mkdirSync(sourceDir, { recursive: true });
+for (const file of fs.readdirSync(sourceDir)) {
+  if (/^source-code-visualizer-\d+\.\d+\.\d+\.tar\.gz$/.test(file)
+      && file !== `source-code-visualizer-${manifest.version}.tar.gz`) {
+    fs.unlinkSync(path.join(sourceDir, file));
+  }
+}
 for (const file of [path.join(repoRoot, 'LICENSE'), path.join(extensionDir, 'LICENSE'),
   path.join(releaseDir, 'LICENSE')]) {
   fs.writeFileSync(file, license);

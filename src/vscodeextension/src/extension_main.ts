@@ -7,7 +7,7 @@ import * as VisualizingSystem from './visualprogramming/extensionactivator';
  *   @brief setup extension within vscode
  **/
 
-export function activate (context: vscode.ExtensionContext)
+export function acthttps://marketplace.visualstudio.com/items?itemName=itnccuong.source-code-visualizerivate (context: vscode.ExtensionContext)
 {
   // 1. activate foundation
   OutlineProviderAPI.activate (context);

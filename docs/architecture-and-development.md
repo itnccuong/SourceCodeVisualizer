@@ -377,6 +377,7 @@ Source file modifications do not update the installed extension automatically. W
 - Register and own the `itnccuong` publisher at https://marketplace.visualstudio.com/manage, or change `publisher` and the documented extension ID before packaging. Create a new extension and upload `src/vscodeextension/release/source-code-visualizer.vsix`. Packaging does not require a publisher token; uploading does require publisher access.
 - Publish a matching version tag/source release. Keep upstream attribution, the license texts, dependency notices, and dated modification notices. Do not imply upstream endorsement.
 - Inherited attribution review: Microsoft's MIT notice and pinned Dark / Dark+ source references are retained in `src/web_visualizer/src/highlightjs/styles/LICENSE` and the generated package licenses. The original copied theme revision is unknown. The CC BY-SA-attributed `TextUtils.count` helper was removed; its only caller counts newlines directly. See `src/vscodeextension/SOURCE.md` for details. This is not legal advice.
+- Marketplace icon: original `src/vscodeextension/icon.svg` artwork renders to the submitted `icon.png` (256 × 256). Rebuild it with `rsvg-convert --width 256 --height 256 --output src/vscodeextension/icon.png src/vscodeextension/icon.svg`. The editable SVG is excluded from direct VSIX files but retained in the corresponding source archive. No upstream icon pixels are reused.
 
 
 ## III. Component and Generated-File Map

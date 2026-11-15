@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Python, TypeScript, and YAML files branching into a visual diagram</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#122e42"/>
+      <stop offset="1" stop-color="#0a1829"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="48" fill="url(#tile)"/>
+  <path d="M66 27h47l21 21v124a10 10 0 0 1-10 10H66a10 10 0 0 1-10-10V37a10 10 0 0 1 10-10Z" fill="#283f50" stroke="#e8bf73" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M113 28v21h20" fill="none" stroke="#e8bf73" stroke-width="4" stroke-linejoin="round"/>
+  <text x="68" y="59" fill="#ffe0a3" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="1">PY</text>
+  <path d="M51 65h49l22 22v111a10 10 0 0 1-10 10H51a10 10 0 0 1-10-10V75a10 10 0 0 1 10-10Z" fill="#193d57" stroke="#75bcf5" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M100 66v22h21" fill="none" stroke="#75bcf5" stroke-width="4" stroke-linejoin="round"/>
+  <text x="53" y="98" fill="#b5ddff" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="1">TS</text>
+  <path d="M36 103h65l21 21v91a10 10 0 0 1-10 10H36a10 10 0 0 1-10-10V113a10 10 0 0 1 10-10Z" fill="#193e50" stroke="#66e5cd" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M100 104v21h21" fill="none" stroke="#66e5cd" stroke-width="4" stroke-linejoin="round"/>
+  <text x="38" y="151" fill="#f1fffc" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1">YAML</text>
+  <g fill="none" stroke-linecap="round" stroke-width="4">
+    <path d="M41 172h18m10 0h29M51 190h9m10 0h28" stroke="#66e5cd"/>
+    <path d="M41 208h18m10 0h19" stroke="#7e9fae"/>
+  </g>
+  <path d="M135 102h13" fill="none" stroke="#66e5cd" stroke-width="4" stroke-linecap="round"/>
+  <path d="m142 96 7 6-7 6" fill="none" stroke="#66e5cd" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M194 114v22m-28 0h56m-56 0v24m56-24v24" fill="none" stroke="#ffb787" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="158" y="73" width="72" height="42" rx="10" fill="#f2a476"/>
+  <path d="M171 87h46" stroke="#713c32" stroke-width="4" stroke-linecap="round"/>
+  <path d="M171 100h28" stroke="#713c32" stroke-width="4" stroke-linecap="round"/>
+  <rect x="145" y="160" width="43" height="40" rx="9" fill="#20495a" stroke="#ffb787" stroke-width="4"/>
+  <rect x="202" y="160" width="39" height="40" rx="9" fill="#20495a" stroke="#ffb787" stroke-width="4"/>
+  <path d="M156 174h20m-20 12h13m37-12h16m-16 12h10" fill="none" stroke="#e6f4f4" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="194" cy="136" r="5" fill="#ffb787"/>
+</svg>

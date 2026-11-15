@@ -1,7 +1,12 @@
 # Change Log
 
-## Unreleased
+## [v0.2.2]
 
+- Clarify language support in the GitHub and Marketplace READMEs with grouped supported, experimental, and legacy language tiers, definition lookup requirements, and parser components.
+
+## [v0.2.1]
+
+- Replace the upstream screenshot icon with original stacked PY, TS, and YAML files feeding a branching diagram for a distinct Marketplace identity.
 - Update development tools to maintained ESLint, Mocha, VS Code test runner, and extension packager versions; pin patched glob dependencies and remove legacy duplicate tools. Separate the unchanged TypeScript 3.9 runtime parser from the TypeScript 5.9 build compiler.
 - Preserve Microsoft's MIT notice for inherited Dark / Dark+ theme styling in release licenses; remove the copied CC BY-SA occurrence-counting helper and count selection newlines directly.
 - Accept complete Python methods whose cached class syntax includes trailing comments beyond Pylance's declaration range, without accepting truncated executable code or changing provider ranges.

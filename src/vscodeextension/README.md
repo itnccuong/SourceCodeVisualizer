@@ -6,19 +6,19 @@ Explore code and YAML as connected, on-demand diagrams inside VS Code.
 
 The recordings below show this fork—not the original Marketplace release.
 
-## Replaced declaration parsing
+## Language support and parsing
 
-This fork replaces legacy declaration-boundary heuristics with syntax-aware parsing for Python and JavaScript/TypeScript/TSX.
+Definition detection finds the symbol or source you want to explore. The parser component extracts its structure and source ranges for the diagram. They are separate responsibilities.
 
-| Language | Parsing in this fork | Editor requirements |
-| --- | --- | --- |
-| Python | Bundled `@lezer/python` parser for declaration boundaries, assignments, nested definitions, decorators, comments, and docstrings. | Python and Pylance extensions; select your project's interpreter. |
-| JavaScript, TypeScript, TSX | Bundled TypeScript compiler parser for declaration boundaries, callable assignments, and declarations without implementation bodies. | A working VS Code language provider. |
-| YAML | Dedicated `yaml` AST/CST provider for mappings, sequences, source ranges, anchors, and aliases. | No separate YAML language-server extension is required for visualization. |
+| Language | Definition detection | Parser component | Status |
+| --- | --- | --- | --- |
+| Python, YAML | **Python:** VS Code Python tooling / Pylance; select your project's interpreter.<br>**YAML:** Dedicated structure and alias/anchor lookup; no external YAML language server required. | **Python:** Bundled Lezer Python (`@lezer/python`) and dedicated adapter.<br>**YAML:** Bundled `yaml` AST/CST parser and dedicated source mapping. | **Supported.** Python is the primary code validation target; YAML support covers configuration structure, not Helm execution or Kubernetes dependency analysis. |
+| JavaScript, TypeScript, TSX | VS Code's built-in JavaScript/TypeScript language provider. | Bundled TypeScript **3.9.10** syntax parser (`typescript-parser`) and dedicated adapter. | **Experimental.** Targeted coverage; newer syntax may be unsupported. |
+| C, C++, Java, PHP, Dart | An installed language provider for the relevant language exposing VS Code symbols and definitions. | Inherited generic brace/semicolon heuristics, **not language-specific syntax parsers**. | **Legacy / best effort.** No fork-level support validation; C/C++ has known parsing limitations. |
 
-For code, VS Code's language providers still find symbols and definitions. The bundled parsers interpret their source boundaries; they **do not replace Pylance or the language server**.
+This fork replaces legacy declaration-boundary heuristics with syntax-aware parsing for Python and JavaScript/TypeScript/TSX. For code, the bundled parsers **do not replace Pylance or the language server**.
 
-Python is the primary validation target. JavaScript/TypeScript/TSX have targeted coverage, not guaranteed parity. Inherited C/C++, PHP, Java, and Dart adapters remain available but have not received the same parser rewrite or validation.
+**Supported** means actively maintained and tested scenarios, not a guarantee for every syntax form or project. **Experimental** has targeted tests without Python-level validation. **Legacy / best effort** adapters remain available, but can produce extraction errors or incorrect boundaries; their presence is not a promise of reliable support. Languages not listed have no bundled adapter.
 
 ## See it in action
 

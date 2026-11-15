@@ -5,3 +5,6 @@
 **/.vscode
 exampleFiles
 src/
+
+# Editable icon artwork stays in the corresponding source archive.
+icon.svg

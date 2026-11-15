@@ -1,5 +1,5 @@
 Source Code Visualizer — independently maintained fork
-Release preparation: 0.2.0, 2026-11-15
+Release preparation: 0.2.2, 2026-11-15
 
 Original project: https://github.com/DarkTrick/SourceCodeVisualizer
 Original copyright: DarkTrick - 4fb5f723849d32782e723c34bfd132e442d378d7
@@ -9,8 +9,8 @@ Fork: https://github.com/itnccuong/SourceCodeVisualizer
 This fork modifies the original extension and web visualizer. Changes include
 syntax-aware Python and JavaScript/TypeScript declaration parsing, YAML
 visualization, source navigation, comment visibility, canvas interaction and
-persistence, documentation, and release packaging. It is not an upstream release
-and is not endorsed by the upstream author.
+persistence, documentation, original multi-file icon artwork, and release
+packaging. It is not an upstream release and is not endorsed by the upstream author.
 
 The upstream extension and web visualizer are distributed under LGPL version 3.
 Modifications to those components remain subject to its applicable terms.
