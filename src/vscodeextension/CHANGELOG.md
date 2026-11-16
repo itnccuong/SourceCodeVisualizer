@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.0.0]
+
+- Support modern JavaScript and TypeScript declarations and cross-family definition navigation with the bundled TypeScript 6.0.3 parser. Requires VS Code 1.146+; TSX remains experimental.
+
 ## [v0.2.5]
 
 - Center and fit the selected node when navigating through Nodes, preserving its layout, collapse/scroll state, and group selection. Reserve toolbar/minimap space and keep oversized node headings accessible at minimum zoom.
