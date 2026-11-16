@@ -39,7 +39,6 @@ class CommentFixture {
 suite('Comment & Docstring Visibility Extraction', () => {
   let fixture: CommentFixture;
   const pythonAdapter = new VpLspExtenderPython();
-  const tsAdapter = new VpLspExtenderTypeScript('typescript');
   const tsxAdapter = new VpLspExtenderTypeScript('typescriptreact');
 
   setup(() => {
@@ -154,39 +153,99 @@ suite('Comment & Docstring Visibility Extraction', () => {
     assert.strictEqual(doc.getText(comments[1].range), '"""Unicode docstring: ✨"""');
   });
 
-  test('TypeScript/JavaScript extracts comments and JSDoc while preserving strings, regex, and templates', async () => {
-    const code = [
-      '// leading single-line comment',
-      '/**',
-      ' * JSDoc comment for fn',
-      ' */',
-      'function testFn(param: string /* inline comment */): string {',
-      '  // inside body comment',
-      '  const str = "hello // not a comment /* still not */";',
-      '  const re = /pattern\\/\\* not comment *\\//g;',
-      '  const tpl = `template with ${param} // not comment`;',
-      '  return str; /* trailing comment */',
-      '}',
-      '// trailing EOF comment'
-    ].join('\n');
+  for (const language of ['javascript', 'typescript'] as const) {
+    test(language + ' extracts exact comments while preserving strings, regex and templates', async () => {
+      const code = [
+        '// leading single-line comment',
+        '/**',
+        ' * JSDoc comment for fn',
+        ' */',
+        language === 'typescript'
+          ? 'function testFn(param: string /* inline comment */): string {'
+          : 'function testFn(param /* inline comment */) {',
+        '  // inside body comment',
+        '  const str = "hello // not a comment /* still not */";',
+        '  const re = /pattern\\/\\* not comment *\\//g;',
+        '  const tpl = `template with ${param} // not comment`;',
+        '  return str; /* trailing comment */',
+        '}',
+        '// trailing EOF comment'
+      ].join('\n');
+      const doc = await fixture.open(language === 'typescript' ? 'sample.ts' : 'sample.js', code, language);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const comments = adapter.getCommentRanges(doc);
+      const expected = ['// leading single-line comment', '/**\n * JSDoc comment for fn\n */',
+        '/* inline comment */', '// inside body comment', '/* trailing comment */', '// trailing EOF comment'];
+      assert.deepStrictEqual(comments.map(comment => doc.getText(comment.range)), expected);
+      for (let index = 0; index < comments.length; index++) {
+        assert.strictEqual(comments[index].kind, 'comment');
+        assert.strictEqual(doc.offsetAt(comments[index].range.start), code.indexOf(expected[index]));
+        assert.strictEqual(doc.offsetAt(comments[index].range.end), code.indexOf(expected[index]) + expected[index].length);
+      }
+    });
 
-    const doc = await fixture.open('sample.ts', code, 'typescript');
-    const comments = tsAdapter.getCommentRanges(doc);
+    test(language + ' preserves CRLF/non-BMP navigation offsets around modern syntax', async () => {
+      const code = [
+        'const emoji = "😀 // literal"; /* 😀 real comment */',
+        'class Cache { #value = 1; static { /* static comment */ this.ready = true; } }',
+        language === 'typescript'
+          ? 'const config = {port: 8080} satisfies Settings; // config comment'
+          : 'const config = {port: 8080}; // config comment',
+        'const result = config?.port ?? 0; // 😀 trailing comment',
+        'const template = `😀 /* text */ ${result /* interpolation comment */}`;'
+      ].join('\r\n');
+      const doc = await fixture.open(language === 'typescript' ? 'modern.ts' : 'modern.js', code, language);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const comments = adapter.getCommentRanges(doc);
+      const expected = ['/* 😀 real comment */', '/* static comment */', '// config comment',
+        '// 😀 trailing comment', '/* interpolation comment */'];
+      assert.deepStrictEqual(comments.map(comment => doc.getText(comment.range)), expected);
+      for (let index = 0; index < comments.length; index++) {
+        const offset = code.indexOf(expected[index]);
+        assert.ok(comments[index].range.start.isEqual(doc.positionAt(offset)));
+        assert.strictEqual(doc.offsetAt(comments[index].range.end), offset + expected[index].length);
+      }
+      const referenceOffset = code.indexOf('config?.port');
+      const target = adapter.getDefinitionSymbol(doc, doc.positionAt(code.indexOf('config =')));
+      assert.ok(target);
+      assert.strictEqual(doc.getText(target!.selectionRange), 'config');
+      assert.strictEqual(adapter.getDefinitionSymbol(doc, doc.positionAt(referenceOffset)), undefined,
+        'a reference remains a reference after comment classification');
+      const hidden = comments.reduceRight((text, comment) =>
+        text.slice(0, doc.offsetAt(comment.range.start)) + text.slice(doc.offsetAt(comment.range.end)), code);
+      assert.ok(hidden.includes('"😀 // literal"'));
+      assert.ok(hidden.includes('`😀 /* text */ ${result }`'));
+      assert.ok(hidden.includes('config?.port ?? 0;'));
+      assert.deepStrictEqual(adapter.getCommentRanges(doc).map(comment => comment.range), comments.map(comment => comment.range));
+    });
 
-    const texts = comments.map(c => doc.getText(c.range));
-    assert.ok(texts.includes('// leading single-line comment'));
-    assert.ok(texts.some(t => t.includes('* JSDoc comment for fn')));
-    assert.ok(texts.includes('/* inline comment */'));
-    assert.ok(texts.includes('// inside body comment'));
-    assert.ok(texts.includes('/* trailing comment */'));
-    assert.ok(texts.includes('// trailing EOF comment'));
-
-    for (const t of texts) {
-      assert.ok(!t.includes('hello // not a comment'), 'Must not treat string literals as comments');
-      assert.ok(!t.includes('pattern\\/'), 'Must not treat regex literals as comments');
-      assert.ok(!t.includes('template with'), 'Must not treat template literals as comments');
-    }
-  });
+    test(language + ' refreshes extraction and comments after a document version changes', async () => {
+      const original = 'const value = "😀"; /* old comment */\r\n';
+      const changed = 'const value = {port: 8080}; // new 😀 comment\r\n';
+      const document = await vscode.workspace.openTextDocument({language, content: original});
+      const adapter = new VpLspExtenderTypeScript(language);
+      try {
+        const before = document.version;
+        assert.deepStrictEqual(adapter.getCommentRanges(document).map(comment => document.getText(comment.range)), ['/* old comment */']);
+        const originalTarget = adapter.getDefinitionSymbol(document, document.positionAt(original.indexOf('value')));
+        assert.ok(originalTarget);
+        assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, originalTarget!).rangeBody!), '"😀"');
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(original.length)), changed);
+        assert.ok(await vscode.workspace.applyEdit(edit));
+        assert.ok(document.version > before);
+        const comments = adapter.getCommentRanges(document);
+        assert.deepStrictEqual(comments.map(comment => document.getText(comment.range)), ['// new 😀 comment']);
+        assert.strictEqual(document.offsetAt(comments[0].range.start), changed.indexOf('//'));
+        const target = adapter.getDefinitionSymbol(document, document.positionAt(changed.indexOf('value')));
+        assert.ok(target);
+        assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, target!).rangeBody!), '{port: 8080}');
+      } finally {
+        await vscode.window.showTextDocument(document);
+        await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+      }
+    });
+  }
 
   test('TSX JSX text vs real comments', async () => {
     const code = [

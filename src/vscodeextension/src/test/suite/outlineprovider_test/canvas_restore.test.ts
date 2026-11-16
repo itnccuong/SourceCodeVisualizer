@@ -1,11 +1,16 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {MemoryFile} from '../memoryfile';
 import * as Outline from '../../../outlineproviderAPI/SymbolDefinition';
 import {SourceReference, computeDocumentHash, SavedRange} from '../../../outlineproviderAPI/source_reference';
 import {OutlineUtils} from '../../../outlineproviderAPI/utils/outlineutils';
 import {VpLspExtenderPython} from '../../../outlineproviders/lspextenderpython';
 import {translateOutlineRanges} from '../../../visualprogramming/outline_entities';
+import {AssertX} from '../assert_utils';
+import {getTestDirPath} from '../../main';
+import {VpLspExtenderTypeScript} from '../../../outlineproviders/lspextendertypescript';
+import {executeDefinitionProviderForPositionOnDocument, executeSavedOutlineProvider} from '../../../outlineproviderAPI/extensionactivator';
 
 let fixtureId = 0;
 
@@ -18,7 +23,22 @@ class RestoreFixture {
   private readonly registrations: vscode.Disposable[];
 
   constructor() {
+    const execute = vscode.commands.executeCommand;
+    vscode.commands.executeCommand = <T>(command: string, ...args: unknown[]): Thenable<T | undefined> => {
+      const uri = args[0];
+      if (uri instanceof vscode.Uri && uri.scheme === this.scheme) {
+        if (command === 'vscode.executeDocumentSymbolProvider') {
+          return Promise.resolve((this.symbols.get(uri.toString()) ?? []) as T);
+        }
+        if (command === 'vscode.executeDefinitionProvider') {
+          this.definitionProviderCalled = true;
+          return Promise.resolve([] as T);
+        }
+      }
+      return execute<T>(command, ...args);
+    };
     this.registrations = [
+      new vscode.Disposable(() => { vscode.commands.executeCommand = execute; }),
       vscode.workspace.registerTextDocumentContentProvider(this.scheme, {
         provideTextDocumentContent: uri => {
           const file = this.files.get(uri.toString());
@@ -26,15 +46,6 @@ class RestoreFixture {
           return file.read();
         }
       }),
-      vscode.languages.registerDocumentSymbolProvider({ scheme: this.scheme, language: 'plaintext' }, {
-        provideDocumentSymbols: document => this.symbols.get(document.uri.toString()) ?? []
-      }),
-      vscode.languages.registerDefinitionProvider({ scheme: this.scheme, language: 'plaintext' }, {
-        provideDefinition: () => {
-          this.definitionProviderCalled = true;
-          return [];
-        }
-      })
     ];
   }
 
@@ -42,10 +53,16 @@ class RestoreFixture {
 
   async open(path: string, content: string, language = 'plaintext') {
     const uri = this.uri(path);
-    const file = MemoryFile.createDocument(path.endsWith('.pyi') ? 'pyi' : 'py');
+    const file = MemoryFile.createDocument(path.split('.').pop() ?? '');
     file.write(content);
     this.files.set(uri.toString(), file);
     return vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(uri), language);
+  }
+
+  async update(document: vscode.TextDocument, content: string) {
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), content);
+    assert.ok(await vscode.workspace.applyEdit(edit), 'the fixture edit is applied');
   }
 
   dispose() {
@@ -58,6 +75,33 @@ function toSaved(range: vscode.Range): SavedRange {
     { line: range.start.line, character: range.start.character },
     { line: range.end.line, character: range.end.character }
   ];
+}
+
+function rangeOf(document: vscode.TextDocument, text: string, from = 0) {
+  const start = document.getText().indexOf(text, from);
+  assert.ok(start >= 0, 'fixture contains ' + text);
+  return new vscode.Range(document.positionAt(start), document.positionAt(start + text.length));
+}
+
+function functionSymbol(document: vscode.TextDocument, declaration: string, name: string, from = 0) {
+  const range = rangeOf(document, declaration, from);
+  return new vscode.DocumentSymbol(name, '', vscode.SymbolKind.Function, range,
+    rangeOf(document, name, document.offsetAt(range.start)));
+}
+
+async function saveReference(outline: Outline.Symbol): Promise<SourceReference> {
+  await translateOutlineRanges([outline]);
+  assert.ok(outline.sourceReference);
+  return JSON.parse(JSON.stringify(outline.sourceReference));
+}
+
+function assertSameSource(actual: Outline.Symbol, expected: Outline.Symbol, document: vscode.TextDocument) {
+  assert.strictEqual(actual.uri, document.uri.toString());
+  assert.strictEqual(actual.language, document.languageId);
+  AssertX.range_equals(actual.totalRange, expected.totalRange);
+  AssertX.range_equals(actual.displayTextRange, expected.displayTextRange);
+  assert.deepStrictEqual(actual.sourceReference?.symbol, expected.sourceReference?.symbol);
+  assert.strictEqual(document.getText(actual.totalRange!), document.getText(expected.totalRange!));
 }
 
 suite('Canvas Restore Validation', () => {
@@ -279,5 +323,123 @@ suite('Canvas Restore Validation', () => {
     assert.strictEqual(child!.sourceReference?.documentHash, computeDocumentHash(code));
     const body = child!.parts.find(part => part.CLASS_TYPE === 'Text');
     assert.ok(body!.displayText.includes('return 42'));
+  });
+
+  for (const language of ['javascript', 'typescript'] as const) {
+    test('restores an unchanged omitted ' + language + ' binding by exact syntax without definition lookup', async () => {
+      const declaration = 'function configure() {\n  const {port = 8080, host: server} = settings;\n  return server;\n}';
+      const doc = await fixture.open(language === 'javascript' ? 'bindings.js' : 'bindings.ts', declaration, language);
+      fixture.symbols.set(doc.uri.toString(), [functionSymbol(doc, declaration, 'configure')]);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const selection = rangeOf(doc, 'server');
+      const result = await OutlineUtils.provideDefinitionOutline(adapter, doc, selection.start);
+      assert.ok(result && result.length === 1 && result[0] instanceof Outline.Symbol);
+      const original = result[0];
+      const reference = await saveReference(original);
+      assert.strictEqual(reference.language, language);
+      assert.strictEqual(reference.uri, doc.uri.toString());
+      assert.strictEqual(reference.symbol?.name, 'server', 'the renamed leaf uses the bound name, not its property key');
+      assert.strictEqual(reference.symbol?.kind, vscode.SymbolKind.Constant);
+      assert.strictEqual(reference.symbol?.path, null);
+      assert.deepStrictEqual(reference.symbol?.selection, toSaved(selection));
+      assert.deepStrictEqual(reference.symbol?.declaration, toSaved(rangeOf(doc, 'const {port = 8080, host: server} = settings;')));
+
+      const restored = await OutlineUtils.provideSavedOutline(doc, reference, adapter);
+      assert.ok(restored instanceof Outline.Symbol);
+      assertSameSource(restored, original, doc);
+      assert.strictEqual(doc.getText(restored.displayTextRange!), '{port = 8080, host: server} =');
+      assert.strictEqual(restored.parts.map(part => doc.getText(part.displayTextRange!)).join(''), 'settings');
+      assert.strictEqual(fixture.definitionProviderCalled, false);
+    });
+
+    test('changed pathless ' + language + ' bindings stay unavailable rather than guessing new coordinates', async () => {
+      const code = 'const value = 42;\n';
+      const doc = await fixture.open(language === 'javascript' ? 'pathless.js' : 'pathless.ts', code, language);
+      fixture.symbols.set(doc.uri.toString(), []);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const result = await OutlineUtils.provideDefinitionOutline(adapter, doc, rangeOf(doc, 'value').start);
+      assert.ok(result && result.length === 1 && result[0] instanceof Outline.Symbol);
+      const reference = await saveReference(result[0]);
+      assert.strictEqual(reference.symbol?.path, null);
+      const version = doc.version;
+      try {
+        await fixture.update(doc, '// moved declaration\n' + code);
+        assert.ok(doc.version > version);
+        await assert.rejects(OutlineUtils.provideSavedOutline(doc, reference, adapter),
+          /Cannot locate declaration "value": document modified and symbol has no ancestry path/);
+        assert.strictEqual(fixture.definitionProviderCalled, false);
+      } finally {
+        await vscode.window.showTextDocument(doc);
+        await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+      }
+    });
+
+    test('changed ' + language + ' provider ancestry remains unavailable when two declarations match', async () => {
+      const first = 'function run() { return 1; }';
+      const second = 'function run() { return 2; }';
+      const doc = await fixture.open(language === 'javascript' ? 'ambiguous.js' : 'ambiguous.ts', first, language);
+      const initialSymbol = functionSymbol(doc, first, 'run');
+      fixture.symbols.set(doc.uri.toString(), [initialSymbol]);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const result = await OutlineUtils.provideDefinitionOutline(adapter, doc, initialSymbol.selectionRange.start);
+      assert.ok(result && result.length === 1 && result[0] instanceof Outline.Symbol);
+      const reference = await saveReference(result[0]);
+      assert.deepStrictEqual(reference.symbol?.path, [{name: 'run', kind: vscode.SymbolKind.Function}]);
+
+      try {
+        await fixture.update(doc, '// modified\n' + first + '\n' + second + '\n');
+        fixture.symbols.set(doc.uri.toString(), [
+          functionSymbol(doc, first, 'run'), functionSymbol(doc, second, 'run', doc.getText().indexOf(second))
+        ]);
+        await assert.rejects(OutlineUtils.provideSavedOutline(doc, reference, adapter),
+          /Ambiguous symbol: multiple declarations match ancestry path for "run"/);
+        assert.strictEqual(fixture.definitionProviderCalled, false);
+      } finally {
+        await vscode.window.showTextDocument(doc);
+        await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+      }
+    });
+  }
+
+  test('saves and restores a real JavaScript to TypeScript target through the target registry', async () => {
+    const extension = vscode.extensions.getExtension('vscode.typescript-language-features');
+    assert.ok(extension, 'the built-in TypeScript language extension must be available');
+    await extension.activate();
+    const fixturePath = path.join(getTestDirPath(), 'testfiles', 'js_ts_parser');
+    const source = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(fixturePath, 'consumer.js')));
+    const target = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(fixturePath, 'modern.ts')));
+    assert.strictEqual(source.languageId, 'javascript');
+    assert.strictEqual(target.languageId, 'typescript');
+    const call = /\bkeep\s*\(/.exec(source.getText());
+    assert.ok(call, 'the real JavaScript fixture calls keep');
+    const position = source.positionAt(call.index);
+    const targets = await OutlineUtils.vscode_executeDefinitionProvider(source.uri, position);
+    const expectedTarget = targets.find(candidate => candidate.uri.toString() === target.uri.toString()
+      && target.getText(candidate.selectionRange) === 'keep');
+    assert.ok(expectedTarget, 'the built-in semantic provider resolves keep to modern.ts');
+    const result = await executeDefinitionProviderForPositionOnDocument(source, position, async choices => {
+      const choice = choices.find(candidate => candidate.uri.toString() === target.uri.toString()
+        && candidate.selectionRange.isEqual(expectedTarget.selectionRange));
+      assert.ok(choice, 'the real chooser retains the selected target coordinates');
+      return choice;
+    });
+    assert.ok(result && result.length === 1 && result[0] instanceof Outline.Symbol);
+    const original = result[0];
+    assert.strictEqual(original.uri, target.uri.toString());
+    assert.strictEqual(original.language, 'typescript');
+    assert.strictEqual(target.getText(original.displayTextRange!), 'keep<const T>(value: T)');
+    const reference = await saveReference(original);
+    assert.strictEqual(reference.uri, target.uri.toString(), 'the saved source is not the JavaScript origin');
+    assert.strictEqual(reference.language, 'typescript');
+    assert.deepStrictEqual(reference.symbol?.selection, toSaved(expectedTarget.selectionRange));
+    assert.ok(reference.symbol?.path, 'a real provider target retains its ancestry for later edits');
+
+    const restored = await executeSavedOutlineProvider(reference);
+    assert.ok(restored instanceof Outline.Symbol);
+    assertSameSource(restored, original, target);
+    await translateOutlineRanges([restored]);
+    assert.strictEqual(restored.displayText, 'keep<const T>(value: T)');
+    assert.strictEqual(restored.parts.map(part => part.displayText).join(''), 'return value;');
+    assert.strictEqual(restored.sourceReference?.documentHash, reference.documentHash);
   });
 });

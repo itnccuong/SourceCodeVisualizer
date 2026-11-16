@@ -8,7 +8,7 @@ import * as Outline from '../SymbolDefinition';
 import * as vscode from 'vscode'
 import * as utils from '../../utils';
 import type {DefinitionTarget, DefinitionTargetChooser, DefinitionOutlineResult} from '../outlineprovider';
-import { SymbolExtractionContext, VpLspExtenderProvider } from '../lspextenderprovider';
+import { SymbolExtractionContext, TargetAdapterResolver, VpLspExtenderProvider } from '../lspextenderprovider';
 import { DocumentSymbolX } from './documentsymbolx';
 import {SavedRange, SymbolPathEntry, SourceReference, computeDocumentHash} from '../source_reference';
 
@@ -16,6 +16,21 @@ export class OutlineUtils {
   private static readonly symbolParents = new WeakMap<vscode.DocumentSymbol, vscode.DocumentSymbol>();
   private static readonly providerSymbols = new WeakSet<vscode.DocumentSymbol>();
 
+
+  private static isJsTs(language: string): boolean {
+    return language === 'javascript' || language === 'typescript' || language === 'typescriptreact';
+  }
+
+  // Keep provider identity/ancestry when syntax proves an exact declaration or RHS.
+  private static syntaxTarget(document: vscode.TextDocument, position: vscode.Position,
+                              provider: VpLspExtenderProvider, symbols: vscode.DocumentSymbol[],
+                              ancestors: readonly vscode.DocumentSymbol[] = []): vscode.DocumentSymbol | undefined {
+    const syntax = provider.getDefinitionSymbol?.(document, position, {ancestors});
+    if (!syntax) { return undefined; }
+    return symbols.find(symbol => symbol === syntax
+      || symbol.selectionRange.isEqual(syntax.selectionRange)
+        && (symbol.range.isEqual(syntax.range) || syntax.range.contains(symbol.range))) ?? syntax;
+  }
   private static _getSymbolExtractionContext(symbol: vscode.DocumentSymbol): SymbolExtractionContext {
     const ancestors: vscode.DocumentSymbol[] = [];
     for (let parent = this.symbolParents.get(symbol); parent; parent = this.symbolParents.get(parent)) {
@@ -169,6 +184,12 @@ export class OutlineUtils {
   {
     const symbols = await this._getFlatDocumentSymbols(uri);
     const document = await vscode.workspace.openTextDocument(uri);
+    return this.selectDocumentSymbol(document, symbols, startPos);
+  }
+
+  private static selectDocumentSymbol(document: vscode.TextDocument,
+                                      symbols: readonly vscode.DocumentSymbol[],
+                                      startPos: vscode.Position): vscode.DocumentSymbol | null {
     let selected: vscode.DocumentSymbol | null = null;
     let enclosing: vscode.DocumentSymbol | null = null;
     let selectedSize = Infinity;
@@ -224,30 +245,22 @@ export class OutlineUtils {
                       provider: VpLspExtenderProvider,
                       uri:      vscode.Uri,
                       position: vscode.Position,
-                      chooseTarget?: DefinitionTargetChooser)
+                      chooseTarget?: DefinitionTargetChooser,
+                      resolveTargetAdapter?: TargetAdapterResolver)
                       : Promise<DefinitionOutlineResult>
   {
     // Messages from the webview contain structural positions, not API instances.
     position = new vscode.Position(position.line, position.character);
-    // JavaScript assignment symbols can select the RHS callable rather than
-    // their displayed receiver. An exact declaration selection is already the
-    // destination; asking for its definition can redirect to the receiver local.
-    if (provider.getLanguageStr() === 'javascript') {
+    // Only syntax-certified direct declaration/callable offsets bypass semantics.
+    if (this.isJsTs(provider.getLanguageStr()) && provider.getDefinitionSymbol) {
       const symbols = await this._getFlatDocumentSymbols(uri);
       const document = await vscode.workspace.openTextDocument(uri);
-      const candidates = symbols.filter(symbol => symbol.range.start.compareTo(position) <= 0
-          && symbol.range.end.compareTo(position) > 0)
-        .sort((a, b) => (document.offsetAt(a.range.end) - document.offsetAt(a.range.start))
+      const ancestors = symbols.filter(symbol => symbol.range.contains(position))
+        .sort((a, b) => document.offsetAt(a.range.end) - document.offsetAt(a.range.start)
           - (document.offsetAt(b.range.end) - document.offsetAt(b.range.start)));
-      for (const declaration of candidates) {
-        if (declaration.selectionRange.start.isEqual(position) || declaration.range.start.isEqual(position)) {
-          return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, uri), provider)];
-        }
-        const information = provider.getLanguageSpecificSymbolInformation(
-          document, declaration, this._getSymbolExtractionContext(declaration));
-        if (information.definitionPosition?.isEqual(position)) {
-          return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, uri), provider)];
-        }
+      const direct = this.syntaxTarget(document, position, provider, symbols, ancestors);
+      if (direct) {
+        return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(direct, uri), provider)];
       }
     }
     const targets = await this.vscode_executeDefinitionProvider(uri, position);
@@ -261,30 +274,39 @@ export class OutlineUtils {
     }
     const origin = await vscode.workspace.openTextDocument(uri);
     const document = await vscode.workspace.openTextDocument(target.uri);
+    let targetAdapter = provider;
     if (document.languageId !== origin.languageId) {
-      throw new Error('The resolved target uses an unsupported language for this navigation: ' + document.languageId + '.');
+      const resolved = this.isJsTs(origin.languageId) && this.isJsTs(document.languageId)
+        ? resolveTargetAdapter?.(document.languageId) : undefined;
+      if (!resolved) {
+        throw new Error('The resolved target uses an unsupported language for this navigation: ' + document.languageId + '.');
+      }
+      targetAdapter = resolved;
     }
     const root = target.selectionRange.isEmpty
       && target.selectionRange.start.line === 0 && target.selectionRange.start.character === 0;
-    if (root) { return [await this.provideDocumentOutline(provider, document)]; }
+    if (root) { return [await this.provideDocumentOutline(targetAdapter, document)]; }
     const symbols = await this._getFlatDocumentSymbols(target.uri);
     const exactRange = symbols.find(symbol => symbol.range.isEqual(target.range));
     if (!exactRange && target.range.isEqual(target.selectionRange)
         && target.range.isEqual(utils.document_getRange(document))) {
-      return [await this.provideDocumentOutline(provider, document)];
+      return [await this.provideDocumentOutline(targetAdapter, document)];
     }
-    let declaration = await this.getDocumentSymbolAtPosition(target.uri, target.selectionRange.start);
-    const exactSelection = declaration && declaration.selectionRange.contains(target.selectionRange)
-      && target.selectionRange.start.isBefore(declaration.selectionRange.end);
-    if (exactRange) { declaration = exactRange; }
-    if (provider.getLanguageStr() === 'python'
-        && (!exactSelection && !exactRange || declaration
+    let declaration = this.selectDocumentSymbol(document, symbols, target.selectionRange.start);
+    const exactSelection = declaration && (this.isJsTs(targetAdapter.getLanguageStr())
+      ? declaration.selectionRange.isEqual(target.selectionRange)
+      : declaration.selectionRange.contains(target.selectionRange)
+        && target.selectionRange.start.isBefore(declaration.selectionRange.end));
+    if (exactRange && !exactSelection) { declaration = exactRange; }
+    if (targetAdapter.getDefinitionSymbol
+        && (!exactSelection && !exactRange || !this.isJsTs(targetAdapter.getLanguageStr()) && declaration
           && [vscode.SymbolKind.Variable, vscode.SymbolKind.Field, vscode.SymbolKind.Property,
               vscode.SymbolKind.Constant].includes(declaration.kind))) {
       const ancestors = declaration
         ? [declaration, ...this._getSymbolExtractionContext(declaration).ancestors] : [];
-      const syntax = provider.getDefinitionSymbol?.(document, target.selectionRange.start, {ancestors});
-      if (syntax && declaration && syntax !== declaration && declaration.range.contains(syntax.range)) {
+      const syntax = this.syntaxTarget(document, target.selectionRange.start, targetAdapter, symbols, ancestors);
+      if (syntax && declaration && syntax !== declaration && !declaration.range.isEqual(syntax.range)
+          && declaration.range.contains(syntax.range)) {
         this.symbolParents.set(syntax, declaration);
       }
       declaration = syntax ?? (exactSelection || exactRange ? declaration : null);
@@ -292,7 +314,7 @@ export class OutlineUtils {
     if (!declaration) {
       throw new Error('No source declaration could be mapped at the resolved location.');
     }
-    return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, target.uri), provider)];
+    return [this.documentSymbol2outlineSymbol(document, new DocumentSymbolX(declaration, target.uri), targetAdapter)];
   }
 
 
@@ -337,7 +359,8 @@ export class OutlineUtils {
           || child.kind === vscode.SymbolKind.Event
           || child.kind === vscode.SymbolKind.Operator
           || child.kind === vscode.SymbolKind.TypeParameter
-          || child.kind === vscode.SymbolKind.Function && child.name.indexOf(") callback") > -1) {
+          || child.kind === vscode.SymbolKind.Function && !this.isJsTs(provider.getLanguageStr())
+            && child.name.indexOf(") callback") > -1) {
         continue;
       }
       if (!range.contains(child.range) || child.range.start.isBefore(rawCursor)) {
@@ -413,10 +436,11 @@ export class OutlineUtils {
                   provider: VpLspExtenderProvider,
                   document: vscode.TextDocument,
                   position: vscode.Position,
-                  chooseTarget?: DefinitionTargetChooser)
+                  chooseTarget?: DefinitionTargetChooser,
+                  resolveTargetAdapter?: TargetAdapterResolver)
                 : Promise<DefinitionOutlineResult>
   {
-    return this._getDefinitionRanges(provider, document.uri, position, chooseTarget);
+    return this._getDefinitionRanges(provider, document.uri, position, chooseTarget, resolveTargetAdapter);
   }
 
 

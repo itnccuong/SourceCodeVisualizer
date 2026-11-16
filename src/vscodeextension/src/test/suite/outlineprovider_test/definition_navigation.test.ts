@@ -6,23 +6,42 @@ import * as Outline from '../../../outlineproviderAPI/SymbolDefinition';
 import {DefinitionOutlineResult, DefinitionTargetChooser} from '../../../outlineproviderAPI/outlineprovider';
 import {OutlineUtils} from '../../../outlineproviderAPI/utils/outlineutils';
 import {VpLspExtenderPython} from '../../../outlineproviders/lspextenderpython';
+import {VpLspExtenderTypeScript} from '../../../outlineproviders/lspextendertypescript';
+import {TargetAdapterResolver, VpLspExtenderProvider} from '../../../outlineproviderAPI/lspextenderprovider';
 
 let fixtureId = 0;
 
-// Plaintext and a unique scheme exclude installed Python/language providers;
-// extraction still uses the real Python adapter on the original source.
+// A unique scheme keeps fixture definitions isolated from installed providers.
+// Plaintext fixtures preserve the existing Python adapter-only cases.
 class NavigationFixture {
   readonly scheme = 'outline-definition-navigation-' + (++fixtureId);
-  readonly adapter = new VpLspExtenderPython();
   readonly reads: string[] = [];
+  readonly definitionReads: string[] = [];
   readonly symbols = new Map<string, vscode.DocumentSymbol[]>();
   definitions: vscode.Definition | vscode.LocationLink[] | undefined = [];
   source!: vscode.TextDocument;
   private readonly files = new Map<string, MemoryFile>();
   private readonly registrations: vscode.Disposable[];
 
-  constructor() {
+  constructor(readonly adapter: VpLspExtenderProvider = new VpLspExtenderPython()) {
+    // Built-in TS providers also serve virtual JS/TS documents. Intercept only
+    // this fixture's command requests so semantic fixtures cannot leak targets.
+    const execute = vscode.commands.executeCommand;
+    vscode.commands.executeCommand = <T>(command: string, ...args: unknown[]): Thenable<T | undefined> => {
+      const uri = args[0];
+      if (uri instanceof vscode.Uri && uri.scheme === this.scheme) {
+        if (command === 'vscode.executeDocumentSymbolProvider') {
+          return Promise.resolve((this.symbols.get(uri.toString()) ?? []) as T);
+        }
+        if (command === 'vscode.executeDefinitionProvider') {
+          this.definitionReads.push(uri.toString());
+          return Promise.resolve((uri.toString() === this.source?.uri.toString() ? this.definitions : []) as T);
+        }
+      }
+      return execute<T>(command, ...args);
+    };
     this.registrations = [
+      new vscode.Disposable(() => { vscode.commands.executeCommand = execute; }),
       vscode.workspace.registerTextDocumentContentProvider(this.scheme, {
         provideTextDocumentContent: uri => {
           this.reads.push(uri.toString());
@@ -31,12 +50,6 @@ class NavigationFixture {
           return file.read();
         }
       }),
-      vscode.languages.registerDocumentSymbolProvider({scheme: this.scheme, language: 'plaintext'}, {
-        provideDocumentSymbols: document => this.symbols.get(document.uri.toString()) ?? []
-      }),
-      vscode.languages.registerDefinitionProvider({scheme: this.scheme, language: 'plaintext'}, {
-        provideDefinition: document => document.uri.toString() === this.source?.uri.toString() ? this.definitions : []
-      })
     ];
   }
 
@@ -44,14 +57,15 @@ class NavigationFixture {
 
   async open(path: string, content: string, language = 'plaintext') {
     const uri = this.uri(path);
-    const file = MemoryFile.createDocument(path.endsWith('.pyi') ? 'pyi' : 'py');
+    const file = MemoryFile.createDocument(path.split('.').pop() ?? '');
     file.write(content);
     this.files.set(uri.toString(), file);
     return vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(uri), language);
   }
 
-  navigate(chooseTarget?: DefinitionTargetChooser) {
-    return OutlineUtils.provideDefinitionOutline(this.adapter, this.source, new vscode.Position(0, 1), chooseTarget);
+  navigate(chooseTarget?: DefinitionTargetChooser, resolveTargetAdapter?: TargetAdapterResolver) {
+    return OutlineUtils.provideDefinitionOutline(
+      this.adapter, this.source, new vscode.Position(0, 1), chooseTarget, resolveTargetAdapter);
   }
 
   dispose() { this.registrations.slice().reverse().forEach(registration => registration.dispose()); }
@@ -61,6 +75,23 @@ async function withFixture(run: (fixture: NavigationFixture) => Promise<void>) {
   const fixture = new NavigationFixture();
   try {
     fixture.source = await fixture.open('source.py', 'lookup()\n');
+    await run(fixture);
+  } finally {
+    fixture.dispose();
+  }
+}
+
+type JsTsLanguage = 'javascript' | 'typescript' | 'typescriptreact';
+
+const resolveJsTsAdapter: TargetAdapterResolver = language =>
+  language === 'javascript' || language === 'typescript' || language === 'typescriptreact'
+    ? new VpLspExtenderTypeScript(language) : undefined;
+
+async function withJsTsFixture(language: JsTsLanguage, run: (fixture: NavigationFixture) => Promise<void>) {
+  const fixture = new NavigationFixture(new VpLspExtenderTypeScript(language));
+  try {
+    fixture.source = await fixture.open('source.' + (language === 'javascript' ? 'js' : language === 'typescriptreact' ? 'tsx' : 'ts'),
+      'lookup();\n', language);
     await run(fixture);
   } finally {
     fixture.dispose();
@@ -105,7 +136,7 @@ function sourceParts(document: vscode.TextDocument, outline: Outline.OutlineRang
 function assertFile(outline: Outline.File, document: vscode.TextDocument) {
   assert.strictEqual(outline.CLASS_TYPE, 'File');
   assert.strictEqual(outline.uri, document.uri.toString());
-  assert.strictEqual(outline.language, 'python');
+  assert.strictEqual(outline.language, document.languageId === 'plaintext' ? 'python' : document.languageId);
   AssertX.range_equals(outline.displayTextRange, new vscode.Range(0, 0, 0, 0));
   assert.strictEqual(sourceParts(document, outline), document.getText(), 'file parts retain gaps and the final character');
 }
@@ -115,7 +146,7 @@ function assertSymbol(outline: Outline.Symbol, document: vscode.TextDocument,
   assert.strictEqual(outline.CLASS_TYPE, 'Symbol');
   assert.strictEqual(outline.kind, kind);
   assert.strictEqual(outline.uri, document.uri.toString());
-  assert.strictEqual(outline.language, 'python');
+  assert.strictEqual(outline.language, document.languageId === 'plaintext' ? 'python' : document.languageId);
   const declarationRange = rangeOf(document, declaration, from);
   AssertX.range_equals(outline.totalRange, declarationRange);
   AssertX.range_equals(outline.displayTextRange, rangeOf(document, heading, document.offsetAt(declarationRange.start)));
@@ -349,8 +380,12 @@ suite('Definition target navigation', () => {
     await withFixture(async fixture => {
       const document = await fixture.open('foreign.js', 'function target() { return 1; }', 'javascript');
       fixture.definitions = [new vscode.Location(document.uri, new vscode.Range(0, 0, 0, 0))];
-      await assert.rejects(fixture.navigate(),
-        /^Error: The resolved target uses an unsupported language for this navigation: javascript\.$/);
+      let resolutions = 0;
+      await assert.rejects(fixture.navigate(undefined, language => {
+        ++resolutions;
+        return resolveJsTsAdapter(language);
+      }), /^Error: The resolved target uses an unsupported language for this navigation: javascript\.$/);
+      assert.strictEqual(resolutions, 0, 'an installed JS adapter does not enable Python cross-language routing');
     });
   });
 
@@ -449,6 +484,243 @@ suite('Definition target navigation', () => {
       fixture.symbols.set(document.uri.toString(), [parent]);
       fixture.definitions = [new vscode.Location(document.uri, rangeOf(document, 'config'))];
       await assert.rejects(fixture.navigate(), /Cannot determine declaration boundaries for "config"\./);
+    });
+  });
+
+  for (const origin of ['javascript', 'typescriptreact'] as const) {
+    test(origin + ' resolves a TypeScript implementation through its target adapter', async () => {
+      await withJsTsFixture(origin, async fixture => {
+        const declaration = 'export function keep<const T>(value: T) { return value; }';
+        const document = await fixture.open('modern.ts', declaration, 'typescript');
+        const target = symbol(document, declaration, 'keep');
+        fixture.symbols.set(document.uri.toString(), [target]);
+        fixture.definitions = [{targetUri: document.uri, targetRange: target.range,
+          targetSelectionRange: target.selectionRange, originSelectionRange: new vscode.Range(0, 0, 0, 6)}];
+        const resolutions: string[] = [];
+        const outline = onlySymbol(await fixture.navigate(undefined, language => {
+          resolutions.push(language);
+          return resolveJsTsAdapter(language);
+        }));
+        assertSymbol(outline, document, declaration, 'keep<const T>(value: T)', 'return value;');
+        assert.deepStrictEqual(resolutions, ['typescript']);
+        assert.strictEqual(outline.sourceReference?.uri, document.uri.toString());
+        assert.strictEqual(outline.sourceReference?.language, 'typescript');
+        assert.deepStrictEqual(outline.sourceReference?.symbol?.path,
+          [{name: 'keep', kind: vscode.SymbolKind.Function}]);
+        assert.deepStrictEqual(fixture.definitionReads, [fixture.source.uri.toString()],
+          'the selected target is not sent through the definition provider a second time');
+      });
+    });
+  }
+
+  test('JavaScript opens only the selected declaration-file overload', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const first = 'export declare function read(path: string): string;';
+      const second = 'export declare function read(path: number): number;';
+      const document = await fixture.open('api.d.ts', first + '\n' + second + '\n', 'typescript');
+      const overload = symbol(document, second, 'read', vscode.SymbolKind.Function, first.length);
+      fixture.symbols.set(document.uri.toString(), [symbol(document, first, 'read'), overload]);
+      fixture.definitions = [{targetUri: document.uri, targetRange: overload.range,
+        targetSelectionRange: overload.selectionRange}];
+      const outline = onlySymbol(await fixture.navigate(undefined, resolveJsTsAdapter));
+      assertSymbol(outline, document, second, 'read(path: number): number', '');
+      assert.strictEqual(outline.declarationOnly, true);
+      assert.deepStrictEqual(outline.parts, []);
+      assert.ok(outline.uri.endsWith('/api.d.ts'));
+    });
+  });
+
+  test('TypeScript opens a JavaScript callable assignment and retains provider children and ancestry', async () => {
+    await withJsTsFixture('typescript', async fixture => {
+      const childText = 'function nested() { return 2; }';
+      const rhs = '(() => { ' + childText + ' return nested(); })';
+      const declaration = 'holder.run = ' + rhs + ';';
+      const document = await fixture.open('legacy.cjs', declaration, 'javascript');
+      const target = symbol(document, declaration, 'run', vscode.SymbolKind.Function);
+      const child = symbol(document, childText, 'nested');
+      target.children = [child];
+      fixture.symbols.set(document.uri.toString(), [target]);
+      fixture.definitions = [{targetUri: document.uri, targetRange: rangeOf(document, rhs),
+        targetSelectionRange: rangeOf(document, rhs)}];
+      const outline = onlySymbol(await fixture.navigate(undefined, resolveJsTsAdapter));
+      assertSymbol(outline, document, declaration, 'holder.run = (() =>', childText + ' return nested();');
+      const nested = outline.parts.filter((part): part is Outline.Symbol => part instanceof Outline.Symbol);
+      assert.strictEqual(nested.length, 1);
+      assertSymbol(nested[0], document, childText, 'nested()', 'return 2;');
+      assert.deepStrictEqual(outline.sourceReference?.symbol?.path,
+        [{name: 'run', kind: vscode.SymbolKind.Function}]);
+      assert.deepStrictEqual(nested[0].sourceReference?.symbol?.path,
+        [{name: 'run', kind: vscode.SymbolKind.Function}, {name: 'nested', kind: vscode.SymbolKind.Function}]);
+      assert.strictEqual(target.children[0], child, 'navigation does not replace the provider tree');
+      AssertX.range_equals(target.range, rangeOf(document, declaration));
+      AssertX.range_equals(target.selectionRange, rangeOf(document, 'run'));
+    });
+  });
+
+  test('an exact single-parameter RHS target stays callable while its parameter target stays a parameter', async () => {
+    await withJsTsFixture('typescript', async fixture => {
+      const rhs = 'value => value + 1';
+      const document = await fixture.open('single.js', 'const run = ' + rhs + ';\n', 'javascript');
+      const rhsRange = rangeOf(document, rhs);
+      const provider = new vscode.DocumentSymbol('run', '', vscode.SymbolKind.Function, rhsRange, rhsRange);
+      fixture.symbols.set(document.uri.toString(), [provider]);
+      fixture.definitions = [{targetUri: document.uri, targetRange: rhsRange, targetSelectionRange: rhsRange}];
+      const callable = onlySymbol(await fixture.navigate(undefined, resolveJsTsAdapter));
+      assertSymbol(callable, document, 'const run = ' + rhs + ';', 'run = value =>', 'value + 1');
+      assert.deepStrictEqual(callable.sourceReference?.symbol?.path,
+        [{name: 'run', kind: vscode.SymbolKind.Function}]);
+      const parameterRange = rangeOf(document, 'value');
+      fixture.definitions = [new vscode.Location(document.uri, parameterRange)];
+      const parameter = onlySymbol(await fixture.navigate(undefined, resolveJsTsAdapter));
+      AssertX.range_equals(parameter.totalRange!, parameterRange);
+      assert.strictEqual(document.getText(parameter.displayTextRange!), 'value');
+      assert.strictEqual(parameter.sourceReference?.symbol?.name, 'value');
+      assert.strictEqual(parameter.sourceReference?.symbol?.path, null);
+      assert.strictEqual(parameter.isCallable, false);
+      AssertX.range_equals(provider.range, rhsRange);
+      AssertX.range_equals(provider.selectionRange, rhsRange);
+    });
+  });
+
+  test('cross-family syntax lookup opens an omitted binding without promoting an enclosing method', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const declaration = 'function build() { const limit: number = 42; return limit; }';
+      const document = await fixture.open('bindings.ts', declaration, 'typescript');
+      fixture.symbols.set(document.uri.toString(), [symbol(document, declaration, 'build')]);
+      fixture.definitions = [new vscode.Location(document.uri, rangeOf(document, 'limit'))];
+      const outline = onlySymbol(await fixture.navigate(undefined, resolveJsTsAdapter));
+      assertSymbol(outline, document, 'const limit: number = 42;', 'limit: number =', '42', 'constant');
+      assert.strictEqual(outline.sourceReference?.symbol?.name, 'limit');
+      assert.strictEqual(outline.sourceReference?.symbol?.path, null);
+      const referenceOffset = document.getText().lastIndexOf('limit');
+      fixture.definitions = [new vscode.Location(document.uri, rangeOf(document, 'limit', referenceOffset))];
+      await assert.rejects(fixture.navigate(undefined, resolveJsTsAdapter),
+        /No source declaration could be mapped at the resolved location\./);
+    });
+  });
+
+  test('cross-family module targets use the target language for file extraction and comments', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const declaration = 'export function keep<const T>(value: T) { return value; }';
+      const document = await fixture.open('module.mts', '// module comment\n' + declaration + '\n// EOF', 'typescript');
+      fixture.symbols.set(document.uri.toString(), [symbol(document, declaration, 'keep')]);
+      fixture.definitions = [new vscode.Location(document.uri, new vscode.Range(0, 0, 0, 0))];
+      const file = onlyFile(await fixture.navigate(undefined, resolveJsTsAdapter));
+      assertFile(file, document);
+      assert.strictEqual(file.sourceReference?.language, 'typescript');
+      assert.strictEqual(file.sourceReference?.uri, document.uri.toString());
+      assert.deepStrictEqual(file.commentRanges?.map(comment => document.getText(comment.range)),
+        ['// module comment', '// EOF']);
+      const child = file.parts.find((part): part is Outline.Symbol => part instanceof Outline.Symbol);
+      assert.ok(child);
+      assertSymbol(child, document, declaration, 'keep<const T>(value: T)', 'return value;');
+    });
+  });
+
+  test('same-language targets retain the supplied adapter without consulting the resolver', async () => {
+    await withJsTsFixture('typescript', async fixture => {
+      const declaration = 'function same(value: string) { return value; }';
+      const document = await fixture.open('same.ts', declaration, 'typescript');
+      const target = symbol(document, declaration, 'same');
+      fixture.symbols.set(document.uri.toString(), [target]);
+      fixture.definitions = [new vscode.Location(document.uri, target.selectionRange)];
+      const outline = onlySymbol(await fixture.navigate(undefined, () => assert.fail('same-language routing uses its supplied adapter')));
+      assertSymbol(outline, document, declaration, 'same(value: string)', 'return value;');
+    });
+  });
+
+  for (const resolver of [undefined, (() => undefined) as TargetAdapterResolver]) {
+    test('cross-family targets reject a missing adapter: ' + (resolver ? 'unregistered' : 'no resolver'), async () => {
+      await withJsTsFixture('javascript', async fixture => {
+        const document = await fixture.open('missing_adapter.ts', 'export const value: number = 1;', 'typescript');
+        fixture.definitions = [new vscode.Location(document.uri, new vscode.Range(0, 0, 0, 0))];
+        await assert.rejects(fixture.navigate(undefined, resolver),
+          /^Error: The resolved target uses an unsupported language for this navigation: typescript\.$/);
+      });
+    });
+  }
+
+  test('JavaScript cannot route to Python even when a resolver supplies its adapter', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const document = await fixture.open('foreign.py', 'def target():\n    return 1', 'python');
+      fixture.definitions = [new vscode.Location(document.uri, new vscode.Range(0, 0, 0, 0))];
+      let resolutions = 0;
+      await assert.rejects(fixture.navigate(undefined, () => {
+        ++resolutions;
+        return new VpLspExtenderPython();
+      }), /^Error: The resolved target uses an unsupported language for this navigation: python\.$/);
+      assert.strictEqual(resolutions, 0);
+    });
+  });
+
+  test('cross-family cancellation happens before target reads or adapter resolution', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      fixture.definitions = [new vscode.Location(fixture.uri('unreadable.ts'), new vscode.Range(1, 0, 1, 4)),
+        new vscode.Location(fixture.uri('unreadable.tsx'), new vscode.Range(2, 0, 2, 4))];
+      const reads = fixture.reads.slice();
+      let choices = 0;
+      const result = await fixture.navigate(async targets => {
+        ++choices;
+        assert.deepStrictEqual(targets.map(target => target.uri.path), ['/unreadable.ts', '/unreadable.tsx']);
+        return undefined;
+      }, () => assert.fail('cancelled targets must not resolve adapters'));
+      assert.strictEqual(result, null);
+      assert.strictEqual(choices, 1);
+      assert.deepStrictEqual(fixture.reads, reads);
+    });
+  });
+
+  test('cross-family duplicate choices retain order and extract only the chosen declaration', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const declaration = 'function chosen(value: number) { return value; }';
+      const first = await fixture.open('first.ts', declaration, 'typescript');
+      const second = await fixture.open('second.ts', '// selected\n' + declaration, 'typescript');
+      const firstSymbol = symbol(first, declaration, 'chosen');
+      const secondSymbol = symbol(second, declaration, 'chosen');
+      fixture.symbols.set(first.uri.toString(), [firstSymbol]);
+      fixture.symbols.set(second.uri.toString(), [secondSymbol]);
+      fixture.definitions = [
+        {targetUri: first.uri, targetRange: firstSymbol.range, targetSelectionRange: firstSymbol.selectionRange},
+        {targetUri: first.uri, targetRange: firstSymbol.selectionRange, targetSelectionRange: firstSymbol.selectionRange},
+        {targetUri: second.uri, targetRange: secondSymbol.range, targetSelectionRange: secondSymbol.selectionRange}
+      ];
+      let choices = 0;
+      const outline = onlySymbol(await fixture.navigate(async targets => {
+        ++choices;
+        assert.deepStrictEqual(targets.map(target => target.uri.toString()),
+          [first.uri.toString(), second.uri.toString()]);
+        AssertX.range_equals(targets[1].selectionRange, secondSymbol.selectionRange);
+        return targets[1];
+      }, resolveJsTsAdapter));
+      assert.strictEqual(choices, 1);
+      assertSymbol(outline, second, declaration, 'chosen(value: number)', 'return value;');
+      fixture.definitions = [
+        {targetUri: second.uri, targetRange: secondSymbol.range, targetSelectionRange: secondSymbol.selectionRange},
+        {targetUri: second.uri, targetRange: secondSymbol.selectionRange, targetSelectionRange: secondSymbol.selectionRange}
+      ];
+      assertSymbol(onlySymbol(await fixture.navigate(async () => assert.fail('duplicates need no chooser'), resolveJsTsAdapter)),
+        second, declaration, 'chosen(value: number)', 'return value;');
+    });
+  });
+
+  test('a selected cross-family syntax error reports that target instead of opening a valid alternative', async () => {
+    await withJsTsFixture('javascript', async fixture => {
+      const valid = 'function valid() { return 1; }';
+      const broken = 'function broken(value: ) { return value; }';
+      const first = await fixture.open('valid.ts', valid, 'typescript');
+      const second = await fixture.open('broken.ts', broken, 'typescript');
+      const firstSymbol = symbol(first, valid, 'valid');
+      const secondSymbol = symbol(second, broken, 'broken');
+      fixture.symbols.set(first.uri.toString(), [firstSymbol]);
+      fixture.symbols.set(second.uri.toString(), [secondSymbol]);
+      fixture.definitions = [new vscode.Location(first.uri, firstSymbol.selectionRange),
+        new vscode.Location(second.uri, secondSymbol.selectionRange)];
+      await assert.rejects(fixture.navigate(async targets => targets[1], resolveJsTsAdapter), error => {
+        assert.ok(error instanceof Error);
+        assert.ok(error.message.startsWith('Cannot determine declaration boundaries for "broken".'), error.message);
+        assert.ok(error.message.includes(second.uri.toString()), error.message);
+        return true;
+      });
     });
   });
 });

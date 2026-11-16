@@ -57,12 +57,12 @@ Registration stores an object for later use; it does not analyze the file yet.
 Inside `OutlineUtils`, the connected path is:
 
 ```text
-provideDefinitionOutline(adapter, document, position, chooseTarget?)
+provideDefinitionOutline(adapter, document, position, chooseTarget?, resolveTargetAdapter?)
   → _getDefinitionRanges(...)
     → normalize and deduplicate VS Code Location / LocationLink targets
     → open one target directly, or await the host Quick Pick chooser
     → file root: provideDocumentOutline(...)
-    → declaration: exact/smallest document symbol, or Python syntax-backed target
+    → declaration: exact provider symbol or adapter-proven syntax target
   → documentSymbol2outlineSymbol(...)
     → adapter.getLanguageSpecificSymbolInformation(document, docSymbol, {ancestors})
     → recursively build parts from child declarations and ordinary text
@@ -79,11 +79,11 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 
 ### Declaration Boundaries
 
-- `Outline.Symbol.totalRange` normally equals the supplied `DocumentSymbol.range`. Syntax-backed exceptions are Python name-only assignments and JavaScript RHS-only callable assignments. The adapter returns optional `rangeDeclaration`; provider objects remain unchanged.
-- Python loads `@lezer/python` on first extraction. JavaScript/TypeScript/TSX reuse TypeScript 3.9.10 in JS/TS/TSX mode. Parsing remains declaration-local or uses supplied ancestor context, not a background whole-file index.
-- Each adapter retains one parsed fragment per document in a `WeakMap`. Version, language, and containment govern reuse. Temporary parser wrappers never enter output ranges.
-- An ambiguous TypeScript property or incomplete JavaScript assignment can use supplied ancestor syntax. Missing context, ambiguous matches, and malformed selected syntax produce extraction errors.
-- Anonymous function and arrow expressions are declaration candidates in JavaScript, TypeScript, and TSX, independent of provider display names such as `<function>`. Whole-expression function selections bypass synthetic variable wrappers; anonymous function expressions use a temporary parenthesis wrapper when needed. Cached ancestor syntax can resolve callbacks directly. Wrapper characters never enter source ranges, and incomplete bodies still fail containment/diagnostic checks.
+- `Outline.Symbol.totalRange` normally equals the supplied `DocumentSymbol.range`. Syntax-backed exceptions are Python name-only assignments and JS/TS name-only declarations or owned callable RHS selections. The adapter returns optional `rangeDeclaration`; provider objects remain unchanged.
+- Python loads `@lezer/python` on first extraction and retains one declaration/ancestor fragment per document. Its fragment parser is unchanged by the JS/TS upgrade.
+- JavaScript/TypeScript/experimental TSX lazily load the exact `typescript-parser` alias, TypeScript 6.0.3. Each adapter retains one on-demand actual-document syntax snapshot in a `WeakMap`, keyed by document identity, version, registered language and filename. JS/TS/TSX mode is explicit; actual filenames retain module/declaration context.
+- Each new JS/TS snapshot creates one in-memory `noResolve`/`noLib`/`noEmit` compiler program for public syntactic diagnostics. Only the SourceFile, diagnostics, declaration-start index and optional comment ranges survive. No imports, project analysis, execution, background index or source writes occur.
+- JS/TS matching proves declaration/binding identity, full executable-body containment and diagnostic isolation. Only exact name-only declarations or owned callable initializer/RHS selections can expand. Transparent expression wrappers identify callable owners without changing displayed source. Anonymous callbacks remain separate declarations; provider display names do not suppress JS/TS callback rows.
 - The named result contains `rangeHead`, nullable `rangeBody`, `attributes`, `declarationOnly`, optional `rangeDeclaration`, optional display-child projection, and optional `definitionPosition`. A null body means no source body; a zero-width body means an empty implementation.
 - TypeScript bodyless signatures set `declarationOnly`; the webview hides their body area while retaining the signature and navigation. No status text or badge is added. Python `pass`, `...`, and docstrings remain source.
 - Shared traversal sorts a copy of children, keeps source gaps, and rejects crossing/overlapping displayed children. Definition lookup uses end-exclusive containment and target-file ranges.
@@ -91,11 +91,11 @@ provideDefinitionOutline(adapter, document, position, chooseTarget?)
 - Pylance 2026.4.1 supplies name-only ranges for Python variables/constants. For an exact name-only variable/constant/field/property range, reuse suitable cached/ancestor syntax or parse from the name's physical line. Extend the local fragment geometrically only while the selected statement has missing tokens at its end; use the parsed statement boundary, never the next colon or next symbol. Malformed syntax and reference selections still fail explicitly. Other incomplete ranges are not repaired.
 - Multiline decorator attributes retain their full original source in the model/hover text. The window displays only a compact first-line metadata label, constrained to one line with ellipsis, so it cannot overlap the signature/body.
 - Python-related changes require live verification of `../../MAFC/Workspace/airflow-data/dags/ingestion/table_level/trino_ingestion_dag_factory.py`: file → `_build_dag` → `ingestion_dag`, plus affected variables. Do not execute or modify that Airflow file.
-- JavaScript callable variable/property/field/constant initializers become declaration rows. Only an immediate wrapper with exactly the same AST function/parenthesis range is transparent; its children are projected without changing the provider tree. Raw and effective child ranges retain strict overlap/crossing checks.
+- JS/TS callable variable/property/field/constant initializers become declaration rows. Only an immediate wrapper with exactly the same AST callable/transparent-expression range is projected; all other provider children survive. Raw and effective child ranges retain strict overlap/crossing checks.
 - Assignment headings include their receiver. Their syntax-backed `definitionPosition` keeps row lookup on the callable, not on the receiver local. Definition requests normalize serialized webview positions into VS Code `Position` instances before comparisons. **Show in code** still selects the displayed heading's source start.
 - Empty `(0,0)` definition targets open files before declaration lookup. Full-document targets open files only when no declaration has exactly that range. File identity is URI-based, its display range is `(0,0)`, and its parts retain whitespace gaps and EOF. **Show in code** opens its beginning without inventing a symbol `totalRange`.
 - Python decorator attributes retain a `definitionRange` for the terminal callable identifier, including qualified and multiline decorators. Descriptive attributes such as `async` have no navigation range. The Python `getDefinitionSymbol` hook proves omitted assignment targets or direct parameter declarations from syntax; it never substitutes an enclosing method for an unmapped reference.
-- The selected target must have the origin document's language ID. Actual `.pyi` source is retained and labeled **Type stub — declaration only**; no implementation filename is guessed and no analyzed code is executed. Unsupported syntax remains an explicit extraction failure. For example, live `builtins.pyi` `bool` opened, while `str` failed on `capitalize`; this is not general stub-extraction parity.
+- Production wrappers resolve target adapters through the existing language registry at navigation time. Same-language requests use the supplied adapter; cross-language routing is limited to JavaScript, TypeScript and experimental TSX, and requires an installed target adapter. Python cross-language navigation remains rejected. Target URI/selection, chooser cancellation, deduplication and source-reference formats are unchanged. Actual `.pyi` source remains labeled **Type stub — declaration only**; no implementation filename is guessed.
 - YAML container endpoints use CST `valueRange` (with original CRLF offsets), not trailing parser trivia in `range`. Sequence and mapping descriptors use the same value boundary so indentation of a following dedented sibling cannot extend a child past its parent. Source gaps and document separators remain in the enclosing outline; strict containment and overlap validation stay enabled.
 
 ### Canvas Window Geometry
@@ -211,7 +211,7 @@ Paths in this table are under `src/vscodeextension/src/`.
 | `visualprogramming/webviewcreator.ts` | Create the Code Diagram webview and its HTML; load assets from `media/` |
 | `outlineproviders/providerregistrer.ts` | Register default language adapters, including Python |
 | `outlineproviders/lspextenderpython.ts` | `VpLspExtenderPython`: derive Python header/body ranges from a document symbol |
-| `outlineproviders/lspextendertypescript.ts` | `VpLspExtenderTypeScript`: split TS/TSX syntax inside supplied declaration/ancestor ranges |
+| `outlineproviders/lspextendertypescript.ts` | `VpLspExtenderTypeScript`: document syntax cache, indexed JS/TS/TSX declaration extraction, syntax-backed targets and comments |
 | `outlineproviderAPI/extensionactivator.ts` | Register internal `vp.*` commands and dispatch to the language registry |
 | `outlineproviderAPI/utils/languagefeatureregistry.ts` | Store/get providers using lowercased language IDs |
 | `outlineproviderAPI/utils/outlineproviderwrapper.ts` | Hold a language adapter and delegate to shared outline utilities |

@@ -3,7 +3,7 @@ import * as Outline from '../SymbolDefinition';
 import * as utils from "../../utils";
 import {OutlineUtils} from './outlineutils';
 import {VpOutlineProvider, DefinitionTargetChooser, DefinitionOutlineResult} from "../outlineprovider";
-import {VpLspExtenderProvider} from "../lspextenderprovider";
+import {VpLspExtenderProvider, TargetAdapterResolver} from "../lspextenderprovider";
 
 
 /**
@@ -14,12 +14,10 @@ import {SourceReference} from '../source_reference';
 
 export class VpOutlineProviderWrapper implements VpOutlineProvider
 {
-  private lspExtender: VpLspExtenderProvider;
-
-  constructor (lspExtender: VpLspExtenderProvider)
-  {
-    this.lspExtender = lspExtender;
-  }
+  constructor (
+    public readonly lspExtender: VpLspExtenderProvider,
+    private readonly resolveTargetAdapter?: TargetAdapterResolver
+  ) {}
 
 
 
@@ -43,7 +41,7 @@ export class VpOutlineProviderWrapper implements VpOutlineProvider
                           chooseTarget?: DefinitionTargetChooser)
     : Promise<DefinitionOutlineResult>
   {
-    return OutlineUtils.provideDefinitionOutline(this.lspExtender, document, position, chooseTarget);
+    return OutlineUtils.provideDefinitionOutline(this.lspExtender, document, position, chooseTarget, this.resolveTargetAdapter);
   }
 
 

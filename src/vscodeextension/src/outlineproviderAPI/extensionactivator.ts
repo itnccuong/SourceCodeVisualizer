@@ -207,7 +207,10 @@ function registerProvider(languageId: string, vpOutlineProvider: VpOutlineProvid
  **/
 function registerLspExtenderProvider(languageId: string, vpLspExtenderProvider: VpLspExtenderProvider)
 {
-  let vpOutlineProvider: VpOutlineProvider = new VpOutlineProviderWrapper (vpLspExtenderProvider);
+  const vpOutlineProvider = new VpOutlineProviderWrapper(vpLspExtenderProvider, language => {
+    const target = outlineProviderRegistry.get(language);
+    return target instanceof VpOutlineProviderWrapper ? target.lspExtender : undefined;
+  });
   outlineProviderRegistry.register (languageId, vpOutlineProvider);
 }
 

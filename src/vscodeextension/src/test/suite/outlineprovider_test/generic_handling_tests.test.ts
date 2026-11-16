@@ -10,6 +10,8 @@ import {MemoryFile} from "../memoryfile"
 import { VpLspExtenderCurlyBraces } from '../../../outlineproviders/lspextender_curlyBraces';
 import { OutlineUtils } from '../../../outlineproviderAPI/utils/outlineutils';
 import { DocumentSymbolX } from '../../../outlineproviderAPI/utils/documentsymbolx';
+import {VpLspExtenderTypeScript} from '../../../outlineproviders/lspextendertypescript';
+import * as Outline from '../../../outlineproviderAPI/SymbolDefinition';
 
 
 async function openDocument(filename: string) {
@@ -24,7 +26,7 @@ async function openDocument(filename: string) {
 async function createMemDocument(content: string, language = "typescript")
   : Promise<vscode.TextDocument>
 {
-  let memfile = MemoryFile.createDocument (language === "cpp" ? "cpp" : "ts");
+  let memfile = MemoryFile.createDocument(language === "cpp" ? "cpp" : language === "javascript" ? "js" : "ts");
   memfile.write (content);
 
   const doc = await vscode.workspace.openTextDocument(memfile.uri);
@@ -70,58 +72,62 @@ suite('getLanguageSpecificSymbolInformation()', async () =>
 
 
 
-  test('08 handle callback functions', async () =>
-  {
-    // setup
-    let content = ""
-    + "function aaa()\n"
-    + "{\n"
-    + "  return funcWithPromise ().\n"
-    + "  then(symbols =>\n"
-    + "  {\n"
-    + "    return symbols;\n"
-    + "  }).catch (err =>\n"
-    + "  {\n"
-    + "    return err;\n"
-    + "  });\n"
-    + "}\n"
-    let doc = await createMemDocument (content);
+  for (const language of ['javascript', 'typescript', 'cpp'] as const) {
+    test('08 handles callback functions for ' + language, async () => {
+      const content = 'function aaa()\n'
+        + '{\n'
+        + '  return funcWithPromise ().\n'
+        + '  then(symbols =>\n'
+        + '  {\n'
+        + '    return symbols;\n'
+        + '  }).catch (err =>\n'
+        + '  {\n'
+        + '    return err;\n'
+        + '  });\n'
+        + '}\n';
+      const doc = await createMemDocument(content, language);
+      const symbol = new vscode.DocumentSymbol('aaa', '', vscode.SymbolKind.Function,
+        utils.range_new(0, 0, 10, 1), utils.range_new(0, 9, 0, 12));
+      const catchRange = utils.range_new(6, 12, 9, 3);
+      const thenRange = utils.range_new(3, 7, 6, 3);
+      const catchCallback = new vscode.DocumentSymbol('catch() callback', '', vscode.SymbolKind.Function,
+        catchRange, catchRange);
+      const thenCallback = new vscode.DocumentSymbol('then() callback', '', vscode.SymbolKind.Function,
+        thenRange, thenRange);
+      symbol.children = [catchCallback, thenCallback];
+      const adapter = language === 'cpp'
+        ? new VpLspExtenderCurlyBraces(language) : new VpLspExtenderTypeScript(language);
+      const actual = OutlineUtils.documentSymbol2outlineSymbol(doc, new DocumentSymbolX(symbol, doc.uri), adapter);
+      const bodyRange = utils.range_new(2, 0, 9, 5);
 
-    let full_range = utils.range_new (0, 0, 10, 1);
-    let name_range = utils.range_new (0, 12, 0, 9);
-    let symbol = new vscode.DocumentSymbol ("executeDefinitionProviderForPosition", "",
-                                            vscode.SymbolKind.Function,
-                                            full_range, name_range);
-    let child0 = new vscode.DocumentSymbol ("catch() callback", "",
-                                            vscode.SymbolKind.Function,
-                                            utils.range_new (6, 11, 9, 2),
-                                            utils.range_new (6, 11, 9, 2));
-    let child1 = new vscode.DocumentSymbol ("then() callback", "",
-                                            vscode.SymbolKind.Function,
-                                            utils.range_new (3, 6, 6, 2),
-                                            utils.range_new (3, 6, 6, 2));
-    symbol.children.push (child0);
-    symbol.children.push (child1);
-
-    // run
-    let subject = OutlineUtils;
-    let actual = subject.documentSymbol2outlineSymbol (doc,
-                                new DocumentSymbolX (symbol, doc.uri),
-                                new VpLspExtenderCurlyBraces ("typescript"));
-
-    // check
-    let actual_parts = actual.parts;
-
-    assert.strictEqual (actual_parts.length, 1, "Number of parts");
-
-    let actual_part = actual_parts[0];
-
-    assertx.range_equals (actual_part.displayTextRange,
-                          utils.range_new (2,0,9,5),
-                          "text range");
-
-
-  });
+      if (language === 'cpp') {
+        assert.strictEqual(actual.parts.length, 1, 'legacy adapters keep callbacks in source');
+        assert.ok(actual.parts[0] instanceof Outline.Text);
+        assertx.range_equals(actual.parts[0].displayTextRange, bodyRange);
+      } else {
+        assert.strictEqual(actual.parts.length, 5, 'both callbacks and all surrounding source are retained');
+        assert.deepStrictEqual(actual.parts.map(part => part.CLASS_TYPE), ['Text', 'Symbol', 'Text', 'Symbol', 'Text']);
+        const expectedRanges = [
+          utils.range_new(2, 0, 3, 7), thenRange, utils.range_new(6, 3, 6, 12), catchRange,
+          utils.range_new(9, 3, 9, 5)
+        ];
+        actual.parts.forEach((part, index) => assertx.range_equals(
+          part instanceof Outline.Symbol ? part.totalRange : part.displayTextRange, expectedRanges[index]));
+        assert.deepStrictEqual(actual.parts.filter(part => part instanceof Outline.Text)
+          .map(part => doc.getText(part.displayTextRange!)), ['  return funcWithPromise ().\n  then(', ').catch (', ');']);
+        const callbacks = actual.parts.filter((part): part is Outline.Symbol => part instanceof Outline.Symbol);
+        assert.deepStrictEqual(callbacks.map(callback => doc.getText(callback.displayTextRange!)), ['symbols =>', 'err =>']);
+        assert.deepStrictEqual(callbacks.map(callback => callback.parts.map(part => doc.getText(part.displayTextRange!)).join('')),
+          ['    return symbols;', '    return err;']);
+      }
+      assert.strictEqual(actual.parts.map(part => doc.getText(
+        part instanceof Outline.Symbol ? part.totalRange! : part.displayTextRange!)).join(''), doc.getText(bodyRange),
+      'parts reconstruct the exact body source');
+      assert.deepStrictEqual(symbol.children, [catchCallback, thenCallback], 'provider child order remains unchanged');
+      assert.strictEqual(catchCallback.range, catchRange);
+      assert.strictEqual(thenCallback.range, thenRange);
+    });
+  }
 
 
   test('08 constructor (total range = selection range)', async () =>

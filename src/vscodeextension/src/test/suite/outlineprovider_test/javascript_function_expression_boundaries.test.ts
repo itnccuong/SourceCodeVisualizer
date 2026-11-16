@@ -8,6 +8,7 @@ import {DocumentSymbolX} from '../../../outlineproviderAPI/utils/documentsymbolx
 import {VpLspExtenderTypeScript} from '../../../outlineproviders/lspextendertypescript';
 
 const constructorText = 'self.constructor = function() {\n    { let container = makeContainer(); use(container); }\n    return self;\n  }';
+const constructorStatementText = constructorText + ';';
 const helperText = 'helper = function() { return 1; }';
 const factoryText = 'const Factory = (function() {\n  let self = makeWindow();\n  ' + constructorText + ';\n  ' + helperText + ';\n  return self;\n});';
 const source = factoryText + '\nafterFactory();\nfunction later() { return 2; }\n';
@@ -15,7 +16,7 @@ const safetyError = /Overlapping or out-of-bounds declaration ranges cannot be d
 const boundaryError = /Cannot determine declaration boundaries/;
 
 async function memory(content: string, language = 'javascript') {
-  const file = MemoryFile.createDocument('js');
+  const file = MemoryFile.createDocument(language === 'typescript' ? 'ts' : 'js');
   file.write(content);
   return vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(file.uri), language);
 }
@@ -38,7 +39,7 @@ function symbol(document: vscode.TextDocument, text: string, name: string,
 }
 
 function extract(document: vscode.TextDocument, input: vscode.DocumentSymbol,
-                 adapter = new VpLspExtenderTypeScript('javascript')) {
+                 adapter = new VpLspExtenderTypeScript(document.languageId === 'typescript' ? 'typescript' : 'javascript')) {
   return OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(input, document.uri), adapter);
 }
 
@@ -118,49 +119,66 @@ async function factory(wrapped: boolean, mode: 'complete' | 'rhs-target' | 'rhs-
   return {document, parent, constructor, helper, wrapper};
 }
 
-suite('JavaScript function-expression boundaries', () => {
+for (const language of ['javascript', 'typescript'] as const) {
+suite(language + ' function-expression boundaries', () => {
+  test('keeps a standalone nested callback distinct from its callable owner', async () => {
+    const callbackText = '(value) => { return value + 1; }';
+    const text = 'const outer = () => { return values.map(' + callbackText + '); };';
+    const document = await memory(text, language);
+    const parent = symbol(document, text, 'outer', vscode.SymbolKind.Constant);
+    const callback = symbol(document, callbackText, 'map() callback', vscode.SymbolKind.Function, callbackText);
+    parent.children = [callback];
+    const unchanged = snapshot([parent]);
+    const adapter = new VpLspExtenderTypeScript(language);
+    const ownerOutline = extract(document, parent, adapter);
+    const children = childOutlines(ownerOutline);
+    assert.strictEqual(children.length, 1);
+    AssertX.range_equals(children[0].totalRange, callback.range);
+    assert.strictEqual(heading(document, children[0]), '(value) =>');
+    assertPartition(document, ownerOutline, adapter.getLanguageSpecificSymbolInformation(document, parent).rangeBody!);
+    const independent = extract(document, callback, adapter);
+    assert.strictEqual(heading(document, independent), '(value) =>');
+    assert.strictEqual(document.getText(independent.totalRange!), callbackText);
+    assert.strictEqual(document.getText(independent.parts[0].displayTextRange!), 'return value + 1;');
+    unchanged();
+  });
+
   for (const wrapped of [false, true]) {
     for (const mode of ['complete', 'rhs-target', 'rhs-selection'] as const) {
       test((wrapped ? 'projects an exact initializer wrapper' : 'keeps a flattened provider tree') + ': ' + mode, async () => {
-        const {document, parent, constructor, helper, wrapper} = await factory(wrapped, mode);
+        const {document, parent, constructor, helper} = await factory(wrapped, mode, language);
         const unchanged = snapshot([parent]);
-        const adapter = new VpLspExtenderTypeScript('javascript');
-        const calls = new Map<vscode.DocumentSymbol, number>();
-        const getInformation = adapter.getLanguageSpecificSymbolInformation.bind(adapter);
-        adapter.getLanguageSpecificSymbolInformation = (doc, input, context) => {
-          calls.set(input, (calls.get(input) ?? 0) + 1);
-          return getInformation(doc, input, context);
-        };
+        const adapter = new VpLspExtenderTypeScript(language);
         const outline = extract(document, parent, adapter);
         const children = childOutlines(outline);
+        const expectedConstructor = mode === 'complete' ? constructorText : constructorStatementText;
         assert.strictEqual(heading(document, outline), 'Factory = (function()');
         AssertX.range_equals(outline.totalRange, parent.range);
         assert.deepStrictEqual(children.map(child => heading(document, child)), ['self.constructor = function()', 'helper = function()']);
-        assert.deepStrictEqual(children.map(child => document.getText(child.totalRange!)), [constructorText, helperText]);
-        assert.strictEqual(calls.get(parent), 1);
-        assert.strictEqual(calls.get(constructor), 1);
-        assert.strictEqual(calls.get(helper), 1);
-        assert.strictEqual(calls.get(wrapper), undefined, 'transparent provider wrapper is not rendered');
-        const parentInformation = getInformation(document, parent);
+        assert.deepStrictEqual(children.map(child => document.getText(child.totalRange!)), [expectedConstructor, helperText]);
+        const parentInformation = adapter.getLanguageSpecificSymbolInformation(document, parent);
         assertPartition(document, outline, parentInformation.rangeBody!);
         const body = document.getText(parentInformation.rangeBody!);
         assert.ok(body.includes('let self = makeWindow();'));
         assert.ok(body.endsWith('return self;'));
         assert.ok(!body.includes('afterFactory') && !body.includes('function later'));
-        const constructorInformation = getInformation(document, constructor, {ancestors: [parent]});
+        const constructorInformation = adapter.getLanguageSpecificSymbolInformation(document, constructor, {ancestors: [parent]});
         assert.strictEqual(document.getText(constructorInformation.rangeBody!),
           '    { let container = makeContainer(); use(container); }\n    return self;');
         assertPartition(document, children[0], constructorInformation.rangeBody!);
         assert.deepStrictEqual(childOutlines(children[0]), [], 'non-callable container remains source');
         if (mode === 'complete') {
           assert.strictEqual(constructorInformation.rangeDeclaration, undefined);
+          AssertX.range_equals(children[0].totalRange, constructor.range);
         } else {
-          AssertX.range_equals(children[0].totalRange, rangeOf(document, constructorText));
+          AssertX.range_equals(children[0].totalRange, rangeOf(document, constructorStatementText));
           AssertX.range_equals(constructorInformation.rangeDeclaration!, children[0].totalRange);
         }
-        assert.strictEqual(outline.parts.filter(part => part instanceof Outline.Text)
-          .map(part => document.getText(part.displayTextRange!)).join('').includes('self.constructor ='), false,
-          'expanded assignments are not duplicated in parent source gaps');
+        assert.deepStrictEqual(outline.parts.filter(part => part instanceof Outline.Text)
+          .map(part => document.getText(part.displayTextRange!)), mode === 'complete'
+          ? ['  let self = makeWindow();\n  ', ';\n  ', ';\n  return self;']
+          : ['  let self = makeWindow();\n  ', ';\n  return self;'],
+        'only expanded assignments consume their statement semicolon from the parent source gaps');
         unchanged();
       });
     }
@@ -174,7 +192,7 @@ suite('JavaScript function-expression boundaries', () => {
         {scheme: document.uri.scheme, language: 'plaintext'},
         {provideDocumentSymbols: doc => doc.uri.toString() === document.uri.toString() ? [parent] : []});
       try {
-        const adapter = new VpLspExtenderTypeScript('javascript');
+        const adapter = new VpLspExtenderTypeScript(language);
         const outline = await OutlineUtils.provideDocumentOutline(adapter, document);
         const factoryOutline = childOutlines(outline)[0];
         const constructorOutline = childOutlines(factoryOutline)[0];
@@ -185,7 +203,7 @@ suite('JavaScript function-expression boundaries', () => {
         const selected = opened![0];
         assert.ok(selected instanceof Outline.Symbol, 'the assigned callable opens as a symbol, not its file');
         assert.deepStrictEqual(opened!.map(part => heading(document, part)), ['self.constructor = function()']);
-        assert.strictEqual(document.getText(selected.totalRange!), constructorText);
+        assert.strictEqual(document.getText(selected.totalRange!), constructorStatementText);
         assert.strictEqual(selected.parts.map(part => document.getText(part.displayTextRange!)).join(''),
           '    { let container = makeContainer(); use(container); }\n    return self;');
         unchanged();
@@ -202,13 +220,13 @@ suite('JavaScript function-expression boundaries', () => {
       {provideDocumentSymbols: () => [parent]});
     try {
       const opened = await OutlineUtils.provideDefinitionOutline(
-        new VpLspExtenderTypeScript('javascript'), document, constructor.range.start);
+        new VpLspExtenderTypeScript(language), document, constructor.range.start);
       assert.ok(opened !== null, 'opening a known declaration is not cancellation');
       assert.strictEqual(opened!.length, 1);
       const selected = opened![0];
       assert.ok(selected instanceof Outline.Symbol, 'the exact declaration opens as a symbol, not its file');
       assert.deepStrictEqual(opened!.map(part => heading(document, part)), ['self.constructor = function()']);
-      assert.strictEqual(document.getText(selected.totalRange!), constructorText);
+      assert.strictEqual(document.getText(selected.totalRange!), constructorStatementText);
     } finally {
       registration.dispose();
     }
@@ -220,7 +238,7 @@ suite('JavaScript function-expression boundaries', () => {
       {scheme: document.uri.scheme, language: 'plaintext'},
       {provideDocumentSymbols: () => [parent]});
     try {
-      const adapter = new VpLspExtenderTypeScript('javascript');
+      const adapter = new VpLspExtenderTypeScript(language);
       const file = await OutlineUtils.provideDocumentOutline(adapter, document);
       const constructor = childOutlines(childOutlines(file)[0])[0];
       // Webview messages carry plain positions, not VS Code Position instances.
@@ -245,7 +263,7 @@ suite('JavaScript function-expression boundaries', () => {
     const provider = vscode.languages.registerDocumentSymbolProvider({scheme: document.uri.scheme, language: 'plaintext'},
       {provideDocumentSymbols: doc => doc.uri.toString() === document.uri.toString() ? inputs : []});
     try {
-      const outline = await OutlineUtils.provideDocumentOutline(new VpLspExtenderTypeScript('javascript'), document);
+      const outline = await OutlineUtils.provideDocumentOutline(new VpLspExtenderTypeScript(language), document);
       assert.deepStrictEqual(childOutlines(outline).map(child => heading(document, child)), ['Factory = (function()', 'later()']);
       assertPartition(document, outline, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)));
       assert.deepStrictEqual(inputs, [later, parent]);
@@ -258,7 +276,7 @@ suite('JavaScript function-expression boundaries', () => {
   for (const kind of [vscode.SymbolKind.Variable, vscode.SymbolKind.Constant, vscode.SymbolKind.Property, vscode.SymbolKind.Field]) {
     test('opts only callable initializers and assignments into ignored kind ' + kind, async () => {
       const text = 'function outer() { const self = makeWindow(); const container = {}; const expandible = class {}; holder.run = (() => { return 3; }); }';
-      const document = await memory(text);
+      const document = await memory(text, language);
       const parent = symbol(document, text, 'outer');
       const callable = symbol(document, 'holder.run = (() => { return 3; });', 'run', kind);
       parent.children = [symbol(document, 'const self = makeWindow();', 'self', kind),
@@ -282,9 +300,9 @@ suite('JavaScript function-expression boundaries', () => {
     ['const value = () => 42;', 'value', 'value = () =>', '42']
   ]) {
     test('extracts callable syntax without punctuation scanning: ' + text, async () => {
-      const document = await memory(text + '\nafter();');
+      const document = await memory(text + '\nafter();', language);
       const input = symbol(document, text, name, vscode.SymbolKind.Variable);
-      const adapter = new VpLspExtenderTypeScript('javascript');
+      const adapter = new VpLspExtenderTypeScript(language);
       const information = adapter.getLanguageSpecificSymbolInformation(document, input);
       assert.strictEqual(document.getText(information.rangeHead), expectedHead);
       assert.strictEqual(document.getText(information.rangeBody!), expectedBody);
@@ -298,11 +316,35 @@ suite('JavaScript function-expression boundaries', () => {
     });
   }
 
-  test('extracts an anonymous function-only fragment through expression syntax', async () => {
+  if (language === 'typescript') {
+    for (const initializer of [
+      '((() => { return 3; }) as (() => number))',
+      '((() => { return 3; }) satisfies (() => number))',
+      '(<() => number>(() => { return 3; }))',
+      '((() => { return 3; })!)'
+    ]) {
+      test('recognizes a callable through transparent TypeScript wrappers: ' + initializer, async () => {
+        const text = 'const run = ' + initializer + ';';
+        const document = await memory(text, language);
+        const owner = symbol(document, text, 'run', vscode.SymbolKind.Constant);
+        const adapter = new VpLspExtenderTypeScript(language);
+        const unchanged = snapshot([owner]);
+        assert.strictEqual(adapter.isDeclarationSymbol(document, owner), true);
+        const info = adapter.getLanguageSpecificSymbolInformation(document, owner);
+        assert.strictEqual(document.getText(info.rangeHead),
+          'run = ' + initializer.slice(0, initializer.indexOf('{')).trim());
+        assert.strictEqual(document.getText(info.rangeBody!), 'return 3;');
+        AssertX.range_equals(extract(document, owner, adapter).totalRange, owner.range);
+        unchanged();
+      });
+    }
+  }
+
+  test('extracts an anonymous callback from its actual call expression', async () => {
     const text = 'function() { return 7; }';
-    const document = await memory(text);
+    const document = await memory('subscribe(' + text + ');', language);
     const input = symbol(document, text, '<function>', vscode.SymbolKind.Function, text);
-    const adapter = new VpLspExtenderTypeScript('javascript');
+    const adapter = new VpLspExtenderTypeScript(language);
     const information = adapter.getLanguageSpecificSymbolInformation(document, input);
     assert.strictEqual(document.getText(information.rangeHead), 'function()');
     assert.strictEqual(document.getText(information.rangeBody!), 'return 7;');
@@ -311,7 +353,7 @@ suite('JavaScript function-expression boundaries', () => {
 
   test('projects only exact function or parenthesized initializer AST ranges', async () => {
     const text = 'const Factory = (((function() { helper = function() {}; return helper; })));';
-    const document = await memory(text);
+    const document = await memory(text, language);
     const parent = symbol(document, text, 'Factory', vscode.SymbolKind.Constant);
     const helper = symbol(document, 'helper = function() {}', 'helper');
     for (const wrapperText of ['function() { helper = function() {}; return helper; }',
@@ -329,7 +371,7 @@ suite('JavaScript function-expression boundaries', () => {
   });
 
   test('retains unrelated real children when projecting an initializer wrapper', async () => {
-    const {document, parent, wrapper} = await factory(true, 'complete');
+    const {document, parent, wrapper} = await factory(true, 'complete', language);
     const outside = symbol(document, 'function later() { return 2; }', 'later');
     parent.children = [outside, wrapper];
     const unchanged = snapshot([parent]);
@@ -339,7 +381,7 @@ suite('JavaScript function-expression boundaries', () => {
   });
 
   test('rejects an unrelated enclosing wrapper instead of flattening it', async () => {
-    const {document, parent, wrapper} = await factory(true, 'complete');
+    const {document, parent, wrapper} = await factory(true, 'complete', language);
     wrapper.range = new vscode.Range(rangeOf(document, '(function').start, parent.range.end);
     wrapper.selectionRange = wrapper.range;
     const unchanged = snapshot([parent]);
@@ -348,7 +390,7 @@ suite('JavaScript function-expression boundaries', () => {
   });
 
   test('rejects a second certified initializer wrapper rather than deduplicating it', async () => {
-    const {document, parent, wrapper} = await factory(true, 'complete');
+    const {document, parent, wrapper} = await factory(true, 'complete', language);
     const duplicate = new vscode.DocumentSymbol('another provider wrapper', '', vscode.SymbolKind.Function, wrapper.range, wrapper.selectionRange);
     duplicate.children = wrapper.children;
     parent.children = [wrapper, duplicate];
@@ -359,7 +401,7 @@ suite('JavaScript function-expression boundaries', () => {
 
   test('preflights duplicate, overlapping and crossing real children before extraction', async () => {
     for (const mode of ['duplicate', 'overlap', 'cross-start', 'cross-end']) {
-      const {document, parent, constructor, helper, wrapper} = await factory(true, 'complete');
+      const {document, parent, constructor, helper, wrapper} = await factory(true, 'complete', language);
       if (mode === 'duplicate') {
         wrapper.children = [constructor, constructor];
       } else if (mode === 'overlap') {
@@ -379,49 +421,42 @@ suite('JavaScript function-expression boundaries', () => {
 
   test('rejects malformed selected callables and unrelated reference selections', async () => {
     for (const text of ['const broken = function() {', 'self.broken = function( {', 'const broken = (() => {']) {
-      const document = await memory(text);
+      const document = await memory(text, language);
       const input = symbol(document, text, 'broken', vscode.SymbolKind.Variable);
       assert.throws(() => extract(document, input), boundaryError);
     }
     const text = 'const value = function() { return value; };';
-    const document = await memory(text);
+    const document = await memory(text, language);
     const input = symbol(document, text, 'value', vscode.SymbolKind.Constant);
     input.selectionRange = rangeOf(document, 'value', text.lastIndexOf('value'));
     assert.throws(() => extract(document, input), boundaryError);
   });
 
-  test('supplies displaying-parent context to projected child classification and extraction', async () => {
-    const {document, parent, constructor, helper} = await factory(true, 'rhs-target');
+  test('projected variable-like children retain exact source and immutable provider input', async () => {
+    const {document, parent, constructor, helper} = await factory(true, 'rhs-target', language);
     constructor.kind = vscode.SymbolKind.Property;
     helper.kind = vscode.SymbolKind.Variable;
-    const adapter = new VpLspExtenderTypeScript('javascript');
-    const classify = adapter.isDeclarationSymbol!.bind(adapter);
-    const getInformation = adapter.getLanguageSpecificSymbolInformation.bind(adapter);
-    const classified = new Map<vscode.DocumentSymbol, readonly vscode.DocumentSymbol[]>();
-    const extracted = new Map<vscode.DocumentSymbol, readonly vscode.DocumentSymbol[]>();
-    adapter.isDeclarationSymbol = (doc, input, context) => {
-      classified.set(input, context!.ancestors);
-      return classify(doc, input, context);
-    };
-    adapter.getLanguageSpecificSymbolInformation = (doc, input, context) => {
-      extracted.set(input, context!.ancestors);
-      return getInformation(doc, input, context);
-    };
+    const unchanged = snapshot([parent]);
+    const adapter = new VpLspExtenderTypeScript(language);
     const outline = extract(document, parent, adapter);
-    assert.strictEqual(childOutlines(outline).length, 2);
-    for (const input of [constructor, helper]) {
-      assert.deepStrictEqual(classified.get(input), [parent]);
-      assert.deepStrictEqual(extracted.get(input), [parent]);
-    }
+    assert.deepStrictEqual(childOutlines(outline).map(child => heading(document, child)),
+      ['self.constructor = function()', 'helper = function()']);
+    assert.deepStrictEqual(childOutlines(outline).map(child => document.getText(child.totalRange!)),
+      [constructorStatementText, helperText]);
+    assertPartition(document, outline, adapter.getLanguageSpecificSymbolInformation(document, parent).rangeBody!);
+    assert.deepStrictEqual(outline.parts.filter(part => part instanceof Outline.Text)
+      .map(part => document.getText(part.displayTextRange!)),
+      ['  let self = makeWindow();\n  ', ';\n  return self;']);
+    unchanged();
   });
 
   test('an empty child projection leaves provider children as ordinary source', async () => {
     const text = 'function outer() { function inner() {} return inner; }';
-    const document = await memory(text);
+    const document = await memory(text, language);
     const parent = symbol(document, text, 'outer');
     parent.children = [symbol(document, 'function inner() {}', 'inner')];
     const unchanged = snapshot([parent]);
-    const adapter = new VpLspExtenderTypeScript('javascript');
+    const adapter = new VpLspExtenderTypeScript(language);
     const getInformation = adapter.getLanguageSpecificSymbolInformation.bind(adapter);
     adapter.getLanguageSpecificSymbolInformation = (doc, input, context) => {
       const information = getInformation(doc, input, context);
@@ -435,8 +470,8 @@ suite('JavaScript function-expression boundaries', () => {
 
   test('rejects overlapping or out-of-body effective ranges after successful raw preflight', async () => {
     for (const crossing of [false, true]) {
-      const {document, parent, constructor, helper} = await factory(false, 'complete');
-      const adapter = new VpLspExtenderTypeScript('javascript');
+      const {document, parent, constructor, helper} = await factory(false, 'complete', language);
+      const adapter = new VpLspExtenderTypeScript(language);
       const getInformation = adapter.getLanguageSpecificSymbolInformation.bind(adapter);
       adapter.getLanguageSpecificSymbolInformation = (doc, input, context) => {
         const information = getInformation(doc, input, context);
@@ -447,19 +482,42 @@ suite('JavaScript function-expression boundaries', () => {
     }
   });
 
-  test('rejects incomplete RHS assignment forms without suitable ancestor syntax', async () => {
-    const document = await memory('self.constructor = function() { return self; };');
-    const rhs = symbol(document, 'function() { return self; }', 'anonymous', vscode.SymbolKind.Function, 'function() { return self; }');
+  test('opens an AST-proven RHS owner without supplied ancestors', async () => {
+    const assignment = 'self.constructor = function() { return self; };';
+    const document = await memory(assignment, language);
+    const rhs = symbol(document, 'function() { return self; }', 'constructor', vscode.SymbolKind.Function,
+      'function() { return self; }');
     rhs.selectionRange = rangeOf(document, 'constructor');
+    const unchanged = snapshot([rhs]);
+    const adapter = new VpLspExtenderTypeScript(language);
+    const info = adapter.getLanguageSpecificSymbolInformation(document, rhs);
+    assert.strictEqual(document.getText(info.rangeDeclaration!), assignment);
+    assert.strictEqual(document.getText(info.rangeHead), 'self.constructor = function()');
+    assert.strictEqual(document.getText(info.rangeBody!), 'return self;');
+    const outline = extract(document, rhs, adapter);
+    AssertX.range_equals(outline.totalRange, info.rangeDeclaration!);
+    unchanged();
+  });
+
+  test('rejects an unrelated RHS selection and a truncated executable RHS', async () => {
+    const text = 'const unrelated = 1; self.constructor = function() { return self; };';
+    const document = await memory(text, language);
+    const rhsText = 'function() { return self; }';
+    const rhs = symbol(document, rhsText, '<function>', vscode.SymbolKind.Function, rhsText);
+    rhs.selectionRange = rangeOf(document, 'unrelated');
+    assert.throws(() => extract(document, rhs), boundaryError);
+    rhs.selectionRange = rangeOf(document, 'constructor');
+    rhs.range = new vscode.Range(rhs.range.start, document.positionAt(document.offsetAt(rhs.range.end) - 1));
     assert.throws(() => extract(document, rhs), boundaryError);
   });
 
   for (const text of ['const value = makeWindow();', 'const value = class {};',
     'value += function() {};', 'use(value = function() {});']) {
     test('keeps a non-callable declaration or expression as ordinary source: ' + text, async () => {
-      const document = await memory(text);
+      const document = await memory(text, language);
       const input = symbol(document, text, 'value', vscode.SymbolKind.Variable);
-      assert.strictEqual(new VpLspExtenderTypeScript('javascript').isDeclarationSymbol(document, input), false);
+      assert.strictEqual(new VpLspExtenderTypeScript(language).isDeclarationSymbol(document, input), false);
     });
   }
 });
+}

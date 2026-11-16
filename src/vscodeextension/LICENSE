@@ -1145,8 +1145,7 @@ They are preserved verbatim, including TypeScript third-party notices.
 @lezer/python@1.1.19 (MIT)
   node_modules/@lezer/python/LICENSE
 
-typescript@3.9.10 (Apache-2.0)
-  node_modules/typescript-parser/CopyrightNotice.txt
+typescript@6.0.3 (Apache-2.0)
   node_modules/typescript-parser/LICENSE.txt
   node_modules/typescript-parser/ThirdPartyNoticeText.txt
 

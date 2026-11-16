@@ -9,7 +9,7 @@ export interface LanguageSpecificSymbolInformation {
   rangeBody: vscode.Range | null; // null = no body; empty range = empty body
   attributes: Outline.Attribute[];
   declarationOnly: boolean;
-  rangeDeclaration?: vscode.Range; // syntax-backed Python assignment or JavaScript RHS-only assignment
+  rangeDeclaration?: vscode.Range; // syntax-certified complete owner; provider symbols remain immutable
   children?: readonly vscode.DocumentSymbol[]; // display projection; absent keeps the provider's children
   definitionPosition?: vscode.Position; // callable lookup may differ from an assignment heading's receiver
   isCallable?: boolean;
@@ -18,6 +18,8 @@ export interface LanguageSpecificSymbolInformation {
 export interface SymbolExtractionContext {
   ancestors: readonly vscode.DocumentSymbol[]; // nearest parent first
 }
+
+export type TargetAdapterResolver = (language: string) => VpLspExtenderProvider | undefined;
 
 
 /**

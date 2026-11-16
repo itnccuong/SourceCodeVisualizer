@@ -9,9 +9,9 @@ import {DocumentSymbolX} from '../../../outlineproviderAPI/utils/documentsymbolx
 const suffix = '\nconsole.log("AFTER");\nfunction later() { return 7; }\n';
 
 async function fixture(declaration: string, name: string, kind: vscode.SymbolKind,
-                       prefix = '', closing = '', language: 'typescript' | 'typescriptreact' = 'typescript',
+                       prefix = '', closing = '', language: 'javascript' | 'typescript' | 'typescriptreact' = 'typescript',
                        selection = declaration.indexOf(name)) {
-  const file = MemoryFile.createDocument(language === 'typescriptreact' ? 'tsx' : 'ts');
+  const file = MemoryFile.createDocument(language === 'typescriptreact' ? 'tsx' : language === 'javascript' ? 'js' : 'ts');
   file.write(prefix + declaration + closing + (declaration.includes('\r\n') ? suffix.replace(/\n/g, '\r\n') : suffix));
   const document = await vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(file.uri), language);
   const range = new vscode.Range(document.positionAt(prefix.length), document.positionAt(prefix.length + declaration.length));
@@ -23,6 +23,111 @@ async function fixture(declaration: string, name: string, kind: vscode.SymbolKin
 }
 
 suite('TypeScript declaration boundaries', () => {
+  for (const language of ['javascript', 'typescript'] as const) {
+    for (const [declaration, name, head, body] of [
+      ['value = {port: 8080}', 'value', 'value =', '{port: 8080}'],
+      ['double = (value) => value * 2', 'double', 'double = (value) =>', 'value * 2'],
+      ['{host: server} = settings', 'server', '{host: server} =', 'settings']
+    ]) {
+      test(language + ' preserves a complete provider declarator: ' + declaration, async () => {
+        const {document, symbol} = await fixture(declaration, name, vscode.SymbolKind.Constant,
+          'export const ', ';', language);
+        const originalRange = symbol.range;
+        const adapter = new VpLspExtenderTypeScript(language);
+        const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+        assert.strictEqual(info.rangeDeclaration, undefined, 'complete provider ranges are not expanded to statements');
+        assert.strictEqual(document.getText(info.rangeHead), head);
+        assert.strictEqual(document.getText(info.rangeBody!), body);
+        const outline = OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri), adapter);
+        AssertX.range_equals(outline.totalRange, originalRange);
+        assert.strictEqual(document.getText(outline.totalRange!), declaration);
+        assert.strictEqual(symbol.range, originalRange, 'the provider range remains immutable');
+      });
+    }
+
+    test(language + ' uses actual private-field, accessor, static-block and arrow-field syntax', async () => {
+      const declaration = 'class Cache { static { this.ready ??= true; } #value = 1; get value() { return this.#value; } arrow = (input) => input?.value ?? this.#value; }';
+      const {document, symbol: parent} = await fixture(declaration, 'Cache', vscode.SymbolKind.Class, '', '', language);
+      const adapter = new VpLspExtenderTypeScript(language);
+      const children: vscode.DocumentSymbol[] = [];
+      for (const [text, name, kind] of [
+        ['static { this.ready ??= true; }', 'static', vscode.SymbolKind.Namespace],
+        ['#value = 1;', '#value', vscode.SymbolKind.Field],
+        ['get value() { return this.#value; }', 'value', vscode.SymbolKind.Method],
+        ['arrow = (input) => input?.value ?? this.#value;', 'arrow', vscode.SymbolKind.Field]
+      ] as const) {
+        const start = document.getText().indexOf(text);
+        const nameStart = start + text.indexOf(name);
+        children.push(new vscode.DocumentSymbol(name, '', kind,
+          new vscode.Range(document.positionAt(start), document.positionAt(start + text.length)),
+          new vscode.Range(document.positionAt(nameStart), document.positionAt(nameStart + name.length))));
+      }
+      parent.children = children;
+      const outline = OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(parent, document.uri), adapter);
+      const rows = outline.parts.filter(part => part.CLASS_TYPE === 'Symbol');
+      assert.deepStrictEqual(rows.map(row => document.getText(row.displayTextRange!)),
+        ['static', 'value()', 'arrow = (input) =>']);
+      assert.deepStrictEqual(rows.map(row => row.parts.map(part => document.getText(part.displayTextRange!)).join('')),
+        ['this.ready ??= true;', 'return this.#value;', 'input?.value ?? this.#value']);
+      assert.strictEqual(outline.parts.filter(part => part.CLASS_TYPE === 'Text')
+        .map(part => document.getText(part.displayTextRange!)).join(''), ' #value = 1; ');
+      assert.strictEqual(adapter.isDeclarationSymbol(document, children[1]), false);
+      assert.strictEqual(adapter.isDeclarationSymbol(document, children[3]), true);
+      assert.deepStrictEqual(parent.children, children);
+    });
+  }
+
+  test('preserves complete provider ranges including semicolons and surrounding comments', async () => {
+    const declaration = '/* leading 😀 */ export const value = {port: 8080}; /* trailing */';
+    const {document, symbol} = await fixture(declaration, 'value', vscode.SymbolKind.Constant);
+    const adapter = new VpLspExtenderTypeScript('typescript');
+    const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+    assert.strictEqual(document.getText(info.rangeHead), 'value =');
+    assert.strictEqual(document.getText(info.rangeBody!), '{port: 8080}');
+    assert.strictEqual(info.rangeDeclaration, undefined);
+    const outline = OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri), adapter);
+    AssertX.range_equals(outline.totalRange, symbol.range);
+    assert.strictEqual(document.getText(outline.totalRange!), declaration);
+  });
+
+  test('parses import attributes and await using in their actual document grammar context', async () => {
+    const declaration = 'await using resource = acquire();';
+    const {document, symbol} = await fixture(declaration, 'resource', vscode.SymbolKind.Constant,
+      'import settings from "./settings.json" with {type: "json"};\nexport async function open() {\n  ', '\n}');
+    const adapter = new VpLspExtenderTypeScript('typescript');
+    const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+    assert.strictEqual(document.getText(info.rangeHead), 'resource =');
+    assert.strictEqual(document.getText(info.rangeBody!), 'acquire()');
+    assert.strictEqual(adapter.isDeclarationSymbol(document, symbol), false);
+    AssertX.range_equals(OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri), adapter).totalRange,
+      symbol.range);
+  });
+
+  test('reports a zero-width missing-token diagnostic at the selected declaration end with source context', async () => {
+    const file = MemoryFile.createDocument('ts');
+    const source = 'const neighbor = 1;\nfunction broken() { return 1;';
+    file.write(source);
+    const document = await vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(file.uri), 'typescript');
+    const start = source.indexOf('function broken');
+    const nameStart = source.indexOf('broken');
+    const broken = new vscode.DocumentSymbol('broken', '', vscode.SymbolKind.Function,
+      new vscode.Range(document.positionAt(start), document.positionAt(source.length)),
+      new vscode.Range(document.positionAt(nameStart), document.positionAt(nameStart + 'broken'.length)));
+    const adapter = new VpLspExtenderTypeScript('typescript');
+    assert.throws(() => adapter.getLanguageSpecificSymbolInformation(document, broken), error => {
+      const message = String(error);
+      assert.ok(message.includes('Cannot determine declaration boundaries for "broken".'));
+      assert.ok(message.includes(document.uri.toString()), 'boundary errors name the selected source URI');
+      assert.ok(message.includes('}') && /expected/i.test(message), 'the concrete missing-token diagnostic is retained');
+      assert.ok(!message.includes('\n'), 'TypeScript diagnostic chains are flattened');
+      return true;
+    });
+    const neighbor = adapter.getDefinitionSymbol(document, document.positionAt(source.indexOf('neighbor')));
+    assert.ok(neighbor);
+    assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, neighbor!).rangeBody!), '1',
+      'a syntax error in the following declaration cannot poison its valid neighbor');
+  });
+
   const cases: Array<[string, string, vscode.SymbolKind, string, string | null, boolean?]> = [
     ['const limit = 42', 'limit', vscode.SymbolKind.Constant, 'limit =', '42'],
     ['const config = { value: 42 };', 'config', vscode.SymbolKind.Constant, 'config =', '{ value: 42 }'],
@@ -64,12 +169,24 @@ suite('TypeScript declaration boundaries', () => {
     ['type Shape = {value: number};', 'Shape', vscode.SymbolKind.Class, 'type Shape = {value: number}', null],
     ['/* comment containing const */ const value = 1;', 'value', vscode.SymbolKind.Constant, 'value =', '1'],
     ['const value = {\r\n  emoji: "😀",\r\n};', 'value', vscode.SymbolKind.Constant,
-      'value =', '{\r\n  emoji: "😀",\r\n}']
+      'value =', '{\r\n  emoji: "😀",\r\n}'],
+    ['function keep<const T>(value: T) { return value; }', 'keep', vscode.SymbolKind.Function,
+      'keep<const T>(value: T)', 'return value;'],
+    ['const config = {port: 8080} satisfies Settings;', 'config', vscode.SymbolKind.Constant,
+      'config =', '{port: 8080} satisfies Settings'],
+    ['using resource = acquire();', 'resource', vscode.SymbolKind.Constant, 'resource =', 'acquire()'],
+    ['const value = source?.nested?.value ?? {fallback: true};', 'value', vscode.SymbolKind.Constant,
+      'value =', 'source?.nested?.value ?? {fallback: true}'],
+    ['namespace Area.Inner { export const value = 1; }', 'Area', vscode.SymbolKind.Namespace,
+      'Area.Inner', 'export const value = 1;']
   ];
   for (const [declaration, name, kind, heading, body, declarationOnly = false] of cases) {
     test(declaration.split('\n')[0] + ' selecting ' + name, async () => {
       const member = kind === vscode.SymbolKind.Method || kind === vscode.SymbolKind.Constructor || kind === vscode.SymbolKind.Field;
-      const {document, symbol} = await fixture(declaration, name, kind, member ? 'class Scope {\n  ' : '', member ? '\n}' : '');
+      const prefix = member ? 'class Scope {\n  ' : kind === vscode.SymbolKind.EnumMember ? 'enum State { ' :
+        declaration === 'value = {a: 1}' ? 'const ' : '';
+      const closing = member ? '\n}' : kind === vscode.SymbolKind.EnumMember ? ' }' : '';
+      const {document, symbol} = await fixture(declaration, name, kind, prefix, closing);
       const adapter = new VpLspExtenderTypeScript('typescript');
       const actual = adapter.getLanguageSpecificSymbolInformation(document, symbol);
       assert.strictEqual(document.getText(actual.rangeHead).trim(), heading);
@@ -141,7 +258,7 @@ suite('TypeScript declaration boundaries', () => {
     });
   }
 
-  test('rejects ambiguous properties without supplied context', async () => {
+  test('rejects a label as a property even without supplied context', async () => {
     const {document, symbol} = await fixture('value: other', 'value', vscode.SymbolKind.Property);
     assert.throws(() => new VpLspExtenderTypeScript('typescript').getLanguageSpecificSymbolInformation(document, symbol), /Cannot determine declaration boundaries/);
   });
@@ -164,7 +281,10 @@ suite('TypeScript declaration boundaries', () => {
   test('accepts constructor and declaration-start selections', async () => {
     for (const declaration of ['export function value() {}', 'constructor() {}']) {
       const name = declaration.startsWith('export') ? 'value' : 'constructor';
-      const {document, symbol} = await fixture(declaration, name, name === 'value' ? vscode.SymbolKind.Function : vscode.SymbolKind.Constructor);
+      const constructor = name === 'constructor';
+      const {document, symbol} = await fixture(declaration, name,
+        constructor ? vscode.SymbolKind.Constructor : vscode.SymbolKind.Function,
+        constructor ? 'class Scope { ' : '', constructor ? ' }' : '');
       symbol.selectionRange = symbol.range;
       const result = new VpLspExtenderTypeScript('typescript').getLanguageSpecificSymbolInformation(document, symbol);
       assert.strictEqual(document.getText(result.rangeHead), name + '()');
@@ -214,20 +334,158 @@ suite('TypeScript declaration boundaries', () => {
     assert.throws(() => adapter.getLanguageSpecificSymbolInformation(document, symbol), /Cannot determine declaration boundaries/);
   });
 
+  for (const [declaration, name, expectedHead] of [
+    ['const {port = 8080, host: server} = settings;', 'port', '{port = 8080, host: server} ='],
+    ['const {port = 8080, host: server} = settings;', 'server', '{port = 8080, host: server} ='],
+    ['const {nested: {value: renamed = fallback}, ...rest} = settings;', 'renamed',
+      '{nested: {value: renamed = fallback}, ...rest} ='],
+    ['const {nested: {value: renamed = fallback}, ...rest} = settings;', 'rest',
+      '{nested: {value: renamed = fallback}, ...rest} ='],
+    ['const [first, , ...remaining] = settings;', 'remaining', '[first, , ...remaining] =']
+  ]) {
+    test('expands an exact name-only destructured binding: ' + name + ' in ' + declaration, async () => {
+      const {document, symbol} = await fixture(declaration, name, vscode.SymbolKind.Constant);
+      const completeRange = symbol.range;
+      symbol.range = symbol.selectionRange;
+      const inputRange = symbol.range;
+      const adapter = new VpLspExtenderTypeScript('typescript');
+      const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+      assert.strictEqual(document.getText(info.rangeHead), expectedHead);
+      assert.strictEqual(document.getText(info.rangeBody!), 'settings');
+      AssertX.range_equals(info.rangeDeclaration!, completeRange);
+      assert.strictEqual(symbol.range, inputRange, 'the provider range is immutable');
+      const outline = OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri), adapter);
+      AssertX.range_equals(outline.totalRange, completeRange);
+      const selected = adapter.getDefinitionSymbol(document, symbol.selectionRange.start);
+      assert.ok(selected, 'the binding has a syntax-backed navigation target');
+      AssertX.range_equals(selected!.selectionRange, symbol.selectionRange);
+      assert.strictEqual(selected!.name, name, 'renamed bindings use their bound name, not their property key');
+      for (const reference of ['settings', 'fallback']) {
+        const start = document.getText().indexOf(reference);
+        if (start >= 0) { assert.strictEqual(adapter.getDefinitionSymbol(document, document.positionAt(start)), undefined); }
+      }
+    });
+  }
+
+  test('name-only selection of a multiple declarator expands only its own value', async () => {
+    const declaration = 'const first = 1, second = {port: 8080} satisfies Settings;';
+    const {document, symbol} = await fixture(declaration, 'second', vscode.SymbolKind.Constant);
+    symbol.range = symbol.selectionRange;
+    const info = new VpLspExtenderTypeScript('typescript').getLanguageSpecificSymbolInformation(document, symbol);
+    assert.strictEqual(document.getText(info.rangeDeclaration!), 'second = {port: 8080} satisfies Settings');
+    assert.strictEqual(document.getText(info.rangeHead), 'second =');
+    assert.strictEqual(document.getText(info.rangeBody!), '{port: 8080} satisfies Settings');
+  });
+
+  for (const [parameter, name, head, body] of [
+    ['value: {port: number} = {port: 8080}', 'value', 'value: {port: number} =', '{port: 8080}'],
+    ['...values: string[]', 'values', '...values: string[]', null],
+    ['{host: server = "localhost"}: Settings = settings', 'server',
+      '{host: server = "localhost"}: Settings =', 'settings']
+  ] as const) {
+    test('directly explores a complete parameter: ' + parameter, async () => {
+      const {document, symbol} = await fixture(parameter, name, vscode.SymbolKind.Variable,
+        'function open(', ') {}');
+      symbol.range = symbol.selectionRange;
+      const adapter = new VpLspExtenderTypeScript('typescript');
+      const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+      assert.strictEqual(document.getText(info.rangeDeclaration!), parameter);
+      assert.strictEqual(document.getText(info.rangeHead), head);
+      assert.strictEqual(info.rangeBody === null ? null : document.getText(info.rangeBody), body);
+      assert.strictEqual(adapter.isDeclarationSymbol(document, symbol), false, 'parameters remain inline in their owner');
+    });
+  }
+
+  test('uses real class-expression and static-block braces', async () => {
+    const declaration = 'class Named<T extends {port: number}> { static { const config = {port: 8080}; use(config); } #value = 1; }';
+    const {document, symbol} = await fixture(declaration, 'Named', vscode.SymbolKind.Class, 'const Factory = ', ';');
+    const adapter = new VpLspExtenderTypeScript('typescript');
+    const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+    assert.strictEqual(document.getText(info.rangeHead), 'Named<T extends {port: number}>');
+    assert.strictEqual(document.getText(info.rangeBody!), 'static { const config = {port: 8080}; use(config); } #value = 1;');
+    const text = 'static { const config = {port: 8080}; use(config); }';
+    const start = document.getText().indexOf(text);
+    const block = new vscode.DocumentSymbol('static', '', vscode.SymbolKind.Namespace,
+      new vscode.Range(document.positionAt(start), document.positionAt(start + text.length)),
+      new vscode.Range(document.positionAt(start), document.positionAt(start + 'static'.length)));
+    const blockInfo = adapter.getLanguageSpecificSymbolInformation(document, block);
+    assert.strictEqual(document.getText(blockInfo.rangeHead), 'static');
+    assert.strictEqual(document.getText(blockInfo.rangeBody!), 'const config = {port: 8080}; use(config);');
+    AssertX.range_equals(OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(block, document.uri), adapter).totalRange, block.range);
+  });
+
+  test('retains only decorators and modifiers inside the displayed range', async () => {
+    const declaration = '@trace({tag: "😀"}) public async read<const T>(value: T) { return value; }';
+    const {document, symbol} = await fixture(declaration, 'read', vscode.SymbolKind.Method, 'class Scope { ', ' }');
+    const adapter = new VpLspExtenderTypeScript('typescript');
+    const info = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+    assert.strictEqual(document.getText(info.rangeHead), 'read<const T>(value: T)');
+    assert.strictEqual(document.getText(info.rangeBody!), 'return value;');
+    assert.deepStrictEqual(info.attributes.map(attribute => document.getText(attribute.displayTextRange!)),
+      ['@trace({tag: "😀"})', 'public', 'async']);
+    const start = document.getText().indexOf('read<const');
+    symbol.range = new vscode.Range(document.positionAt(start), symbol.range.end);
+    const omitted = adapter.getLanguageSpecificSymbolInformation(document, symbol);
+    assert.deepStrictEqual(omitted.attributes, []);
+    assert.strictEqual(document.getText(omitted.rangeHead), 'read<const T>(value: T)');
+    AssertX.range_equals(OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri), adapter).totalRange, symbol.range);
+  });
+
+  for (const [signature, name] of [
+    ['(value: string): {value: string};', '<call>'],
+    ['new (value: string): Reader;', '<construct>'],
+    ['[key: string]: {value: number};', '<index>']
+  ]) {
+    test('keeps a bodyless interface signature: ' + name, async () => {
+      const {document, symbol} = await fixture(signature, signature, vscode.SymbolKind.Method,
+        'interface Reader { ', ' }');
+      symbol.name = name;
+      symbol.selectionRange = symbol.range;
+      const info = new VpLspExtenderTypeScript('typescript').getLanguageSpecificSymbolInformation(document, symbol);
+      assert.strictEqual(document.getText(info.rangeHead), signature.slice(0, -1));
+      assert.strictEqual(info.rangeBody, null);
+      assert.strictEqual(info.declarationOnly, true);
+    });
+  }
+
+  for (const extension of ['d.ts', 'd.mts', 'd.cts']) {
+    test('selects only the requested overload in .' + extension, async () => {
+      const first = 'export declare function read(value: string): string;';
+      const second = 'export declare function read(value: number): number;';
+      const file = MemoryFile.createDocument(extension);
+      file.write(first + '\n' + second + '\nexport interface Reader { read(): void; }\n');
+      const document = await vscode.languages.setTextDocumentLanguage(await vscode.workspace.openTextDocument(file.uri), 'typescript');
+      const start = first.length + 1;
+      const nameStart = start + second.indexOf('read');
+      const symbol = new vscode.DocumentSymbol('read', '', vscode.SymbolKind.Function,
+        new vscode.Range(document.positionAt(start), document.positionAt(start + second.length)),
+        new vscode.Range(document.positionAt(nameStart), document.positionAt(nameStart + 4)));
+      const info = new VpLspExtenderTypeScript('typescript').getLanguageSpecificSymbolInformation(document, symbol);
+      assert.strictEqual(document.getText(info.rangeHead), 'read(value: number): number');
+      assert.strictEqual(info.rangeBody, null);
+      assert.strictEqual(info.declarationOnly, true);
+      AssertX.range_equals(OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(symbol, document.uri),
+        new VpLspExtenderTypeScript('typescript')).totalRange, symbol.range);
+    });
+  }
+
   test('invalidates the cache after edits and rejects invalid document positions', async () => {
     const document = await vscode.workspace.openTextDocument({language: 'typescript', content: 'const value = 1;'});
     const adapter = new VpLspExtenderTypeScript('typescript');
     const symbol = new vscode.DocumentSymbol('value', '', vscode.SymbolKind.Constant,
       new vscode.Range(0, 0, 0, 16), new vscode.Range(0, 6, 0, 11));
-    assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, symbol).rangeBody!), '1');
-    const edit = new vscode.WorkspaceEdit();
-    edit.replace(document.uri, symbol.range, 'const value = {emoji: "😀"};');
-    assert.ok(await vscode.workspace.applyEdit(edit));
-    symbol.range = new vscode.Range(0, 0, 0, document.lineAt(0).text.length);
-    assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, symbol).rangeBody!), '{emoji: "😀"}');
-    symbol.range = new vscode.Range(0, 0, document.lineCount, 0);
-    assert.throws(() => adapter.getLanguageSpecificSymbolInformation(document, symbol), /Cannot determine declaration boundaries/);
-    await vscode.window.showTextDocument(document);
-    await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+    try {
+      assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, symbol).rangeBody!), '1');
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(document.uri, symbol.range, 'const value = {emoji: "😀"};');
+      assert.ok(await vscode.workspace.applyEdit(edit));
+      symbol.range = new vscode.Range(0, 0, 0, document.lineAt(0).text.length);
+      assert.strictEqual(document.getText(adapter.getLanguageSpecificSymbolInformation(document, symbol).rangeBody!), '{emoji: "😀"}');
+      symbol.range = new vscode.Range(0, 0, document.lineCount, 0);
+      assert.throws(() => adapter.getLanguageSpecificSymbolInformation(document, symbol), /Cannot determine declaration boundaries/);
+    } finally {
+      await vscode.window.showTextDocument(document);
+      await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+    }
   });
 });

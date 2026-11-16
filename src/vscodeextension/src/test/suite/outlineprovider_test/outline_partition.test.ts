@@ -43,17 +43,29 @@ suite('Outline partition and navigation', () => {
     assert.deepStrictEqual(outline.parts.filter(p => p instanceof Outline.Symbol).map(p => p.parts), [[], []]);
   });
 
-  test('skips outside children and keeps ignored callback source', async () => {
-    const source = 'function outer() { promise.then(() => { return 1; }); }\nfunction later() {}';
-    const document = await memory(source);
-    const parent = symbol(document, source.split('\n')[0], 'outer', vscode.SymbolKind.Function);
-    const callback = symbol(document, '() => { return 1; }', '()', vscode.SymbolKind.Function);
-    callback.name = 'then() callback';
-    const outside = symbol(document, 'function later() {}', 'later', vscode.SymbolKind.Function);
-    parent.children = [outside, callback];
-    const outline = OutlineUtils.documentSymbol2outlineSymbol(document, new DocumentSymbolX(parent, document.uri), new VpLspExtenderTypeScript('typescript'));
-    assert.deepStrictEqual(outline.parts.map(p => document.getText(p.displayTextRange!)), ['promise.then(() => { return 1; });']);
-  });
+  for (const language of ['javascript', 'typescript', 'typescriptreact'] as const) {
+    test(language + ' keeps callback declaration rows regardless of provider display name and skips outside children', async () => {
+      const source = 'function outer() { promise.then(() => { return 1; }); }\nfunction later() {}';
+      const document = await vscode.languages.setTextDocumentLanguage(await memory(source), language);
+      const parent = symbol(document, source.split('\n')[0], 'outer', vscode.SymbolKind.Function);
+      const callback = symbol(document, '() => { return 1; }', '()', vscode.SymbolKind.Function);
+      callback.name = 'then() callback';
+      callback.selectionRange = callback.range;
+      const outside = symbol(document, 'function later() {}', 'later', vscode.SymbolKind.Function);
+      parent.children = [outside, callback];
+      const outline = OutlineUtils.documentSymbol2outlineSymbol(document,
+        new DocumentSymbolX(parent, document.uri), new VpLspExtenderTypeScript(language));
+      assert.deepStrictEqual(outline.parts.map(part =>
+        document.getText(part instanceof Outline.Symbol ? part.totalRange! : part.displayTextRange!)),
+      ['promise.then(', '() => { return 1; }', ');']);
+      const children = outline.parts.filter((part): part is Outline.Symbol => part instanceof Outline.Symbol);
+      assert.strictEqual(children.length, 1);
+      assert.strictEqual(document.getText(children[0].displayTextRange!), '() =>');
+      assert.strictEqual(document.getText(children[0].parts[0].displayTextRange!), 'return 1;');
+      AssertX.range_equals(children[0].totalRange, callback.range);
+      assert.deepStrictEqual(parent.children, [outside, callback]);
+    });
+  }
 
   test('rejects crossing and overlapping child ranges', async () => {
     const source = 'class Scope { first() {} second() {} }';
